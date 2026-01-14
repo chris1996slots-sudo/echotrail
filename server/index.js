@@ -70,12 +70,17 @@ if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '..', 'dist');
   app.use(express.static(distPath));
 
-  // Handle SPA routing - serve index.html for all non-API routes
-  // Express 5 requires named parameter instead of '*'
-  app.get('/{*path}', (req, res, next) => {
+  // Handle SPA routing - serve index.html for all non-API/non-asset routes
+  app.use((req, res, next) => {
+    // Skip API routes
     if (req.path.startsWith('/api')) {
       return next();
     }
+    // Skip static assets (files with extensions)
+    if (req.path.includes('.')) {
+      return next();
+    }
+    // Serve index.html for SPA routes
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
