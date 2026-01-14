@@ -8,6 +8,7 @@
     "dev:server": "node server/index.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
+    "build:render": "prisma db push && vite build",
     "build:all": "npm run build && npm run db:generate",
     "start": "node server/index.js",
     "start:prod": "node server/index.js",
