@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SubscriptionPlan {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role     @default(USER)
+  purpose       String?
+  avatarUrl     String?
+
+  subscription  SubscriptionPlan @default(FREE)
+  subscribedAt  DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  persona       Persona?
+  memories      Memory[]
+  timeCapsules  TimeCapsule[]
+  wisdomChats   WisdomChat[]
+
+  @@map("users")
+}
+
+model Persona {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Personality traits (0-100)
+  humor          Int      @default(50)
+  empathy        Int      @default(50)
+  tradition      Int      @default(50)
+  adventure      Int      @default(50)
+  wisdom         Int      @default(50)
+  creativity     Int      @default(50)
+  patience       Int      @default(50)
+  optimism       Int      @default(50)
+
+  // Core values and philosophy
+  coreValues     String[] @default([])
+  lifePhilosophy String?  @db.Text
+
+  // Avatar settings
+  avatarStyle    String   @default("realistic")
+  backgroundType String   @default("office")
+
+  echoVibe       String   @default("compassionate")
+  legacyScore    Int      @default(0)
+
+  lifeStories    LifeStory[]
+  avatarImages   AvatarImage[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("personas")
+}
+
+model AvatarImage {
+  id        String   @id @default(cuid())
+  personaId String
+  persona   Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  imageData String   @db.Text
+  label     String   @default("")
+  isActive  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("avatar_images")
+}
+
+model LifeStory {
+  id           String   @id @default(cuid())
+  personaId    String
+  persona      Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  category     String
+  questionId   String?
+  chapterId    String?
+  chapterTitle String?
+  question     String?
+  content      String   @db.Text
+
+  createdAt    DateTime @default(now())
+
+  @@map("life_stories")
+}
+
+model Memory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String   @db.Text
+  history     String?  @db.Text
+  imageUrl    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("memories")
+}
+
+model TimeCapsule {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title        String
+  occasion     String
+  recipient    String
+  message      String   @db.Text
+  deliveryDate DateTime
+  status       String   @default("sealed")
+
+  createdAt    DateTime @default(now())
+
+  @@map("time_capsules")
+}
+
+model WisdomChat {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      String
+  content   String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@map("wisdom_chats")
+}
+
+model ApiConfig {
+  id          String   @id @default(cuid())
+  service     String   @unique
+  apiKey      String
+  isActive    Boolean  @default(true)
+  settings    Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("api_configs")
+}
+
+model SystemSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model SupportChat {
+  id        String   @id @default(cuid())
+
+  userId    String?
+  userEmail String?
+  userName  String?
+
+  status    String   @default("open") // open, closed
+
+  messages  SupportMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("support_chats")
+}
+
+model SupportMessage {
+  id        String      @id @default(cuid())
+  chatId    String
+  chat      SupportChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  sender    String   // user, admin
+  content   String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@map("support_messages")
+}
