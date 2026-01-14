@@ -28,14 +28,32 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests from localhost on any port in development
-    if (!origin || origin.startsWith('http://localhost:')) {
+    // Allow requests with no origin (same-origin, mobile apps, curl, etc.)
+    if (!origin) {
       callback(null, true);
-    } else if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+    // Allow localhost in development
+    if (origin.startsWith('http://localhost:')) {
+      callback(null, true);
+      return;
+    }
+    // Allow Render URLs
+    if (origin.includes('.onrender.com')) {
+      callback(null, true);
+      return;
+    }
+    // Allow configured frontend URL
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+      callback(null, true);
+      return;
+    }
+    // In production, allow same-origin requests
+    if (process.env.NODE_ENV === 'production') {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));
