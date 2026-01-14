@@ -32,7 +32,8 @@ import {
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In production, use relative URLs (same origin). In development, use localhost
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 // Service categories with providers
 const serviceCategories = {
