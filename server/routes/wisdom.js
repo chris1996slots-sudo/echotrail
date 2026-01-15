@@ -22,6 +22,40 @@ router.post('/chat', authenticate, async (req, res) => {
   try {
     const { message } = req.body;
 
+    // Check blacklist for forbidden topics
+    const blacklistedTopics = await req.prisma.blacklistedTopic.findMany({
+      where: { isActive: true }
+    });
+
+    const messageLower = message.toLowerCase();
+    const blockedTopic = blacklistedTopics.find(topic =>
+      messageLower.includes(topic.topic.toLowerCase())
+    );
+
+    if (blockedTopic) {
+      // Return polite decline for blacklisted topics
+      const declineMessage = await req.prisma.wisdomChat.create({
+        data: {
+          userId: req.user.id,
+          role: 'user',
+          content: message,
+        }
+      });
+
+      const declineResponse = await req.prisma.wisdomChat.create({
+        data: {
+          userId: req.user.id,
+          role: 'assistant',
+          content: `I appreciate you sharing with me, but I'd prefer not to discuss that particular topic. Perhaps we could talk about something else? I'd love to hear about your day, your dreams, or any questions about life, family, or the things that matter most to you.`,
+        }
+      });
+
+      return res.json({
+        userMessage: declineMessage,
+        assistantMessage: declineResponse,
+      });
+    }
+
     // Save user message
     const userMessage = await req.prisma.wisdomChat.create({
       data: {
@@ -122,7 +156,7 @@ router.delete('/chat', authenticate, async (req, res) => {
 // Generate response using configured LLM API
 async function generateLLMResponse(message, persona, user, provider, prisma) {
   try {
-    const systemPrompt = buildSystemPrompt(persona, user);
+    const systemPrompt = await buildSystemPrompt(persona, user, prisma);
 
     // Get previous messages for context (last 10)
     const previousMessages = await prisma.wisdomChat.findMany({
@@ -293,7 +327,7 @@ async function generateGeminiResponse(message, systemPrompt, chatHistory, apiKey
 }
 
 // Build system prompt from persona
-function buildSystemPrompt(persona, user) {
+async function buildSystemPrompt(persona, user, prisma) {
   const vibeDescriptions = {
     compassionate: 'warm, nurturing, and deeply caring',
     strict: 'firm, principled, and focused on growth',
@@ -305,6 +339,38 @@ function buildSystemPrompt(persona, user) {
 
   const stories = persona?.lifeStories?.map(s => s.content).join('\n\n') || '';
 
+  // Try to get custom prompt from database
+  let customPrompt = null;
+  try {
+    const promptSetting = await prisma.systemSettings.findUnique({
+      where: { key: 'prompt_wisdom_system' }
+    });
+    if (promptSetting?.value) {
+      customPrompt = promptSetting.value;
+    }
+  } catch (error) {
+    console.log('No custom prompt found, using default');
+  }
+
+  // If custom prompt exists, replace placeholders
+  if (customPrompt) {
+    return customPrompt
+      .replace(/{userName}/g, `${user.firstName} ${user.lastName}`)
+      .replace(/{humor}/g, persona?.humor || 50)
+      .replace(/{empathy}/g, persona?.empathy || 50)
+      .replace(/{tradition}/g, persona?.tradition || 50)
+      .replace(/{adventure}/g, persona?.adventure || 50)
+      .replace(/{wisdom}/g, persona?.wisdom || 50)
+      .replace(/{creativity}/g, persona?.creativity || 50)
+      .replace(/{patience}/g, persona?.patience || 50)
+      .replace(/{optimism}/g, persona?.optimism || 50)
+      .replace(/{coreValues}/g, persona?.coreValues?.join(', ') || 'Not specified')
+      .replace(/{lifePhilosophy}/g, persona?.lifePhilosophy || 'Not specified')
+      .replace(/{echoVibe}/g, vibeDescriptions[persona?.echoVibe || 'compassionate'])
+      .replace(/{stories}/g, stories || 'No specific stories recorded yet.');
+  }
+
+  // Default prompt
   return `You are the digital echo of ${user.firstName} ${user.lastName}. You embody their personality, values, and wisdom to guide their descendants.
 
 PERSONALITY TRAITS (scale 0-100):

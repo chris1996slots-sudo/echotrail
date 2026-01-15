@@ -27,7 +27,13 @@ import {
   User as UserIcon,
   BookOpen,
   Image,
-  Heart
+  Heart,
+  FileText,
+  Ban,
+  Play,
+  Pause,
+  Plus,
+  Save
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -109,6 +115,64 @@ export function AdminDashboard({ onNavigate }) {
   const [userDetails, setUserDetails] = useState(null);
   const [expandedStory, setExpandedStory] = useState(null);
 
+  // AI Prompts state
+  const [aiPrompts, setAiPrompts] = useState([]);
+  const [editingPrompt, setEditingPrompt] = useState(null);
+  const [promptDraft, setPromptDraft] = useState({ value: '', description: '' });
+
+  // Blacklist state
+  const [blacklist, setBlacklist] = useState([]);
+  const [newTopic, setNewTopic] = useState('');
+  const [newTopicDescription, setNewTopicDescription] = useState('');
+
+  // Voice samples state
+  const [userVoiceSamples, setUserVoiceSamples] = useState(null);
+  const [playingAudio, setPlayingAudio] = useState(null);
+
+  // Default prompts configuration
+  const defaultPrompts = [
+    {
+      key: 'wisdom_system',
+      name: 'WisdomGPT System Prompt',
+      description: 'Main system prompt for WisdomGPT AI conversations',
+      defaultValue: `You are the digital echo of {userName}, created to preserve and share their wisdom, stories, and personality with loved ones.
+
+Your personality traits (scale 0-100):
+- Humor: {humor}
+- Empathy: {empathy}
+- Tradition: {tradition}
+- Adventure: {adventure}
+- Wisdom: {wisdom}
+- Creativity: {creativity}
+- Patience: {patience}
+- Optimism: {optimism}
+
+Core values: {coreValues}
+Life philosophy: {lifePhilosophy}
+Echo vibe: {echoVibe}
+
+Draw from their life stories and memories to provide authentic, personal responses. Speak as if you ARE them, using their voice, mannerisms, and perspective.`
+    },
+    {
+      key: 'echo_sim',
+      name: 'Echo Simulator Prompt',
+      description: 'Prompt for the Echo Simulation/Avatar feature',
+      defaultValue: `You are simulating a conversation with the preserved echo of {userName}. Generate responses that authentically represent their personality, values, and way of speaking. Be warm, personal, and draw from their life experiences.`
+    },
+    {
+      key: 'story_enhancement',
+      name: 'Story Enhancement Prompt',
+      description: 'Prompt for enhancing life stories with AI',
+      defaultValue: `Help the user elaborate on their life story. Ask thoughtful follow-up questions and help them capture important details, emotions, and lessons from their experiences. Be empathetic and encouraging.`
+    },
+    {
+      key: 'memory_narrative',
+      name: 'Memory Narrative Prompt',
+      description: 'Prompt for generating narrative around memories',
+      defaultValue: `Create a warm, personal narrative about this memory. Capture the emotions, sensory details, and significance of this moment in the person's life.`
+    }
+  ];
+
   // Check if user is admin
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -152,6 +216,21 @@ export function AdminDashboard({ onNavigate }) {
         const chatsRes = await fetch(`${API_URL}/api/support/admin/chats?status=all`, { headers });
         if (chatsRes.ok) {
           setSupportChats(await chatsRes.json());
+        }
+      }
+
+      if (activeTab === 'settings') {
+        // Fetch prompts and blacklist
+        const [promptsRes, blacklistRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/prompts`, { headers }),
+          fetch(`${API_URL}/api/admin/blacklist`, { headers })
+        ]);
+
+        if (promptsRes.ok) {
+          setAiPrompts(await promptsRes.json());
+        }
+        if (blacklistRes.ok) {
+          setBlacklist(await blacklistRes.json());
         }
       }
     } catch (error) {
@@ -223,17 +302,138 @@ export function AdminDashboard({ onNavigate }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('echotrail_token');
-      const res = await fetch(`${API_URL}/api/admin/users/${userId}/details`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setUserDetails(await res.json());
+      const [detailsRes, voiceRes] = await Promise.all([
+        fetch(`${API_URL}/api/admin/users/${userId}/details`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API_URL}/api/admin/users/${userId}/voice-samples`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      if (detailsRes.ok) {
+        setUserDetails(await detailsRes.json());
         setSelectedUser(userId);
+      }
+      if (voiceRes.ok) {
+        setUserVoiceSamples(await voiceRes.json());
       }
     } catch (error) {
       console.error('Failed to load user details:', error);
     }
     setLoading(false);
+  };
+
+  // Save AI prompt
+  const savePrompt = async (promptKey) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/admin/prompts/${promptKey}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(promptDraft)
+      });
+      setEditingPrompt(null);
+      setPromptDraft({ value: '', description: '' });
+      fetchData();
+    } catch (error) {
+      console.error('Failed to save prompt:', error);
+    }
+  };
+
+  // Reset prompt to default
+  const resetPrompt = async (promptKey) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/admin/prompts/${promptKey}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Failed to reset prompt:', error);
+    }
+  };
+
+  // Add blacklist topic
+  const addBlacklistTopic = async () => {
+    if (!newTopic.trim()) return;
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/admin/blacklist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          topic: newTopic.trim(),
+          description: newTopicDescription.trim() || null
+        })
+      });
+      if (res.ok) {
+        setNewTopic('');
+        setNewTopicDescription('');
+        fetchData();
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Failed to add topic');
+      }
+    } catch (error) {
+      console.error('Failed to add topic:', error);
+    }
+  };
+
+  // Toggle blacklist topic active state
+  const toggleBlacklistTopic = async (id, isActive) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/admin/blacklist/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: !isActive })
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Failed to toggle topic:', error);
+    }
+  };
+
+  // Delete blacklist topic
+  const deleteBlacklistTopic = async (id) => {
+    if (!confirm('Are you sure you want to delete this topic?')) return;
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/admin/blacklist/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Failed to delete topic:', error);
+    }
+  };
+
+  // Play voice sample
+  const playVoiceSample = (audioData, sampleId) => {
+    if (playingAudio) {
+      playingAudio.pause();
+      if (playingAudio.sampleId === sampleId) {
+        setPlayingAudio(null);
+        return;
+      }
+    }
+    const audio = new Audio(audioData);
+    audio.sampleId = sampleId;
+    audio.onended = () => setPlayingAudio(null);
+    audio.play();
+    setPlayingAudio(audio);
   };
 
   const testApiConnection = async (service) => {
@@ -1093,6 +1293,52 @@ export function AdminDashboard({ onNavigate }) {
                 </div>
               </div>
 
+              {/* Voice Samples */}
+              {userVoiceSamples?.voiceSamples?.length > 0 && (
+                <div className="glass-card p-6 mt-6">
+                  <h3 className="text-lg font-serif text-cream mb-4 flex items-center gap-2">
+                    <Mic className="w-5 h-5 text-gold" />
+                    Voice Samples ({userVoiceSamples.voiceSamples.length})
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {userVoiceSamples.voiceSamples.map(sample => (
+                      <div key={sample.id} className="p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="text-cream font-medium">{sample.label || 'Voice Sample'}</p>
+                            <p className="text-cream/50 text-xs">
+                              {sample.duration > 0 ? `${sample.duration}s` : 'Duration unknown'} • {new Date(sample.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <motion.button
+                            onClick={() => playVoiceSample(sample.audioData, sample.id)}
+                            className={`p-3 rounded-full ${
+                              playingAudio?.sampleId === sample.id
+                                ? 'bg-gold text-navy'
+                                : 'bg-gold/20 text-gold hover:bg-gold/30'
+                            }`}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            {playingAudio?.sampleId === sample.id ? (
+                              <Pause className="w-5 h-5" />
+                            ) : (
+                              <Play className="w-5 h-5" />
+                            )}
+                          </motion.button>
+                        </div>
+                        {sample.prompt && (
+                          <div className="bg-navy-dark/50 rounded-lg p-3">
+                            <p className="text-cream/60 text-xs mb-1">Prompt read:</p>
+                            <p className="text-cream/80 text-sm italic">"{sample.prompt}"</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Wisdom Chats */}
               {userDetails.wisdomChats?.length > 0 && (
                 <div className="glass-card p-6 mt-6">
@@ -1375,6 +1621,225 @@ export function AdminDashboard({ onNavigate }) {
                       </span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* AI System Prompts */}
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-serif text-cream">AI System Prompts</h3>
+                    <p className="text-cream/50 text-sm">Customize AI behavior and personality</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {defaultPrompts.map(prompt => {
+                    const savedPrompt = aiPrompts.find(p => p.key === `prompt_${prompt.key}`);
+                    const currentValue = savedPrompt?.value || prompt.defaultValue;
+                    const isEditing = editingPrompt === prompt.key;
+
+                    return (
+                      <div key={prompt.key} className="p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4 className="text-cream font-medium">{prompt.name}</h4>
+                            <p className="text-cream/50 text-sm">{prompt.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {savedPrompt && (
+                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                                Customized
+                              </span>
+                            )}
+                            {!isEditing ? (
+                              <motion.button
+                                onClick={() => {
+                                  setEditingPrompt(prompt.key);
+                                  setPromptDraft({ value: currentValue, description: prompt.description });
+                                }}
+                                className="p-2 text-gold/70 hover:text-gold"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </motion.button>
+                            ) : (
+                              <div className="flex gap-2">
+                                <motion.button
+                                  onClick={() => savePrompt(prompt.key)}
+                                  className="p-2 text-green-400 hover:text-green-300"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <Save className="w-4 h-4" />
+                                </motion.button>
+                                <motion.button
+                                  onClick={() => { setEditingPrompt(null); setPromptDraft({ value: '', description: '' }); }}
+                                  className="p-2 text-red-400 hover:text-red-300"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </motion.button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {isEditing ? (
+                          <textarea
+                            value={promptDraft.value}
+                            onChange={(e) => setPromptDraft(prev => ({ ...prev, value: e.target.value }))}
+                            className="w-full h-48 px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50 font-mono text-sm resize-y"
+                          />
+                        ) : (
+                          <div className="bg-navy-dark/50 rounded-lg p-3 max-h-32 overflow-y-auto">
+                            <pre className="text-cream/70 text-sm whitespace-pre-wrap font-mono">{currentValue}</pre>
+                          </div>
+                        )}
+
+                        {savedPrompt && !isEditing && (
+                          <motion.button
+                            onClick={() => resetPrompt(prompt.key)}
+                            className="mt-3 text-sm text-cream/50 hover:text-cream flex items-center gap-1"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Reset to default
+                          </motion.button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-cream/70 text-sm">
+                        Use placeholders like <code className="bg-navy-dark px-1 rounded">{'{userName}'}</code>, <code className="bg-navy-dark px-1 rounded">{'{humor}'}</code>, etc. for dynamic content.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Blacklist Management */}
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                    <Ban className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-serif text-cream">Forbidden Topics Blacklist</h3>
+                    <p className="text-cream/50 text-sm">Topics and questions AI will refuse to answer</p>
+                  </div>
+                </div>
+
+                {/* Add new topic */}
+                <div className="mb-6 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <h4 className="text-cream/70 text-sm mb-3">Add New Topic</h4>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={newTopic}
+                      onChange={(e) => setNewTopic(e.target.value)}
+                      placeholder="Enter topic or keyword..."
+                      className="flex-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
+                    />
+                    <input
+                      type="text"
+                      value={newTopicDescription}
+                      onChange={(e) => setNewTopicDescription(e.target.value)}
+                      placeholder="Description (optional)"
+                      className="flex-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
+                    />
+                    <motion.button
+                      onClick={addBlacklistTopic}
+                      disabled={!newTopic.trim()}
+                      className="px-6 py-2 bg-gold text-navy rounded-xl font-medium disabled:opacity-50 flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Blacklist items */}
+                {blacklist.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Ban className="w-12 h-12 text-cream/20 mx-auto mb-3" />
+                    <p className="text-cream/50">No blacklisted topics yet</p>
+                    <p className="text-cream/30 text-sm mt-1">Add topics that the AI should not discuss</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {blacklist.map(item => (
+                      <div
+                        key={item.id}
+                        className={`flex items-center justify-between p-4 rounded-xl border ${
+                          item.isActive
+                            ? 'bg-red-500/10 border-red-500/30'
+                            : 'bg-navy-dark/30 border-gold/10 opacity-60'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-cream font-medium">{item.topic}</span>
+                            {!item.isActive && (
+                              <span className="px-2 py-0.5 bg-cream/10 text-cream/50 text-xs rounded-full">
+                                Disabled
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-cream/50 text-sm mt-1">{item.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <motion.button
+                            onClick={() => toggleBlacklistTopic(item.id, item.isActive)}
+                            className={`p-2 rounded-lg ${
+                              item.isActive
+                                ? 'text-green-400 hover:bg-green-500/20'
+                                : 'text-cream/50 hover:bg-cream/10'
+                            }`}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            title={item.isActive ? 'Disable' : 'Enable'}
+                          >
+                            {item.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                          </motion.button>
+                          <motion.button
+                            onClick={() => deleteBlacklistTopic(item.id)}
+                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </motion.button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-4 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-cream/70 text-sm">
+                        The AI will politely decline to discuss topics on the blacklist and redirect the conversation.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -225,3 +225,15 @@ model SupportMessage {
 
   @@map("support_messages")
 }
+
+model BlacklistedTopic {
+  id          String   @id @default(cuid())
+  topic       String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("blacklisted_topics")
+}

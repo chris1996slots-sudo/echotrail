@@ -726,4 +726,175 @@ router.put('/settings/:key', async (req, res) => {
   }
 });
 
+// =====================
+// AI PROMPTS MANAGEMENT
+// =====================
+
+// Get all AI prompts
+router.get('/prompts', async (req, res) => {
+  try {
+    // Get all prompts from system settings
+    const prompts = await req.prisma.systemSettings.findMany({
+      where: {
+        key: { startsWith: 'prompt_' }
+      }
+    });
+    res.json(prompts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch prompts' });
+  }
+});
+
+// Update or create AI prompt
+router.put('/prompts/:promptKey', async (req, res) => {
+  try {
+    const { promptKey } = req.params;
+    const { value, description } = req.body;
+    const key = `prompt_${promptKey}`;
+
+    const prompt = await req.prisma.systemSettings.upsert({
+      where: { key },
+      update: { value, description },
+      create: { key, value, description }
+    });
+
+    res.json(prompt);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update prompt' });
+  }
+});
+
+// Delete AI prompt (reset to default)
+router.delete('/prompts/:promptKey', async (req, res) => {
+  try {
+    const { promptKey } = req.params;
+    const key = `prompt_${promptKey}`;
+
+    await req.prisma.systemSettings.delete({
+      where: { key }
+    });
+
+    res.json({ message: 'Prompt deleted (will use default)' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete prompt' });
+  }
+});
+
+// =====================
+// BLACKLIST MANAGEMENT
+// =====================
+
+// Get all blacklisted topics
+router.get('/blacklist', async (req, res) => {
+  try {
+    const topics = await req.prisma.blacklistedTopic.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(topics);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch blacklist' });
+  }
+});
+
+// Add blacklisted topic
+router.post('/blacklist', async (req, res) => {
+  try {
+    const { topic, description } = req.body;
+
+    if (!topic || topic.trim().length === 0) {
+      return res.status(400).json({ error: 'Topic is required' });
+    }
+
+    const entry = await req.prisma.blacklistedTopic.create({
+      data: {
+        topic: topic.trim().toLowerCase(),
+        description: description || null
+      }
+    });
+
+    res.status(201).json(entry);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Topic already exists' });
+    }
+    res.status(500).json({ error: 'Failed to add topic' });
+  }
+});
+
+// Update blacklisted topic
+router.put('/blacklist/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { topic, description, isActive } = req.body;
+
+    const entry = await req.prisma.blacklistedTopic.update({
+      where: { id },
+      data: {
+        ...(topic && { topic: topic.trim().toLowerCase() }),
+        ...(description !== undefined && { description }),
+        ...(isActive !== undefined && { isActive })
+      }
+    });
+
+    res.json(entry);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update topic' });
+  }
+});
+
+// Delete blacklisted topic
+router.delete('/blacklist/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await req.prisma.blacklistedTopic.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Topic deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete topic' });
+  }
+});
+
+// =====================
+// USER VOICE SAMPLES VIEW
+// =====================
+
+// Get user's voice samples (for admin viewing)
+router.get('/users/:id/voice-samples', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await req.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        persona: {
+          select: {
+            voiceSamples: {
+              orderBy: { createdAt: 'desc' }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      userId: user.id,
+      userName: `${user.firstName} ${user.lastName}`,
+      voiceSamples: user.persona?.voiceSamples || []
+    });
+  } catch (error) {
+    console.error('Voice samples error:', error);
+    res.status(500).json({ error: 'Failed to fetch voice samples' });
+  }
+});
+
 export default router;
