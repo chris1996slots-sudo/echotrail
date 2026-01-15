@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { Save, RotateCcw, Plus, X } from 'lucide-react';
+import { Save, RotateCcw, Plus, X, Check, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import api from '../services/api';
 
 const traits = [
   { id: 'humor', label: 'Humor', description: 'How often do you use humor in conversations?' },
@@ -62,20 +63,23 @@ function Slider({ value, onChange, label, description }) {
 export function ValueStore() {
   const { persona, setPersona } = useApp();
   const [values, setValues] = useState(persona.values || {
-    humor: 50,
-    empathy: 50,
-    tradition: 50,
-    adventure: 50,
-    wisdom: 50,
-    creativity: 50,
-    patience: 50,
-    optimism: 50,
+    humor: persona.humor ?? 50,
+    empathy: persona.empathy ?? 50,
+    tradition: persona.tradition ?? 50,
+    adventure: persona.adventure ?? 50,
+    wisdom: persona.wisdom ?? 50,
+    creativity: persona.creativity ?? 50,
+    patience: persona.patience ?? 50,
+    optimism: persona.optimism ?? 50,
   });
   const [coreValues, setCoreValues] = useState(persona.coreValues || []);
   const [newValue, setNewValue] = useState('');
   const [lifePhilosophy, setLifePhilosophy] = useState(persona.lifePhilosophy || '');
   const [hasChanges, setHasChanges] = useState(false);
   const [isChartReady, setIsChartReady] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+  const saveTimeoutRef = useRef(null);
 
   // Delay chart rendering to ensure container has dimensions
   useEffect(() => {
@@ -92,37 +96,93 @@ export function ValueStore() {
     };
   }, []);
 
-  const handleValueChange = useCallback((trait, value) => {
-    setValues(prev => ({ ...prev, [trait]: value }));
-    setHasChanges(true);
+  // Auto-save function with debounce
+  const autoSave = useCallback(async (newValues, newCoreValues, newPhilosophy) => {
+    setIsSaving(true);
+    setSaveStatus(null);
+
+    try {
+      // Update local state immediately
+      setPersona(prev => ({
+        ...prev,
+        ...newValues,
+        coreValues: newCoreValues,
+        lifePhilosophy: newPhilosophy,
+      }));
+
+      // Save to database
+      await api.updateValues({
+        ...newValues,
+        coreValues: newCoreValues,
+        lifePhilosophy: newPhilosophy,
+      });
+
+      setSaveStatus('success');
+      setHasChanges(false);
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Failed to auto-save:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [setPersona]);
+
+  // Debounced save trigger
+  const triggerAutoSave = useCallback((newValues, newCoreValues, newPhilosophy) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      autoSave(newValues, newCoreValues, newPhilosophy);
+    }, 1000); // Wait 1 second after last change
+  }, [autoSave]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, []);
+
+  const handleValueChange = useCallback((trait, value) => {
+    const newValues = { ...values, [trait]: value };
+    setValues(newValues);
+    setHasChanges(true);
+    triggerAutoSave(newValues, coreValues, lifePhilosophy);
+  }, [values, coreValues, lifePhilosophy, triggerAutoSave]);
 
   const handleAddCoreValue = () => {
     if (newValue.trim() && coreValues.length < 10) {
-      setCoreValues(prev => [...prev, newValue.trim()]);
+      const newCoreValues = [...coreValues, newValue.trim()];
+      setCoreValues(newCoreValues);
       setNewValue('');
       setHasChanges(true);
+      triggerAutoSave(values, newCoreValues, lifePhilosophy);
     }
   };
 
   const handleRemoveCoreValue = (index) => {
-    setCoreValues(prev => prev.filter((_, i) => i !== index));
+    const newCoreValues = coreValues.filter((_, i) => i !== index);
+    setCoreValues(newCoreValues);
     setHasChanges(true);
+    triggerAutoSave(values, newCoreValues, lifePhilosophy);
   };
 
   const handlePhilosophyChange = (text) => {
     setLifePhilosophy(text);
     setHasChanges(true);
+    triggerAutoSave(values, coreValues, text);
   };
 
-  const handleSave = () => {
-    setPersona(prev => ({
-      ...prev,
-      values,
-      coreValues,
-      lifePhilosophy,
-    }));
-    setHasChanges(false);
+  const handleSave = async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    await autoSave(values, coreValues, lifePhilosophy);
   };
 
   const handleReset = () => {
@@ -140,6 +200,7 @@ export function ValueStore() {
     setCoreValues([]);
     setLifePhilosophy('');
     setHasChanges(true);
+    triggerAutoSave(defaultValues, [], '');
   };
 
   const chartData = traits.map(trait => ({
@@ -294,25 +355,73 @@ export function ValueStore() {
         </div>
       </div>
 
-      <div className="flex justify-center gap-4 pt-4">
+      {/* Auto-save Status Indicator */}
+      <div className="flex items-center justify-center gap-4 pt-4">
         <motion.button
           onClick={handleReset}
-          className="btn-secondary flex items-center"
+          disabled={isSaving}
+          className="btn-secondary flex items-center disabled:opacity-50"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
           <RotateCcw className="w-4 h-4 mr-2" />
-          Reset to Default
+          Reset
         </motion.button>
+
+        {/* Save Status Display */}
+        <div className="flex items-center gap-2 min-w-[140px] justify-center">
+          {isSaving && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2 text-gold"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Saving...</span>
+            </motion.div>
+          )}
+          {saveStatus === 'success' && !isSaving && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-2 text-green-400"
+            >
+              <Check className="w-4 h-4" />
+              <span className="text-sm">Saved!</span>
+            </motion.div>
+          )}
+          {saveStatus === 'error' && !isSaving && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-2 text-red-400"
+            >
+              <X className="w-4 h-4" />
+              <span className="text-sm">Save failed</span>
+            </motion.div>
+          )}
+          {!isSaving && !saveStatus && hasChanges && (
+            <span className="text-cream/40 text-sm">Auto-saving...</span>
+          )}
+          {!isSaving && !saveStatus && !hasChanges && (
+            <span className="text-cream/30 text-sm">All changes saved</span>
+          )}
+        </div>
+
         <motion.button
           onClick={handleSave}
-          disabled={!hasChanges}
+          disabled={!hasChanges || isSaving}
           className="btn-primary flex items-center disabled:opacity-50"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Save className="w-4 h-4 mr-2" />
-          Save Values
+          {isSaving ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Save Now
         </motion.button>
       </div>
 
