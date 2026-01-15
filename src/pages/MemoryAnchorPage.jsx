@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
   Image as ImageIcon,
+  Video,
   X,
   Plus,
   Trash2,
   Edit3,
   Save,
   Camera,
-  Loader2
+  Loader2,
+  Play
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -21,21 +23,79 @@ export function MemoryAnchorPage() {
     title: '',
     description: '',
     imageUrl: null,
+    videoUrl: null,
+    mediaType: null, // 'image' or 'video'
     history: '',
   });
   const [editingId, setEditingId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+  const videoInputRef = useRef(null);
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (max 5MB for images)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be smaller than 5MB');
+        return;
+      }
+      setUploadProgress(0);
       const reader = new FileReader();
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
       reader.onloadend = () => {
-        setCurrentMemory(prev => ({ ...prev, imageUrl: reader.result }));
+        setCurrentMemory(prev => ({
+          ...prev,
+          imageUrl: reader.result,
+          videoUrl: null,
+          mediaType: 'image'
+        }));
+        setUploadProgress(0);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleVideoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 50MB for videos)
+      if (file.size > 50 * 1024 * 1024) {
+        alert('Video must be smaller than 50MB');
+        return;
+      }
+      setUploadProgress(0);
+      const reader = new FileReader();
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+      reader.onloadend = () => {
+        setCurrentMemory(prev => ({
+          ...prev,
+          videoUrl: reader.result,
+          imageUrl: null,
+          mediaType: 'video'
+        }));
+        setUploadProgress(0);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearMedia = () => {
+    setCurrentMemory(prev => ({
+      ...prev,
+      imageUrl: null,
+      videoUrl: null,
+      mediaType: null
+    }));
   };
 
   const handleSaveMemory = async () => {
@@ -47,6 +107,8 @@ export function MemoryAnchorPage() {
       title: currentMemory.title,
       description: currentMemory.description,
       imageUrl: currentMemory.imageUrl,
+      videoUrl: currentMemory.videoUrl,
+      mediaType: currentMemory.mediaType,
       history: currentMemory.history,
     };
 
@@ -71,6 +133,8 @@ export function MemoryAnchorPage() {
       title: memory.title,
       description: memory.description,
       imageUrl: memory.imageUrl,
+      videoUrl: memory.videoUrl,
+      mediaType: memory.mediaType || (memory.imageUrl ? 'image' : memory.videoUrl ? 'video' : null),
       history: memory.history || '',
     });
     setEditingId(memory.id);
@@ -78,9 +142,10 @@ export function MemoryAnchorPage() {
   };
 
   const resetForm = () => {
-    setCurrentMemory({ title: '', description: '', imageUrl: null, history: '' });
+    setCurrentMemory({ title: '', description: '', imageUrl: null, videoUrl: null, mediaType: null, history: '' });
     setEditingId(null);
     setShowModal(false);
+    setUploadProgress(0);
   };
 
   if (isLoading) {
@@ -149,7 +214,21 @@ export function MemoryAnchorPage() {
                   whileHover={{ y: -5 }}
                 >
                   <div className="relative aspect-square bg-navy-dark">
-                    {memory.imageUrl ? (
+                    {memory.videoUrl ? (
+                      <div className="relative w-full h-full">
+                        <video
+                          src={memory.videoUrl}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <div className="w-14 h-14 rounded-full bg-gold/90 flex items-center justify-center">
+                            <Play className="w-6 h-6 text-navy ml-1" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : memory.imageUrl ? (
                       <img
                         src={memory.imageUrl}
                         alt={memory.title}
@@ -224,39 +303,86 @@ export function MemoryAnchorPage() {
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-cream/70 text-sm mb-3">Photo</label>
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`relative aspect-video rounded-xl border-2 border-dashed cursor-pointer transition-all overflow-hidden ${
-                      currentMemory.imageUrl
-                        ? 'border-gold/50'
-                        : 'border-gold/20 hover:border-gold/40'
-                    }`}
-                  >
-                    {currentMemory.imageUrl ? (
-                      <>
+                  <label className="block text-cream/70 text-sm mb-3">Photo or Video</label>
+
+                  {/* Media Preview */}
+                  {(currentMemory.imageUrl || currentMemory.videoUrl) ? (
+                    <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-gold/50 mb-3">
+                      {currentMemory.mediaType === 'video' ? (
+                        <video
+                          src={currentMemory.videoUrl}
+                          className="w-full h-full object-cover"
+                          controls
+                          playsInline
+                        />
+                      ) : (
                         <img
                           src={currentMemory.imageUrl}
                           alt="Preview"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                          <Camera className="w-8 h-8 text-white" />
+                      )}
+                      <button
+                        onClick={clearMedia}
+                        className="absolute top-3 right-3 p-2 rounded-full bg-red-500/80 text-white hover:bg-red-500 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Upload Progress */}
+                      {uploadProgress > 0 && (
+                        <div className="mb-3">
+                          <div className="h-2 bg-navy-dark rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gold transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-cream/50 text-xs mt-1 text-center">Uploading... {uploadProgress}%</p>
                         </div>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-navy-dark/50">
-                        <Upload className="w-10 h-10 text-gold/40 mb-3" />
-                        <p className="text-cream/50 text-sm">Click to upload a photo</p>
-                        <p className="text-cream/30 text-xs mt-1">JPG, PNG up to 5MB</p>
+                      )}
+
+                      {/* Upload Buttons */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative aspect-video rounded-xl border-2 border-dashed border-gold/20 hover:border-gold/40 cursor-pointer transition-all overflow-hidden"
+                        >
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-navy-dark/50">
+                            <ImageIcon className="w-8 h-8 text-gold/40 mb-2" />
+                            <p className="text-cream/50 text-sm">Upload Photo</p>
+                            <p className="text-cream/30 text-xs mt-1">JPG, PNG up to 5MB</p>
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => videoInputRef.current?.click()}
+                          className="relative aspect-video rounded-xl border-2 border-dashed border-gold/20 hover:border-gold/40 cursor-pointer transition-all overflow-hidden"
+                        >
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-navy-dark/50">
+                            <Video className="w-8 h-8 text-gold/40 mb-2" />
+                            <p className="text-cream/50 text-sm">Upload Video</p>
+                            <p className="text-cream/30 text-xs mt-1">MP4, MOV up to 50MB</p>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
+
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoUpload}
                     className="hidden"
                   />
                 </div>

@@ -19,7 +19,7 @@ router.get('/', authenticate, async (req, res) => {
 // Create memory
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, history, imageUrl } = req.body;
+    const { title, description, history, imageUrl, videoUrl, mediaType } = req.body;
 
     // Check memory limit for non-premium users
     if (req.user.subscription !== 'PREMIUM') {
@@ -43,11 +43,14 @@ router.post('/', authenticate, async (req, res) => {
         description,
         history,
         imageUrl,
+        videoUrl,
+        mediaType,
       }
     });
 
     res.status(201).json(memory);
   } catch (error) {
+    console.error('Failed to create memory:', error);
     res.status(500).json({ error: 'Failed to create memory' });
   }
 });
@@ -56,7 +59,7 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, history, imageUrl } = req.body;
+    const { title, description, history, imageUrl, videoUrl, mediaType } = req.body;
 
     const memory = await req.prisma.memory.updateMany({
       where: {
@@ -68,6 +71,8 @@ router.put('/:id', authenticate, async (req, res) => {
         description,
         history,
         imageUrl,
+        videoUrl,
+        mediaType,
       }
     });
 
@@ -81,6 +86,7 @@ router.put('/:id', authenticate, async (req, res) => {
 
     res.json(updated);
   } catch (error) {
+    console.error('Failed to update memory:', error);
     res.status(500).json({ error: 'Failed to update memory' });
   }
 });
