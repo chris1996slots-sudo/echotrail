@@ -10,11 +10,13 @@ import {
   Heart,
   CheckCircle2,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import { LegacyScore } from '../components/LegacyScore';
+import api from '../services/api';
 
 const steps = [
   {
@@ -63,6 +65,7 @@ export function OnboardingPage({ onNavigate }) {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const progress = ((currentStep + 1) / steps.length) * 100;
 
@@ -89,23 +92,40 @@ export function OnboardingPage({ onNavigate }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const nextStep = () => {
-    if (validateStep()) {
-      if (currentStep === steps.length - 2) {
-        setUser({
+  const nextStep = async () => {
+    if (!validateStep()) return;
+
+    // Handle registration on account step
+    if (currentStep === steps.length - 2) {
+      setIsSubmitting(true);
+      setErrors({});
+
+      try {
+        const response = await api.register({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          purposes: formData.purposes,
-          createdAt: new Date().toISOString(),
+          password: formData.password,
         });
+
+        // Set user from API response
+        setUser(response.user);
         setSubscription({
-          plan: 'premium',
+          plan: response.user.subscription || 'FREE',
           startedAt: new Date().toISOString(),
         });
+
+        // Move to completion step after successful registration
+        setCurrentStep(prev => prev + 1);
+      } catch (error) {
+        setErrors({ submit: error.message || 'Registration failed. Please try again.' });
+      } finally {
+        setIsSubmitting(false);
       }
-      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+      return;
     }
+
+    setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
   };
 
   const prevStep = () => {
@@ -264,6 +284,9 @@ export function OnboardingPage({ onNavigate }) {
                 <p className="text-red-400 text-sm mt-1">{errors.password}</p>
               )}
             </div>
+            {errors.submit && (
+              <p className="text-red-400 text-sm text-center bg-red-400/10 p-3 rounded-lg">{errors.submit}</p>
+            )}
             <p className="text-cream/40 text-xs text-center">
               By creating an account, you agree to our Terms of Service and Privacy Policy.
             </p>
@@ -372,12 +395,22 @@ export function OnboardingPage({ onNavigate }) {
             {currentStep < steps.length - 1 ? (
               <motion.button
                 onClick={nextStep}
-                className="btn-primary flex items-center ml-auto"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                disabled={isSubmitting}
+                className="btn-primary flex items-center ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={isSubmitting ? {} : { scale: 1.05 }}
+                whileTap={isSubmitting ? {} : { scale: 0.95 }}
               >
-                {currentStep === 0 ? "Let's Begin" : 'Continue'}
-                <ArrowRight className="w-5 h-5 ml-2" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    {currentStep === 0 ? "Let's Begin" : 'Continue'}
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
               </motion.button>
             ) : (
               <motion.button
