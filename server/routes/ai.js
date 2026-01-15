@@ -124,6 +124,71 @@ router.post('/voice/synthesize', authenticate, requireSubscription('PREMIUM'), a
 });
 
 // =====================
+// TEXT-TO-SPEECH (Simplified endpoint for Wisdom GPT)
+// =====================
+router.post('/voice/tts', authenticate, async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || text.length > 5000) {
+      return res.status(400).json({ error: 'Text is required and must be under 5000 characters' });
+    }
+
+    const config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'elevenlabs' }
+    });
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'Voice service not configured' });
+    }
+
+    // Get user's cloned voice if available
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: { elevenlabsVoiceId: true }
+    });
+
+    // Use cloned voice or default
+    const voiceId = persona?.elevenlabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
+
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': config.apiKey,
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_multilingual_v2',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      return res.status(response.status).json({ error: error.detail?.message || 'TTS failed' });
+    }
+
+    // Stream audio directly back to client
+    const audioBuffer = await response.arrayBuffer();
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.byteLength,
+    });
+    res.send(Buffer.from(audioBuffer));
+  } catch (error) {
+    console.error('TTS error:', error);
+    res.status(500).json({ error: 'Failed to generate speech' });
+  }
+});
+
+// =====================
 // ELEVENLABS VOICE CLONING
 // =====================
 

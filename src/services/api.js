@@ -146,11 +146,31 @@ class ApiService {
     return this.request('/api/wisdom/chat');
   }
 
-  async sendWisdomMessage(message) {
+  async sendWisdomMessage(message, options = {}) {
     return this.request('/api/wisdom/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, ...options }),
     });
+  }
+
+  // Text-to-Speech with voice clone
+  async textToSpeech(text) {
+    const response = await fetch(`${API_URL}/api/ai/voice/tts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      },
+      credentials: 'include',
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'TTS failed');
+    }
+
+    return response.blob();
   }
 
   async clearWisdomChat() {
