@@ -147,7 +147,7 @@ export function useEchoTrailStorage() {
 
     try {
       // Save values
-      await api.updatePersonaValues({
+      await api.updateValues({
         humor: personaData.humor,
         empathy: personaData.empathy,
         tradition: personaData.tradition,
@@ -162,7 +162,7 @@ export function useEchoTrailStorage() {
 
       // Save vibe
       if (personaData.echoVibe) {
-        await api.updatePersonaVibe(personaData.echoVibe);
+        await api.updateVibe(personaData.echoVibe);
       }
 
       // Save avatar settings
@@ -198,7 +198,7 @@ export function useEchoTrailStorage() {
     if (!user || !token) return null;
 
     try {
-      const savedStory = await api.addLifeStory(storyData);
+      const savedStory = await api.addStory(storyData);
       setPersonaState(prev => ({
         ...prev,
         lifeStories: [savedStory, ...(prev.lifeStories || [])],
@@ -220,7 +220,7 @@ export function useEchoTrailStorage() {
     if (!user || !token) return;
 
     try {
-      await api.deleteLifeStory(storyId);
+      await api.deleteStory(storyId);
       setPersonaState(prev => ({
         ...prev,
         lifeStories: prev.lifeStories.filter(s => s.id !== storyId),

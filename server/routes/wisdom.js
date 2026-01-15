@@ -41,18 +41,33 @@ router.post('/chat', authenticate, async (req, res) => {
       where: { id: req.user.id }
     });
 
-    // Check if Claude API is configured
-    const claudeConfig = await req.prisma.apiConfig.findUnique({
-      where: { service: 'claude' }
-    });
+    // Get all API configs to find active LLM
+    const apiConfigs = await req.prisma.apiConfig.findMany();
+    const llmProviders = ['groq', 'openai', 'claude', 'gemini'];
+
+    console.log('Available API configs:', apiConfigs.map(c => ({ service: c.service, isActive: c.isActive, hasKey: !!c.apiKey })));
+
+    // Find the first active LLM provider
+    let activeProvider = null;
+    for (const provider of llmProviders) {
+      const config = apiConfigs.find(c => c.service === provider);
+      if (config?.isActive && config?.apiKey) {
+        activeProvider = { service: provider, apiKey: config.apiKey };
+        console.log(`Using LLM provider: ${provider}`);
+        break;
+      }
+    }
 
     let aiResponse;
 
-    if (claudeConfig?.isActive && claudeConfig?.apiKey) {
-      // Use real Claude API
-      aiResponse = await generateClaudeResponse(message, persona, user, claudeConfig.apiKey);
+    if (activeProvider) {
+      // Use real LLM API
+      console.log(`Calling ${activeProvider.service} API...`);
+      aiResponse = await generateLLMResponse(message, persona, user, activeProvider, req.prisma);
+      console.log('LLM response received successfully');
     } else {
       // Use mock response
+      console.log('No active LLM provider found, using mock response');
       aiResponse = generateMockResponse(message, persona, user);
     }
 
@@ -87,39 +102,177 @@ router.delete('/chat', authenticate, async (req, res) => {
   }
 });
 
-// Generate response using Claude API
-async function generateClaudeResponse(message, persona, user, apiKey) {
+// Generate response using configured LLM API
+async function generateLLMResponse(message, persona, user, provider, prisma) {
   try {
     const systemPrompt = buildSystemPrompt(persona, user);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [
-          { role: 'user', content: message }
-        ]
-      })
+    // Get previous messages for context (last 10)
+    const previousMessages = await prisma.wisdomChat.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
     });
 
-    const data = await response.json();
+    const chatHistory = previousMessages.reverse().map(m => ({
+      role: m.role,
+      content: m.content,
+    }));
 
-    if (data.content && data.content[0]) {
-      return data.content[0].text;
+    switch (provider.service) {
+      case 'groq':
+        return await generateGroqResponse(message, systemPrompt, chatHistory, provider.apiKey);
+      case 'openai':
+        return await generateOpenAIResponse(message, systemPrompt, chatHistory, provider.apiKey);
+      case 'claude':
+        return await generateClaudeResponse(message, systemPrompt, chatHistory, provider.apiKey);
+      case 'gemini':
+        return await generateGeminiResponse(message, systemPrompt, chatHistory, provider.apiKey);
+      default:
+        throw new Error(`Unsupported provider: ${provider.service}`);
     }
-
-    throw new Error('Invalid Claude response');
   } catch (error) {
-    console.error('Claude API error:', error);
+    console.error('LLM API error:', error);
     return generateMockResponse(message, persona, user);
   }
+}
+
+// Groq API (Llama 3.3 70B)
+async function generateGroqResponse(message, systemPrompt, chatHistory, apiKey) {
+  console.log('Groq API call starting...');
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...chatHistory,
+        { role: 'user', content: message }
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    })
+  });
+
+  const data = await response.json();
+  console.log('Groq API response status:', response.status);
+
+  if (!response.ok) {
+    console.error('Groq API error response:', JSON.stringify(data));
+    throw new Error(`Groq API error: ${data.error?.message || JSON.stringify(data)}`);
+  }
+
+  if (data.choices && data.choices[0]?.message?.content) {
+    return data.choices[0].message.content;
+  }
+  console.error('Groq unexpected response format:', JSON.stringify(data));
+  throw new Error('Invalid Groq response format');
+}
+
+// OpenAI API
+async function generateOpenAIResponse(message, systemPrompt, chatHistory, apiKey) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...chatHistory,
+        { role: 'user', content: message }
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    })
+  });
+
+  const data = await response.json();
+  if (data.choices && data.choices[0]?.message?.content) {
+    return data.choices[0].message.content;
+  }
+  throw new Error('Invalid OpenAI response');
+}
+
+// Claude API
+async function generateClaudeResponse(message, systemPrompt, chatHistory, apiKey) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [
+        ...chatHistory.filter(m => m.role !== 'system'),
+        { role: 'user', content: message }
+      ]
+    })
+  });
+
+  const data = await response.json();
+  if (data.content && data.content[0]) {
+    return data.content[0].text;
+  }
+  throw new Error('Invalid Claude response');
+}
+
+// Gemini API
+async function generateGeminiResponse(message, systemPrompt, chatHistory, apiKey) {
+  // Combine system prompt with conversation
+  const contents = [];
+
+  // Add system context as first user message
+  contents.push({
+    role: 'user',
+    parts: [{ text: `Context: ${systemPrompt}\n\nPlease respond according to this persona.` }]
+  });
+  contents.push({
+    role: 'model',
+    parts: [{ text: 'I understand. I will respond as this persona.' }]
+  });
+
+  // Add chat history
+  for (const msg of chatHistory) {
+    contents.push({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    });
+  }
+
+  // Add current message
+  contents.push({
+    role: 'user',
+    parts: [{ text: message }]
+  });
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+      }
+    })
+  });
+
+  const data = await response.json();
+  if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+    return data.candidates[0].content.parts[0].text;
+  }
+  throw new Error('Invalid Gemini response');
 }
 
 // Build system prompt from persona

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -15,7 +15,13 @@ import {
   Save,
   Lock,
   Unlock,
-  Loader2
+  Loader2,
+  Image as ImageIcon,
+  Video,
+  Upload,
+  Play,
+  FileImage,
+  FileVideo
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -40,7 +46,62 @@ export function TimeCapsulePage() {
     recipient: '',
     message: '',
     deliveryDate: '',
+    attachments: [], // Array of { type: 'image' | 'video', data: base64, name: string }
   });
+  const fileInputRef = useRef(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploadingFile(true);
+
+    for (const file of files) {
+      // Check file size (max 50MB for videos, 10MB for images)
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert(`File "${file.name}" is too large. Max size: ${file.type.startsWith('video/') ? '50MB' : '10MB'}`);
+        continue;
+      }
+
+      // Read file as base64
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const type = file.type.startsWith('video/') ? 'video' : 'image';
+        setCurrentCapsule(prev => ({
+          ...prev,
+          attachments: [
+            ...prev.attachments,
+            {
+              id: Date.now() + Math.random(),
+              type,
+              data: event.target.result,
+              name: file.name,
+              size: file.size,
+            }
+          ]
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+
+    setUploadingFile(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (attachmentId) => {
+    setCurrentCapsule(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter(a => a.id !== attachmentId)
+    }));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
 
   const handleSaveCapsule = async () => {
     if (!currentCapsule.title || !currentCapsule.message || !currentCapsule.deliveryDate) return;
@@ -53,6 +114,7 @@ export function TimeCapsulePage() {
       recipient: currentCapsule.recipient,
       message: currentCapsule.message,
       deliveryDate: new Date(currentCapsule.deliveryDate).toISOString(),
+      attachments: currentCapsule.attachments,
     };
 
     await addTimeCapsule(capsuleData);
@@ -74,6 +136,7 @@ export function TimeCapsulePage() {
       recipient: capsule.recipient,
       message: capsule.message,
       deliveryDate: capsule.deliveryDate ? new Date(capsule.deliveryDate).toISOString().split('T')[0] : '',
+      attachments: capsule.attachments || [],
     });
     setEditingId(capsule.id);
     setShowModal(true);
@@ -86,6 +149,7 @@ export function TimeCapsulePage() {
       recipient: '',
       message: '',
       deliveryDate: '',
+      attachments: [],
     });
     setEditingId(null);
     setShowModal(false);
@@ -228,6 +292,23 @@ export function TimeCapsulePage() {
                               To: {capsule.recipient} • {occasion?.label || 'Custom'}
                             </p>
                             <p className="text-cream/70 text-sm line-clamp-2">{capsule.message}</p>
+                            {/* Attachments indicator */}
+                            {capsule.attachments && capsule.attachments.length > 0 && (
+                              <div className="flex items-center gap-2 mt-2">
+                                {capsule.attachments.filter(a => a.type === 'image').length > 0 && (
+                                  <span className="flex items-center gap-1 text-xs text-cream/40 bg-navy-dark/50 px-2 py-1 rounded-full">
+                                    <FileImage className="w-3 h-3" />
+                                    {capsule.attachments.filter(a => a.type === 'image').length} photo{capsule.attachments.filter(a => a.type === 'image').length > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {capsule.attachments.filter(a => a.type === 'video').length > 0 && (
+                                  <span className="flex items-center gap-1 text-xs text-cream/40 bg-navy-dark/50 px-2 py-1 rounded-full">
+                                    <FileVideo className="w-3 h-3" />
+                                    {capsule.attachments.filter(a => a.type === 'video').length} video{capsule.attachments.filter(a => a.type === 'video').length > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -369,8 +450,81 @@ export function TimeCapsulePage() {
                     value={currentCapsule.message}
                     onChange={(e) => setCurrentCapsule(prev => ({ ...prev, message: e.target.value }))}
                     placeholder="Write your heartfelt message..."
-                    className="input-field min-h-[200px] resize-none"
+                    className="input-field min-h-[150px] resize-none"
                   />
+                </div>
+
+                {/* Attachments Section */}
+                <div>
+                  <label className="block text-cream/70 text-sm mb-3">Photos & Videos</label>
+
+                  {/* Existing Attachments */}
+                  {currentCapsule.attachments.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                      {currentCapsule.attachments.map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="relative group aspect-video rounded-xl overflow-hidden border-2 border-gold/20 bg-navy-dark"
+                        >
+                          {attachment.type === 'image' ? (
+                            <img
+                              src={attachment.data}
+                              alt={attachment.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-navy-dark">
+                              <Play className="w-8 h-8 text-gold/50 mb-1" />
+                              <span className="text-cream/50 text-xs truncate px-2 max-w-full">{attachment.name}</span>
+                            </div>
+                          )}
+                          {/* Size badge */}
+                          <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-cream/70">
+                            {formatFileSize(attachment.size)}
+                          </div>
+                          {/* Remove button */}
+                          <button
+                            onClick={() => removeAttachment(attachment.id)}
+                            className="absolute top-1 right-1 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                          {/* Type indicator */}
+                          <div className="absolute top-1 left-1 w-6 h-6 bg-navy/80 rounded-full flex items-center justify-center">
+                            {attachment.type === 'image' ? (
+                              <ImageIcon className="w-3 h-3 text-gold" />
+                            ) : (
+                              <Video className="w-3 h-3 text-gold" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Upload Button */}
+                  <label className="flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/20 cursor-pointer transition-all hover:bg-navy-light/30">
+                    {uploadingFile ? (
+                      <Loader2 className="w-5 h-5 text-gold animate-spin" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-gold/50" />
+                    )}
+                    <span className="text-cream/60 text-sm">
+                      {uploadingFile ? 'Uploading...' : 'Add photos or videos'}
+                    </span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={uploadingFile}
+                    />
+                  </label>
+                  <p className="text-cream/40 text-xs mt-2 text-center">
+                    Max 10MB for images, 50MB for videos • JPG, PNG, MP4, MOV supported
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">

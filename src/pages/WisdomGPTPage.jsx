@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
+import api from '../services/api';
 
 const suggestedQuestions = [
   { icon: Heart, text: "What's your advice on finding love?" },
@@ -119,25 +120,43 @@ export function WisdomGPTPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = input;
     setInput('');
     setIsTyping(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+    try {
+      // Call the backend API to get LLM response
+      const response = await api.sendWisdomMessage(messageToSend);
 
-    const response = generateResponse(input, persona, user);
+      const assistantMessage = {
+        id: response.assistantMessage?.id || Date.now() + 1,
+        role: 'assistant',
+        content: response.assistantMessage?.content || 'I apologize, but I had trouble formulating a response. Please try again.',
+        timestamp: response.assistantMessage?.createdAt || new Date().toISOString(),
+      };
 
-    const assistantMessage = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: response,
-      timestamp: new Date().toISOString(),
-    };
+      setMessages(prev => {
+        const updated = [...prev, assistantMessage];
+        setWisdomChats(updated);
+        return updated;
+      });
+    } catch (error) {
+      console.error('Failed to get wisdom response:', error);
+      // Fallback to mock response if API fails
+      const fallbackResponse = generateResponse(messageToSend, persona, user);
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: fallbackResponse,
+        timestamp: new Date().toISOString(),
+      };
 
-    setMessages(prev => {
-      const updated = [...prev, assistantMessage];
-      setWisdomChats(updated);
-      return updated;
-    });
+      setMessages(prev => {
+        const updated = [...prev, assistantMessage];
+        setWisdomChats(updated);
+        return updated;
+      });
+    }
 
     setIsTyping(false);
   };

@@ -7,8 +7,9 @@ import {
   Clock,
   Image,
   Shield,
-  LogOut,
+  Settings,
   LogIn,
+  LogOut,
   Menu,
   X
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const navItems = [
   { id: 'memory-anchor', label: 'Memories', icon: Image, requiresAuth: true, userOnly: true },
   { id: 'wisdom-gpt', label: 'Wisdom GPT', icon: MessageCircle, requiresAuth: true, userOnly: true },
   { id: 'time-capsule', label: 'Time Capsule', icon: Clock, requiresAuth: true, userOnly: true },
+  { id: 'settings', label: 'Settings', icon: Settings, requiresAuth: true, userOnly: true },
   { id: 'admin', label: 'Dashboard', icon: Shield, requiresAuth: true, adminOnly: true },
 ];
 

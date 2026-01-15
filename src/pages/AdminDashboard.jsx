@@ -1300,20 +1300,20 @@ export function AdminDashboard({ onNavigate }) {
                     <Image className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-serif text-cream">Avatar Hintergründe</h3>
-                    <p className="text-cream/50 text-sm">Verwalte die verfügbaren Hintergrundbilder</p>
+                    <h3 className="text-lg font-serif text-cream">Avatar Backgrounds</h3>
+                    <p className="text-cream/50 text-sm">Manage available background images</p>
                   </div>
                 </div>
 
                 {/* Default Backgrounds */}
                 <div className="mb-6">
-                  <h4 className="text-cream/70 text-sm mb-3">Standard Hintergründe</h4>
+                  <h4 className="text-cream/70 text-sm mb-3">Default Backgrounds</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { id: 'beach', label: 'Am Strand', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop' },
-                      { id: 'library', label: 'Bibliothek', url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400&h=300&fit=crop' },
-                      { id: 'nature', label: 'In der Natur', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop' },
-                      { id: 'home', label: 'Gemütliches Zuhause', url: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&h=300&fit=crop' },
+                      { id: 'beach', label: 'Beach', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop' },
+                      { id: 'library', label: 'Library', url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400&h=300&fit=crop' },
+                      { id: 'nature', label: 'Nature', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop' },
+                      { id: 'home', label: 'Cozy Home', url: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&h=300&fit=crop' },
                     ].map(bg => (
                       <div key={bg.id} className="relative group">
                         <div className="aspect-video rounded-xl overflow-hidden border-2 border-gold/20">
@@ -1321,7 +1321,7 @@ export function AdminDashboard({ onNavigate }) {
                         </div>
                         <p className="text-cream/70 text-sm mt-2 text-center">{bg.label}</p>
                         <div className="absolute top-2 right-2 px-2 py-0.5 bg-green-500/80 rounded-full">
-                          <span className="text-white text-xs">Aktiv</span>
+                          <span className="text-white text-xs">Active</span>
                         </div>
                       </div>
                     ))}
@@ -1334,10 +1334,10 @@ export function AdminDashboard({ onNavigate }) {
                     <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-cream/70 text-sm">
-                        Die Hintergrundbilder werden über Unsplash bereitgestellt. Benutzer können zusätzlich eigene Bilder hochladen.
+                        Background images are provided via Unsplash. Users can also upload their own images.
                       </p>
                       <p className="text-cream/50 text-xs mt-2">
-                        Um eigene Standard-Hintergründe hinzuzufügen, bearbeite die <code className="bg-navy-dark px-1 rounded">backgrounds</code> Array in <code className="bg-navy-dark px-1 rounded">PersonaPage.jsx</code>
+                        To add custom default backgrounds, edit the <code className="bg-navy-dark px-1 rounded">backgrounds</code> array in <code className="bg-navy-dark px-1 rounded">PersonaPage.jsx</code>
                       </p>
                     </div>
                   </div>
@@ -1351,8 +1351,8 @@ export function AdminDashboard({ onNavigate }) {
                     <UserIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-serif text-cream">Avatar Stile</h3>
-                    <p className="text-cream/50 text-sm">Verfügbare Rendering-Stile für Avatare</p>
+                    <h3 className="text-lg font-serif text-cream">Avatar Styles</h3>
+                    <p className="text-cream/50 text-sm">Available rendering styles for avatars</p>
                   </div>
                 </div>
 
@@ -1371,7 +1371,7 @@ export function AdminDashboard({ onNavigate }) {
                       <span className={`text-xs mt-2 inline-block px-2 py-0.5 rounded-full ${
                         style.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                       }`}>
-                        {style.active ? 'Aktiv' : 'Inaktiv'}
+                        {style.active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   ))}
@@ -1386,27 +1386,27 @@ export function AdminDashboard({ onNavigate }) {
                   </div>
                   <div>
                     <h3 className="text-lg font-serif text-cream">System Info</h3>
-                    <p className="text-cream/50 text-sm">Übersicht über Systemeinstellungen</p>
+                    <p className="text-cream/50 text-sm">Overview of system settings</p>
                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Max. Fotos pro Benutzer</p>
-                    <p className="text-cream font-medium">10 Fotos</p>
+                    <p className="text-cream/60 text-sm mb-1">Max Photos per User</p>
+                    <p className="text-cream font-medium">10 Photos</p>
                   </div>
                   <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Unterstützte Bildformate</p>
+                    <p className="text-cream/60 text-sm mb-1">Supported Image Formats</p>
                     <p className="text-cream font-medium">JPG, PNG, WebP</p>
                   </div>
                   <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Max. Bildgröße</p>
+                    <p className="text-cream/60 text-sm mb-1">Max Image Size</p>
                     <p className="text-cream font-medium">10 MB</p>
                   </div>
                   <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Video-Avatar Provider</p>
+                    <p className="text-cream/60 text-sm mb-1">Video Avatar Provider</p>
                     <p className="text-cream font-medium">
-                      {stats?.avatarProvider || 'Nicht konfiguriert'}
+                      {stats?.avatarProvider || 'Not configured'}
                     </p>
                   </div>
                 </div>

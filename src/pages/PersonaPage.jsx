@@ -193,24 +193,24 @@ const interviewChapters = [
 
 // Age categories for avatar photos
 const ageCategories = [
-  { id: 'child', label: 'Kind (0-12)' },
+  { id: 'child', label: 'Child (0-12)' },
   { id: 'teen', label: 'Teenager (13-19)' },
-  { id: 'young', label: 'Jung (20-35)' },
-  { id: 'middle', label: 'Mittleres Alter (36-55)' },
-  { id: 'mature', label: 'Reif (56-70)' },
+  { id: 'young', label: 'Young Adult (20-35)' },
+  { id: 'middle', label: 'Middle Age (36-55)' },
+  { id: 'mature', label: 'Mature (56-70)' },
   { id: 'senior', label: 'Senior (70+)' },
 ];
 
 // Occasion categories for avatar photos
 const occasionCategories = [
-  { id: 'casual', label: 'Alltag' },
-  { id: 'professional', label: 'Beruflich' },
-  { id: 'formal', label: 'Formal/Feierlich' },
-  { id: 'vacation', label: 'Urlaub' },
-  { id: 'celebration', label: 'Feier/Event' },
-  { id: 'sports', label: 'Sport/Hobby' },
-  { id: 'family', label: 'Familie' },
-  { id: 'special', label: 'Besonderer Anlass' },
+  { id: 'casual', label: 'Casual' },
+  { id: 'professional', label: 'Professional' },
+  { id: 'formal', label: 'Formal/Celebration' },
+  { id: 'vacation', label: 'Vacation' },
+  { id: 'celebration', label: 'Party/Event' },
+  { id: 'sports', label: 'Sports/Hobby' },
+  { id: 'family', label: 'Family' },
+  { id: 'special', label: 'Special Occasion' },
 ];
 
 export function PersonaPage({ onNavigate }) {
@@ -247,31 +247,31 @@ export function PersonaPage({ onNavigate }) {
   const backgrounds = [
     {
       id: 'beach',
-      label: 'Am Strand',
+      label: 'Beach',
       preview: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop',
       fullUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=1080&fit=crop'
     },
     {
       id: 'library',
-      label: 'Bibliothek',
+      label: 'Library',
       preview: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400&h=300&fit=crop',
       fullUrl: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1920&h=1080&fit=crop'
     },
     {
       id: 'nature',
-      label: 'In der Natur',
+      label: 'Nature',
       preview: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
       fullUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop'
     },
     {
       id: 'home',
-      label: 'Gemütliches Zuhause',
+      label: 'Cozy Home',
       preview: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&h=300&fit=crop',
       fullUrl: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1920&h=1080&fit=crop'
     },
     {
       id: 'custom',
-      label: 'Eigenes Bild',
+      label: 'Custom Image',
       preview: null,
       fullUrl: null
     },
@@ -279,10 +279,10 @@ export function PersonaPage({ onNavigate }) {
 
   // Avatar creation step flow
   const avatarSteps = [
-    { id: 'photos', label: 'Fotos', icon: Camera, description: 'Lade deine Fotos hoch' },
-    { id: 'background', label: 'Hintergrund', icon: ImageIcon, description: 'Wähle einen Hintergrund' },
-    { id: 'style', label: 'Stil', icon: Palette, description: 'Wähle deinen Avatar-Stil' },
-    { id: 'preview', label: 'Vorschau', icon: Eye, description: 'Schau dir dein Ergebnis an' },
+    { id: 'photos', label: 'Photos', icon: Camera, description: 'Upload your photos' },
+    { id: 'background', label: 'Background', icon: ImageIcon, description: 'Choose a background' },
+    { id: 'style', label: 'Style', icon: Palette, description: 'Choose your avatar style' },
+    { id: 'preview', label: 'Preview', icon: Eye, description: 'See your result' },
   ];
 
   const [avatarStep, setAvatarStep] = useState(0);
@@ -325,8 +325,8 @@ export function PersonaPage({ onNavigate }) {
   // Validate and submit the avatar upload
   const handleAvatarSubmit = async () => {
     const errors = {};
-    if (!uploadForm.age) errors.age = 'Bitte wähle eine Altersgruppe';
-    if (!uploadForm.occasion) errors.occasion = 'Bitte wähle einen Anlass';
+    if (!uploadForm.age) errors.age = 'Please select an age group';
+    if (!uploadForm.occasion) errors.occasion = 'Please select an occasion';
 
     if (Object.keys(errors).length > 0) {
       setUploadErrors(errors);
@@ -514,8 +514,8 @@ export function PersonaPage({ onNavigate }) {
                   {/* Photo Gallery */}
                   <div className="bg-navy-dark/30 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-cream font-medium">Deine Fotos</h4>
-                      <span className="text-cream/40 text-xs">{avatarImages.length}/10 Fotos</span>
+                      <h4 className="text-cream font-medium">Your Photos</h4>
+                      <span className="text-cream/40 text-xs">{avatarImages.length}/10 Photos</span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -538,12 +538,12 @@ export function PersonaPage({ onNavigate }) {
                           />
                           {/* Label */}
                           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-                            <p className="text-cream text-xs text-center truncate">{img.label || 'Kein Label'}</p>
+                            <p className="text-cream text-xs text-center truncate">{img.label || 'No Label'}</p>
                           </div>
                           {/* Active Badge */}
                           {(img.isActive || persona.activeAvatarId === img.id) && (
                             <div className="absolute top-2 left-2 px-2 py-0.5 bg-gold rounded-full">
-                              <span className="text-navy text-xs font-medium">Aktiv</span>
+                              <span className="text-navy text-xs font-medium">Active</span>
                             </div>
                           )}
                           {/* Action Buttons */}
@@ -551,7 +551,7 @@ export function PersonaPage({ onNavigate }) {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const newLabel = prompt('Neuer Name:', img.label || '');
+                                const newLabel = prompt('New name:', img.label || '');
                                 if (newLabel !== null) updateAvatarLabel(img.id, newLabel);
                               }}
                               className="w-7 h-7 bg-navy/80 backdrop-blur rounded-full flex items-center justify-center hover:bg-gold/80 transition-colors"
@@ -561,7 +561,7 @@ export function PersonaPage({ onNavigate }) {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm('Foto wirklich löschen?')) deleteAvatarImage(img.id);
+                                if (confirm('Delete this photo?')) deleteAvatarImage(img.id);
                               }}
                               className="w-7 h-7 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                             >
@@ -575,7 +575,7 @@ export function PersonaPage({ onNavigate }) {
                       {avatarImages.length < 10 && (
                         <label className="aspect-square rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-navy-light/50">
                           <Plus className="w-10 h-10 text-gold/50 mb-2" />
-                          <span className="text-cream/50 text-sm">Foto hinzufügen</span>
+                          <span className="text-cream/50 text-sm">Add Photo</span>
                           <input
                             type="file"
                             accept="image/*"
@@ -591,7 +591,7 @@ export function PersonaPage({ onNavigate }) {
                     <div className="mt-4 pt-4 border-t border-gold/10">
                       <div className="flex items-center gap-2 text-cream/50 text-sm">
                         <Tag className="w-4 h-4" />
-                        <span>Beim Hochladen werden Altersgruppe und Anlass abgefragt</span>
+                        <span>Each photo requires age group and occasion when uploading</span>
                       </div>
                     </div>
                   </div>
@@ -599,7 +599,7 @@ export function PersonaPage({ onNavigate }) {
                   {!hasImages && (
                     <div className="text-center p-6 bg-gold/10 rounded-xl border border-gold/20">
                       <Camera className="w-12 h-12 text-gold/60 mx-auto mb-3" />
-                      <p className="text-cream/70">Lade mindestens ein Foto hoch, um fortzufahren</p>
+                      <p className="text-cream/70">Upload at least one photo to continue</p>
                     </div>
                   )}
                 </div>
@@ -609,7 +609,7 @@ export function PersonaPage({ onNavigate }) {
               return (
                 <div className="space-y-6">
                   <p className="text-cream/60 text-sm text-center">
-                    Wähle einen Hintergrund für dein sprechendes Avatar-Video
+                    Choose a background for your talking avatar video
                   </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -636,7 +636,7 @@ export function PersonaPage({ onNavigate }) {
                             ) : (
                               <>
                                 <Upload className="w-10 h-10 text-gold/50 mb-2" />
-                                <span className="text-cream/60 text-sm">Eigenes Bild</span>
+                                <span className="text-cream/60 text-sm">Custom Image</span>
                               </>
                             )}
                             <input
@@ -671,7 +671,7 @@ export function PersonaPage({ onNavigate }) {
               return (
                 <div className="space-y-6">
                   <p className="text-cream/60 text-sm text-center">
-                    Wähle den Stil für deinen sprechenden Avatar
+                    Choose the style for your talking avatar
                   </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -764,28 +764,28 @@ export function PersonaPage({ onNavigate }) {
 
                   {/* Summary */}
                   <div className="bg-navy-dark/30 rounded-xl p-5">
-                    <h4 className="text-cream font-medium mb-4">Zusammenfassung</h4>
+                    <h4 className="text-cream font-medium mb-4">Summary</h4>
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="p-3 bg-navy-light/30 rounded-lg">
                         <Camera className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Fotos</p>
+                        <p className="text-cream/50 text-xs">Photos</p>
                         <p className="text-cream font-medium">{avatarImages.length}</p>
                       </div>
                       <div className="p-3 bg-navy-light/30 rounded-lg">
                         <ImageIcon className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Hintergrund</p>
+                        <p className="text-cream/50 text-xs">Background</p>
                         <p className="text-cream font-medium text-sm">{selectedBackground.label}</p>
                       </div>
                       <div className="p-3 bg-navy-light/30 rounded-lg">
                         <Palette className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Stil</p>
+                        <p className="text-cream/50 text-xs">Style</p>
                         <p className="text-cream font-medium text-sm">{selectedStyle.label}</p>
                       </div>
                     </div>
                   </div>
 
                   <p className="text-cream/50 text-center text-sm">
-                    Dein Avatar wird animiert und spricht deine Weisheiten
+                    Your avatar will be animated and speak your wisdom
                   </p>
                 </div>
               );
@@ -842,7 +842,7 @@ export function PersonaPage({ onNavigate }) {
             {/* Current Step Title */}
             <div className="text-center py-4 border-b border-gold/10">
               <h3 className="text-2xl font-serif text-cream">{currentStepData.description}</h3>
-              <p className="text-cream/50 text-sm mt-1">Schritt {avatarStep + 1} von {avatarSteps.length}</p>
+              <p className="text-cream/50 text-sm mt-1">Step {avatarStep + 1} of {avatarSteps.length}</p>
             </div>
 
             {/* Step Content */}
@@ -868,7 +868,7 @@ export function PersonaPage({ onNavigate }) {
                   whileTap={{ scale: 0.95 }}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Zurück
+                  Back
                 </motion.button>
               ) : (
                 <div />
@@ -882,7 +882,7 @@ export function PersonaPage({ onNavigate }) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Weiter
+                  Next
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </motion.button>
               ) : (
@@ -893,7 +893,7 @@ export function PersonaPage({ onNavigate }) {
                   whileTap={{ scale: 0.95 }}
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Avatar testen
+                  Test Avatar
                 </motion.button>
               )}
             </div>
@@ -1347,7 +1347,7 @@ export function PersonaPage({ onNavigate }) {
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-serif text-cream">Foto Details</h3>
+                <h3 className="text-xl font-serif text-cream">Photo Details</h3>
                 <button
                   onClick={handleUploadCancel}
                   className="p-2 rounded-lg hover:bg-navy-light/50 text-cream/60 hover:text-cream transition-colors"
@@ -1374,13 +1374,13 @@ export function PersonaPage({ onNavigate }) {
                 {/* Name (Optional) */}
                 <div>
                   <label className="block text-cream/70 text-sm mb-2">
-                    Name / Titel <span className="text-cream/40">(optional)</span>
+                    Name / Title <span className="text-cream/40">(optional)</span>
                   </label>
                   <input
                     type="text"
                     value={uploadForm.name}
                     onChange={(e) => setUploadForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="z.B. Hochzeit 2015, Opa mit 30..."
+                    placeholder="e.g. Wedding 2015, Grandpa at 30..."
                     className="input-field"
                   />
                 </div>
@@ -1388,7 +1388,7 @@ export function PersonaPage({ onNavigate }) {
                 {/* Age Category (Required) */}
                 <div>
                   <label className="block text-cream/70 text-sm mb-2">
-                    Altersgruppe <span className="text-red-400">*</span>
+                    Age Group <span className="text-red-400">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {ageCategories.map((age) => (
@@ -1419,7 +1419,7 @@ export function PersonaPage({ onNavigate }) {
                 {/* Occasion Category (Required) */}
                 <div>
                   <label className="block text-cream/70 text-sm mb-2">
-                    Anlass <span className="text-red-400">*</span>
+                    Occasion <span className="text-red-400">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {occasionCategories.map((occasion) => (
@@ -1456,7 +1456,7 @@ export function PersonaPage({ onNavigate }) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  Abbrechen
+                  Cancel
                 </motion.button>
                 <motion.button
                   onClick={handleAvatarSubmit}
@@ -1466,11 +1466,11 @@ export function PersonaPage({ onNavigate }) {
                   whileTap={{ scale: 0.98 }}
                 >
                   {saving ? (
-                    <>Speichern...</>
+                    <>Saving...</>
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      Speichern
+                      Save
                     </>
                   )}
                 </motion.button>
