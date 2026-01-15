@@ -324,12 +324,6 @@ export function WisdomGPTPage() {
           </div>
         </FadeIn>
 
-        <FadeIn delay={0.2}>
-          <p className="text-center text-cream/30 text-xs mt-4">
-            Responses are generated based on {user?.firstName}'s stored values and personality traits.
-            This is a simulation and does not represent actual AI consciousness.
-          </p>
-        </FadeIn>
       </div>
     </PageTransition>
   );
