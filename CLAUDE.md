@@ -161,3 +161,4 @@ curl https://echotrail-qt41.onrender.com/api/auth/me
 ## Admin Credentials
 
 Für Tests - im Admin Dashboard API Keys konfigurieren für LLM Provider.
+
