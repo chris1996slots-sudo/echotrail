@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -26,7 +26,9 @@ import {
   Award,
   Target,
   Lightbulb,
-  Clock
+  Clock,
+  X,
+  Tag
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -186,6 +188,28 @@ const interviewChapters = [
   },
 ];
 
+// Age categories for avatar photos
+const ageCategories = [
+  { id: 'child', label: 'Kind (0-12)' },
+  { id: 'teen', label: 'Teenager (13-19)' },
+  { id: 'young', label: 'Jung (20-35)' },
+  { id: 'middle', label: 'Mittleres Alter (36-55)' },
+  { id: 'mature', label: 'Reif (56-70)' },
+  { id: 'senior', label: 'Senior (70+)' },
+];
+
+// Occasion categories for avatar photos
+const occasionCategories = [
+  { id: 'casual', label: 'Alltag' },
+  { id: 'professional', label: 'Beruflich' },
+  { id: 'formal', label: 'Formal/Feierlich' },
+  { id: 'vacation', label: 'Urlaub' },
+  { id: 'celebration', label: 'Feier/Event' },
+  { id: 'sports', label: 'Sport/Hobby' },
+  { id: 'family', label: 'Familie' },
+  { id: 'special', label: 'Besonderer Anlass' },
+];
+
 export function PersonaPage({ onNavigate }) {
   const { persona, setPersona, user, addStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, isLoading } = useApp();
   const [activeTab, setActiveTab] = useState('stories');
@@ -196,6 +220,17 @@ export function PersonaPage({ onNavigate }) {
   const [interviewAnswers, setInterviewAnswers] = useState({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Avatar upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null);
+  const [uploadForm, setUploadForm] = useState({
+    name: '',
+    age: '',
+    occasion: '',
+  });
+  const [uploadErrors, setUploadErrors] = useState({});
+  const fileInputRef = useRef(null);
 
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
@@ -232,26 +267,67 @@ export function PersonaPage({ onNavigate }) {
     setTimeout(() => setShowSaveConfirm(false), 2000);
   };
 
-  const handleAvatarUpload = async (e, label = '') => {
+  // Handle file selection - show modal for metadata
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSaving(true);
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const imageLabel = label || `Photo ${(persona.avatarImages?.length || 0) + 1}`;
-        const isFirst = (persona.avatarImages?.length || 0) === 0;
-
-        // Save to database
-        const saved = await uploadAvatar(reader.result, imageLabel, isFirst);
-
-        if (saved) {
-          setShowSaveConfirm(true);
-          setTimeout(() => setShowSaveConfirm(false), 2000);
-        }
-        setSaving(false);
+      reader.onloadend = () => {
+        setPendingImage(reader.result);
+        setUploadForm({ name: '', age: '', occasion: '' });
+        setUploadErrors({});
+        setShowUploadModal(true);
       };
       reader.readAsDataURL(file);
     }
+    // Reset file input
+    if (e.target) e.target.value = '';
+  };
+
+  // Validate and submit the avatar upload
+  const handleAvatarSubmit = async () => {
+    const errors = {};
+    if (!uploadForm.age) errors.age = 'Bitte wähle eine Altersgruppe';
+    if (!uploadForm.occasion) errors.occasion = 'Bitte wähle einen Anlass';
+
+    if (Object.keys(errors).length > 0) {
+      setUploadErrors(errors);
+      return;
+    }
+
+    setSaving(true);
+    const isFirst = (persona.avatarImages?.length || 0) === 0;
+
+    // Build label from metadata
+    const ageCat = ageCategories.find(a => a.id === uploadForm.age);
+    const occasionCat = occasionCategories.find(o => o.id === uploadForm.occasion);
+    const labelParts = [];
+    if (uploadForm.name) labelParts.push(uploadForm.name);
+    labelParts.push(ageCat?.label || uploadForm.age);
+    labelParts.push(occasionCat?.label || uploadForm.occasion);
+    const imageLabel = labelParts.join(' • ');
+
+    // Save to database with metadata
+    const saved = await uploadAvatar(pendingImage, imageLabel, isFirst);
+
+    if (saved) {
+      setShowSaveConfirm(true);
+      setTimeout(() => setShowSaveConfirm(false), 2000);
+    }
+
+    // Close modal and reset
+    setShowUploadModal(false);
+    setPendingImage(null);
+    setUploadForm({ name: '', age: '', occasion: '' });
+    setSaving(false);
+  };
+
+  // Cancel upload
+  const handleUploadCancel = () => {
+    setShowUploadModal(false);
+    setPendingImage(null);
+    setUploadForm({ name: '', age: '', occasion: '' });
+    setUploadErrors({});
   };
 
   const selectActiveAvatar = async (imageId) => {
@@ -478,36 +554,24 @@ export function PersonaPage({ onNavigate }) {
                   {avatarImages.length < 10 && (
                     <label className="aspect-square rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/30 flex flex-col items-center justify-center cursor-pointer transition-all">
                       <Plus className="w-8 h-8 text-gold/50 mb-1" />
-                      <span className="text-cream/40 text-xs">Add Photo</span>
+                      <span className="text-cream/40 text-xs">Foto hinzufügen</span>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleAvatarUpload(e)}
+                        onChange={handleFileSelect}
                         className="hidden"
+                        ref={fileInputRef}
                       />
                     </label>
                   )}
                 </div>
 
-                {/* Quick Add Labels */}
+                {/* Info about required tags */}
                 {avatarImages.length < 10 && (
                   <div className="mt-4 pt-4 border-t border-gold/10">
-                    <p className="text-cream/40 text-xs mb-2">Quick add with label:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Young', 'Middle Age', 'Recent', 'Professional', 'Casual', 'Special Occasion'].map((label) => (
-                        <label
-                          key={label}
-                          className="px-3 py-1.5 bg-gold/10 hover:bg-gold/20 text-gold text-xs rounded-full cursor-pointer transition-colors"
-                        >
-                          + {label}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleAvatarUpload(e, label)}
-                            className="hidden"
-                          />
-                        </label>
-                      ))}
+                    <div className="flex items-center gap-2 text-cream/50 text-xs">
+                      <Tag className="w-4 h-4" />
+                      <span>Jedes Foto benötigt Altersgruppe und Anlass</span>
                     </div>
                   </div>
                 )}
@@ -1067,16 +1131,169 @@ export function PersonaPage({ onNavigate }) {
         </div>
       </div>
 
+      {/* Save Confirmation Toast */}
       <AnimatePresence>
         {showSaveConfirm && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gold text-navy px-6 py-3 rounded-full flex items-center shadow-lg"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gold text-navy px-6 py-3 rounded-full flex items-center shadow-lg z-50"
           >
             <CheckCircle2 className="w-5 h-5 mr-2" />
             <span className="font-medium">Saved to your legacy!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Avatar Upload Modal */}
+      <AnimatePresence>
+        {showUploadModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={handleUploadCancel}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-navy-dark border border-gold/30 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-serif text-cream">Foto Details</h3>
+                <button
+                  onClick={handleUploadCancel}
+                  className="p-2 rounded-lg hover:bg-navy-light/50 text-cream/60 hover:text-cream transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Image Preview */}
+              {pendingImage && (
+                <div className="mb-6">
+                  <div className="w-32 h-32 mx-auto rounded-xl overflow-hidden border-2 border-gold/30">
+                    <img
+                      src={pendingImage}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <div className="space-y-5">
+                {/* Name (Optional) */}
+                <div>
+                  <label className="block text-cream/70 text-sm mb-2">
+                    Name / Titel <span className="text-cream/40">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadForm.name}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="z.B. Hochzeit 2015, Opa mit 30..."
+                    className="input-field"
+                  />
+                </div>
+
+                {/* Age Category (Required) */}
+                <div>
+                  <label className="block text-cream/70 text-sm mb-2">
+                    Altersgruppe <span className="text-red-400">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ageCategories.map((age) => (
+                      <motion.button
+                        key={age.id}
+                        type="button"
+                        onClick={() => {
+                          setUploadForm(prev => ({ ...prev, age: age.id }));
+                          setUploadErrors(prev => ({ ...prev, age: null }));
+                        }}
+                        className={`p-2.5 rounded-lg border-2 text-left text-sm transition-all ${
+                          uploadForm.age === age.id
+                            ? 'border-gold bg-gold/20 text-cream'
+                            : 'border-gold/20 hover:border-gold/40 text-cream/70'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {age.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                  {uploadErrors.age && (
+                    <p className="text-red-400 text-xs mt-1">{uploadErrors.age}</p>
+                  )}
+                </div>
+
+                {/* Occasion Category (Required) */}
+                <div>
+                  <label className="block text-cream/70 text-sm mb-2">
+                    Anlass <span className="text-red-400">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {occasionCategories.map((occasion) => (
+                      <motion.button
+                        key={occasion.id}
+                        type="button"
+                        onClick={() => {
+                          setUploadForm(prev => ({ ...prev, occasion: occasion.id }));
+                          setUploadErrors(prev => ({ ...prev, occasion: null }));
+                        }}
+                        className={`p-2.5 rounded-lg border-2 text-left text-sm transition-all ${
+                          uploadForm.occasion === occasion.id
+                            ? 'border-gold bg-gold/20 text-cream'
+                            : 'border-gold/20 hover:border-gold/40 text-cream/70'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {occasion.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                  {uploadErrors.occasion && (
+                    <p className="text-red-400 text-xs mt-1">{uploadErrors.occasion}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <motion.button
+                  onClick={handleUploadCancel}
+                  className="flex-1 btn-secondary"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Abbrechen
+                </motion.button>
+                <motion.button
+                  onClick={handleAvatarSubmit}
+                  disabled={saving}
+                  className="flex-1 btn-primary flex items-center justify-center disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {saving ? (
+                    <>Speichern...</>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Speichern
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
