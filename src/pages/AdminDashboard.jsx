@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
@@ -92,7 +93,23 @@ const aiServices = [
 
 export function AdminDashboard({ onNavigate }) {
   const { user } = useApp();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { tab: urlTab } = useParams();
+  const navigate = useNavigate();
+
+  // Valid tabs for URL routing
+  const validTabs = ['overview', 'support', 'referral', 'apis', 'users', 'settings'];
+
+  // Get active tab from URL or default to 'overview'
+  const activeTab = validTabs.includes(urlTab) ? urlTab : 'overview';
+
+  // Navigate to tab via URL
+  const setActiveTab = (tabId) => {
+    if (tabId === 'overview') {
+      navigate('/admin');
+    } else {
+      navigate(`/admin/${tabId}`);
+    }
+  };
   const [stats, setStats] = useState(null);
   const [apiConfigs, setApiConfigs] = useState([]);
   const [users, setUsers] = useState([]);

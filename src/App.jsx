@@ -98,6 +98,10 @@ function AppContent() {
       '/settings': 'settings',
       '/admin': 'admin',
     };
+    // Check for admin sub-routes
+    if (location.pathname.startsWith('/admin')) {
+      return 'admin';
+    }
     return pathMap[location.pathname] || 'landing';
   };
 
@@ -162,8 +166,13 @@ function AppContent() {
             </UserRoute>
           } />
 
-          {/* Admin routes */}
+          {/* Admin routes - with sub-routes for each tab */}
           <Route path="/admin" element={
+            <AdminRoute>
+              <AdminDashboard onNavigate={handleNavigate} />
+            </AdminRoute>
+          } />
+          <Route path="/admin/:tab" element={
             <AdminRoute>
               <AdminDashboard onNavigate={handleNavigate} />
             </AdminRoute>
