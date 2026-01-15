@@ -36,6 +36,18 @@ model User {
   referralCode  String?  @unique // User's personal referral code
   referredBy    String?  // ID of user who referred this user
 
+  // Session/Activity tracking
+  lastLoginAt   DateTime?
+  lastActiveAt  DateTime?
+  lastIpAddress String?
+  lastUserAgent String?
+  lastCountry   String?
+  lastCity      String?
+  loginCount    Int      @default(0)
+
+  // Total spending
+  totalSpent    Float    @default(0)
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -43,6 +55,8 @@ model User {
   memories      Memory[]
   timeCapsules  TimeCapsule[]
   wisdomChats   WisdomChat[]
+  sessions      UserSession[]
+  purchases     Purchase[]
 
   @@map("users")
 }
@@ -277,4 +291,81 @@ model Referral {
   updatedAt     DateTime @updatedAt
 
   @@map("referrals")
+}
+
+model UserSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ipAddress   String?
+  userAgent   String?
+  browser     String?
+  os          String?
+  device      String?
+  country     String?
+  city        String?
+  region      String?
+
+  loginAt     DateTime @default(now())
+  logoutAt    DateTime?
+  isActive    Boolean  @default(true)
+
+  @@map("user_sessions")
+}
+
+model Purchase {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String   // subscription, tokens, addon
+  productName String   // e.g., "Premium Monthly", "100 Tokens"
+  amount      Float    // Price in USD
+  currency    String   @default("USD")
+
+  // Subscription specific
+  plan        String?  // FREE, STANDARD, PREMIUM
+  period      String?  // monthly, yearly
+
+  // Token specific
+  tokenAmount Int?
+
+  // Payment details
+  paymentMethod   String?  // stripe, paypal
+  paymentId       String?  // External payment reference
+  status          String   @default("completed") // pending, completed, failed, refunded
+
+  createdAt   DateTime @default(now())
+
+  @@map("purchases")
+}
+
+model ShopProduct {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  price       Float
+  currency    String   @default("EUR")
+  imageUrl    String?  @db.Text
+  category    String   @default("addon") // subscription, tokens, addon
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("shop_products")
+}
+
+model AvatarBackground {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String   @db.Text
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("avatar_backgrounds")
 }

@@ -36,7 +36,28 @@ import {
   Plus,
   Save,
   Loader2,
-  Upload
+  Upload,
+  Globe,
+  MapPin,
+  Monitor,
+  Smartphone,
+  Tablet,
+  DollarSign,
+  CreditCard,
+  Gift,
+  Link,
+  Calendar,
+  Coins,
+  UserPlus,
+  History,
+  Volume2,
+  Star,
+  Award,
+  ShoppingBag,
+  Package,
+  Flag,
+  BarChart3,
+  Archive
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -55,8 +76,6 @@ const serviceCategories = {
     providers: [
       { id: 'claude', name: 'Claude (Anthropic)', docsUrl: 'https://console.anthropic.com/', tier: 'premium', description: 'Best empathy & reasoning' },
       { id: 'groq', name: 'Groq (Free)', docsUrl: 'https://console.groq.com/', tier: 'free', description: 'Llama 3.3 70B - Very fast' },
-      { id: 'gemini', name: 'Google Gemini', docsUrl: 'https://aistudio.google.com/', tier: 'free', description: '60 req/min free tier' },
-      { id: 'ollama', name: 'Ollama (Local)', docsUrl: 'https://ollama.com/', tier: 'free', description: 'Runs locally, no API key' },
     ]
   },
   voice: {
@@ -66,9 +85,6 @@ const serviceCategories = {
     color: 'from-emerald-500 to-teal-500',
     providers: [
       { id: 'elevenlabs', name: 'ElevenLabs', docsUrl: 'https://elevenlabs.io/', tier: 'premium', description: 'Best voice cloning' },
-      { id: 'edge-tts', name: 'Edge TTS (Free)', docsUrl: 'https://github.com/rany2/edge-tts', tier: 'free', description: 'Microsoft voices, unlimited' },
-      { id: 'openai-tts', name: 'OpenAI TTS', docsUrl: 'https://platform.openai.com/', tier: 'budget', description: '$0.015/1K chars' },
-      { id: 'google-tts', name: 'Google Cloud TTS', docsUrl: 'https://cloud.google.com/text-to-speech', tier: 'free', description: '4M chars/month free' },
     ]
   },
   avatar: {
@@ -78,9 +94,6 @@ const serviceCategories = {
     color: 'from-orange-500 to-red-500',
     providers: [
       { id: 'heygen', name: 'HeyGen', docsUrl: 'https://heygen.com/', tier: 'premium', description: 'Professional avatars' },
-      { id: 'd-id', name: 'D-ID (Free Trial)', docsUrl: 'https://www.d-id.com/', tier: 'free', description: '5 min free' },
-      { id: 'sadtalker', name: 'SadTalker (Local)', docsUrl: 'https://github.com/OpenTalker/SadTalker', tier: 'free', description: 'Open source, runs locally' },
-      { id: 'none', name: 'Audio Only', docsUrl: '', tier: 'free', description: 'No video, voice only' },
     ]
   }
 };
@@ -98,7 +111,7 @@ export function AdminDashboard({ onNavigate }) {
   const navigate = useNavigate();
 
   // Valid tabs for URL routing
-  const validTabs = ['overview', 'support', 'referral', 'apis', 'users', 'settings'];
+  const validTabs = ['overview', 'support', 'referral', 'shop', 'apis', 'users', 'settings'];
 
   // Get active tab from URL or default to 'overview'
   const activeTab = validTabs.includes(urlTab) ? urlTab : 'overview';
@@ -204,6 +217,21 @@ export function AdminDashboard({ onNavigate }) {
     pendingReferrals: 0,
     totalRewardsGiven: 0,
   });
+  const [topReferrers, setTopReferrers] = useState([]);
+  const [topReferrersPeriod, setTopReferrersPeriod] = useState('all');
+
+  // Shop Products state
+  const [shopProducts, setShopProducts] = useState([]);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productDraft, setProductDraft] = useState({ name: '', description: '', price: 0, imageUrl: '', category: 'addon', isActive: true });
+
+  // Avatar Backgrounds state
+  const [avatarBackgrounds, setAvatarBackgrounds] = useState([]);
+  const [editingBackground, setEditingBackground] = useState(null);
+  const [backgroundDraft, setBackgroundDraft] = useState({ name: '', imageUrl: '', isActive: true });
+
+  // Country stats state
+  const [countryStats, setCountryStats] = useState({ countries: [], total: 0 });
 
   // Default prompts configuration
   const defaultPrompts = [
@@ -338,7 +366,7 @@ Ask clarifying questions if needed, then help them write or refine their message
   // Fetch data
   useEffect(() => {
     fetchData();
-  }, [activeTab, statsPeriod]);
+  }, [activeTab, statsPeriod, topReferrersPeriod]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -350,8 +378,12 @@ Ask clarifying questions if needed, then help them write or refine their message
       };
 
       if (activeTab === 'overview' || activeTab === 'users') {
-        const statsRes = await fetch(`${API_URL}/api/admin/stats?period=${statsPeriod}`, { headers });
+        const [statsRes, countryRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/stats?period=${statsPeriod}`, { headers }),
+          fetch(`${API_URL}/api/admin/stats/countries`, { headers })
+        ]);
         if (statsRes.ok) setStats(await statsRes.json());
+        if (countryRes.ok) setCountryStats(await countryRes.json());
       }
 
       if (activeTab === 'apis') {
@@ -410,10 +442,11 @@ Ask clarifying questions if needed, then help them write or refine their message
       }
 
       if (activeTab === 'referral') {
-        // Fetch referral settings and stats
-        const [settingsRes, statsRes] = await Promise.all([
+        // Fetch referral settings, stats, and top referrers
+        const [settingsRes, statsRes, topRes] = await Promise.all([
           fetch(`${API_URL}/api/admin/referral/settings`, { headers }),
-          fetch(`${API_URL}/api/admin/referral/stats`, { headers })
+          fetch(`${API_URL}/api/admin/referral/stats`, { headers }),
+          fetch(`${API_URL}/api/admin/referral/top?period=${topReferrersPeriod}`, { headers })
         ]);
 
         if (settingsRes.ok) {
@@ -421,6 +454,24 @@ Ask clarifying questions if needed, then help them write or refine their message
         }
         if (statsRes.ok) {
           setReferralStats(await statsRes.json());
+        }
+        if (topRes.ok) {
+          setTopReferrers(await topRes.json());
+        }
+      }
+
+      if (activeTab === 'shop') {
+        const productsRes = await fetch(`${API_URL}/api/admin/shop/products`, { headers });
+        if (productsRes.ok) {
+          setShopProducts(await productsRes.json());
+        }
+      }
+
+      if (activeTab === 'settings') {
+        // Also fetch avatar backgrounds
+        const bgRes = await fetch(`${API_URL}/api/admin/avatar-backgrounds`, { headers });
+        if (bgRes.ok) {
+          setAvatarBackgrounds(await bgRes.json());
         }
       }
     } catch (error) {
@@ -934,10 +985,98 @@ Ask clarifying questions if needed, then help them write or refine their message
     }
   };
 
+  // Shop Product CRUD
+  const saveProduct = async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const method = editingProduct === 'new' ? 'POST' : 'PUT';
+      const url = editingProduct === 'new'
+        ? `${API_URL}/api/admin/shop/products`
+        : `${API_URL}/api/admin/shop/products/${editingProduct}`;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(productDraft),
+      });
+
+      if (res.ok) {
+        await fetchData();
+        setEditingProduct(null);
+        setProductDraft({ name: '', description: '', price: 0, imageUrl: '', category: 'addon', isActive: true });
+        showToast('Product saved successfully', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to save product:', error);
+      showToast('Failed to save product', 'error');
+    }
+  };
+
+  const deleteProduct = async (id) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/admin/shop/products/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      await fetchData();
+      showToast('Product deleted', 'success');
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    }
+  };
+
+  // Avatar Background CRUD
+  const saveBackground = async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const method = editingBackground === 'new' ? 'POST' : 'PUT';
+      const url = editingBackground === 'new'
+        ? `${API_URL}/api/admin/avatar-backgrounds`
+        : `${API_URL}/api/admin/avatar-backgrounds/${editingBackground}`;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(backgroundDraft),
+      });
+
+      if (res.ok) {
+        await fetchData();
+        setEditingBackground(null);
+        setBackgroundDraft({ name: '', imageUrl: '', isActive: true });
+        showToast('Background saved successfully', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to save background:', error);
+    }
+  };
+
+  const deleteBackground = async (id) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/admin/avatar-backgrounds/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      await fetchData();
+      showToast('Background deleted', 'success');
+    } catch (error) {
+      console.error('Failed to delete background:', error);
+    }
+  };
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'support', label: 'Support', icon: MessageCircle, badge: totalUnread || supportChats.filter(c => c.status === 'open').length },
     { id: 'referral', label: 'Referral', icon: Heart },
+    { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'apis', label: 'AI Services', icon: Key },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -1152,6 +1291,10 @@ Ask clarifying questions if needed, then help them write or refine their message
                       {aiServices.map((service) => {
                         const config = apiConfigs.find(c => c.service === service.id);
                         const Icon = service.icon;
+                        const isActive = config?.isActive && config?.hasKey;
+                        const providerName = config?.provider ?
+                          serviceCategories[service.category]?.providers.find(p => p.id === config.provider)?.name || config.provider
+                          : 'Not configured';
                         return (
                           <div key={service.id} className="flex items-center justify-between p-3 bg-navy-dark/30 rounded-lg">
                             <div className="flex items-center gap-3">
@@ -1160,12 +1303,18 @@ Ask clarifying questions if needed, then help them write or refine their message
                               </div>
                               <div>
                                 <p className="text-cream font-medium">{service.name}</p>
-                                <p className="text-cream/50 text-xs">{config?.hasKey ? 'API Key configured' : 'Not configured'}</p>
+                                <p className="text-cream/50 text-xs">{providerName}</p>
                               </div>
                             </div>
-                            <div className={`w-3 h-3 rounded-full ${
-                              config?.isActive && config?.hasKey ? 'bg-green-500' : 'bg-red-500'
-                            }`} />
+                            <div className="relative">
+                              <div className={`w-4 h-4 rounded-full ${
+                                isActive ? 'bg-green-500' : 'bg-red-500'
+                              }`} />
+                              <div className={`absolute inset-0 w-4 h-4 rounded-full ${
+                                isActive ? 'bg-green-500' : 'bg-red-500'
+                              } animate-ping opacity-75`}
+                              style={{ animationDuration: '3s' }} />
+                            </div>
                           </div>
                         );
                       })}
@@ -1173,6 +1322,47 @@ Ask clarifying questions if needed, then help them write or refine their message
                   </div>
                 </FadeIn>
               </div>
+
+              {/* Country Usage Stats */}
+              <FadeIn delay={0.6}>
+                <div className="glass-card p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Flag className="w-5 h-5 text-gold" />
+                    <h3 className="text-lg font-serif text-cream">Usage by Country</h3>
+                    <span className="text-cream/50 text-sm ml-auto">{countryStats.total} total sessions</span>
+                  </div>
+                  {countryStats.countries.length > 0 ? (
+                    <div className="space-y-3">
+                      {countryStats.countries.map((country, index) => {
+                        const percentage = countryStats.total > 0 ? (country.count / countryStats.total * 100).toFixed(1) : 0;
+                        return (
+                          <div key={country.country} className="flex items-center gap-4">
+                            <span className="text-cream font-medium w-8 text-center">#{index + 1}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-cream">{country.country}</span>
+                                <span className="text-cream/60 text-sm">{country.count} sessions ({percentage}%)</span>
+                              </div>
+                              <div className="h-2 bg-navy-dark/50 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-gold to-gold-light rounded-full"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Globe className="w-12 h-12 text-cream/30 mx-auto mb-3" />
+                      <p className="text-cream/50">No session data yet</p>
+                      <p className="text-cream/30 text-sm">Country data will appear as users log in</p>
+                    </div>
+                  )}
+                </div>
+              </FadeIn>
             </motion.div>
           )}
 
@@ -1191,7 +1381,7 @@ Ask clarifying questions if needed, then help them write or refine their message
                   const Icon = category.icon;
                   const testResult = testResults[categoryKey];
                   const isEditing = editingApi === categoryKey;
-                  const needsApiKey = !['edge-tts', 'sadtalker', 'none', 'ollama'].includes(selectedProvider);
+                  const needsApiKey = true; // All remaining providers require API keys
 
                   return (
                     <StaggerItem key={categoryKey}>
@@ -1506,25 +1696,27 @@ Ask clarifying questions if needed, then help them write or refine their message
                 </motion.button>
               </div>
 
-              {/* User Header */}
+              {/* User Header with Complete Info */}
               <div className="glass-card p-6 mb-6">
-                <div className="flex items-start gap-6">
+                <div className="flex flex-col lg:flex-row lg:items-start gap-6">
                   {/* Avatar */}
                   <div className="flex-shrink-0">
                     {userDetails.persona?.avatarImages?.find(img => img.isActive) ? (
                       <img
                         src={userDetails.persona.avatarImages.find(img => img.isActive)?.imageData}
                         alt="Avatar"
-                        className="w-20 h-20 rounded-full object-cover border-2 border-gold/30"
+                        className="w-24 h-24 rounded-full object-cover border-2 border-gold/30"
                       />
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center">
-                        <UserIcon className="w-10 h-10 text-gold" />
+                      <div className="w-24 h-24 rounded-full bg-gold/20 flex items-center justify-center">
+                        <UserIcon className="w-12 h-12 text-gold" />
                       </div>
                     )}
                   </div>
+
+                  {/* Main User Info */}
                   <div className="flex-1">
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div>
                         <h2 className="text-2xl font-serif text-cream">{userDetails.firstName} {userDetails.lastName}</h2>
                         <p className="text-cream/50">{userDetails.email}</p>
@@ -1532,70 +1724,242 @@ Ask clarifying questions if needed, then help them write or refine their message
                           <p className="text-cream/40 text-sm mt-1">Purpose: {userDetails.purpose}</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          userDetails.subscription === 'PREMIUM'
-                            ? 'bg-gold/20 text-gold'
-                            : userDetails.subscription === 'STANDARD'
-                            ? 'bg-blue-500/20 text-blue-400'
-                            : 'bg-cream/10 text-cream/60'
-                        }`}>
-                          {userDetails.subscription}
-                        </span>
-                        <p className="text-cream/40 text-xs mt-2">Joined {new Date(userDetails.createdAt).toLocaleDateString()}</p>
+                      <div className="flex flex-col items-start md:items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            userDetails.subscription === 'PREMIUM'
+                              ? 'bg-gold/20 text-gold'
+                              : userDetails.subscription === 'STANDARD'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : 'bg-cream/10 text-cream/60'
+                          }`}>
+                            {userDetails.subscription}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            userDetails.role === 'ADMIN' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                          }`}>
+                            {userDetails.role}
+                          </span>
+                        </div>
+                        <p className="text-cream/40 text-xs">
+                          Joined {new Date(userDetails.createdAt).toLocaleString('de-DE', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-5 gap-4 mt-4 pt-4 border-t border-gold/10">
-                      <div className="text-center">
-                        <p className="text-xl font-serif text-cream">{userDetails.persona?.lifeStories?.length || 0}</p>
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mt-4 pt-4 border-t border-gold/10">
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.totalStories || 0}</p>
                         <p className="text-cream/40 text-xs">Stories</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xl font-serif text-cream">{userDetails.memories?.length || 0}</p>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.totalMemories || 0}</p>
                         <p className="text-cream/40 text-xs">Memories</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xl font-serif text-cream">{userDetails.timeCapsules?.length || 0}</p>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.totalCapsules || 0}</p>
                         <p className="text-cream/40 text-xs">Capsules</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xl font-serif text-cream">{userDetails.persona?.avatarImages?.length || 0}</p>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.totalAvatars || 0}</p>
                         <p className="text-cream/40 text-xs">Avatars</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xl font-serif text-cream">{userDetails.wisdomChats?.length || 0}</p>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.totalWisdomChats || 0}</p>
                         <p className="text-cream/40 text-xs">Chats</p>
+                      </div>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.totalSupportChats || 0}</p>
+                        <p className="text-cream/40 text-xs">Support</p>
+                      </div>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.successfulReferrals || 0}</p>
+                        <p className="text-cream/40 text-xs">Referrals</p>
+                      </div>
+                      <div className="text-center p-2 bg-navy-dark/30 rounded-lg">
+                        <p className="text-lg font-serif text-cream">{userDetails.stats?.daysActive || 0}</p>
+                        <p className="text-cream/40 text-xs">Days</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Avatar Images */}
+              {/* Session & Financial Info Row */}
+              <div className="grid lg:grid-cols-3 gap-6 mb-6">
+                {/* Session Info */}
+                <div className="glass-card p-5">
+                  <h3 className="text-sm font-medium text-cream mb-3 flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-gold" />
+                    Last Session
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-cream/40" />
+                      <span className="text-cream/70">
+                        {userDetails.lastCity && userDetails.lastCity !== 'Unknown'
+                          ? `${userDetails.lastCity}, ${userDetails.lastCountry}`
+                          : userDetails.lastCountry || 'Unknown'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Monitor className="w-4 h-4 text-cream/40" />
+                      <span className="text-cream/70 truncate">
+                        {userDetails.lastUserAgent
+                          ? (userDetails.lastUserAgent.includes('Chrome') ? 'Chrome' :
+                             userDetails.lastUserAgent.includes('Safari') ? 'Safari' :
+                             userDetails.lastUserAgent.includes('Firefox') ? 'Firefox' : 'Unknown')
+                          : 'Unknown'} on {
+                          userDetails.lastUserAgent
+                            ? (userDetails.lastUserAgent.includes('Windows') ? 'Windows' :
+                               userDetails.lastUserAgent.includes('Mac') ? 'macOS' :
+                               userDetails.lastUserAgent.includes('Linux') ? 'Linux' :
+                               userDetails.lastUserAgent.includes('Android') ? 'Android' :
+                               userDetails.lastUserAgent.includes('iPhone') ? 'iOS' : 'Unknown')
+                            : 'Unknown'
+                        }
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-cream/40" />
+                      <span className="text-cream/70">
+                        IP: {userDetails.lastIpAddress || 'Unknown'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-gold/10">
+                      <Clock className="w-4 h-4 text-cream/40" />
+                      <span className="text-cream/50 text-xs">
+                        Last login: {userDetails.lastLoginAt
+                          ? new Date(userDetails.lastLoginAt).toLocaleString('de-DE')
+                          : 'Never'}
+                      </span>
+                    </div>
+                    <div className="text-cream/40 text-xs">
+                      Total logins: {userDetails.loginCount || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial Info */}
+                <div className="glass-card p-5">
+                  <h3 className="text-sm font-medium text-cream mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gold" />
+                    Financial
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Total Spent</span>
+                      <span className="text-gold font-medium">${(userDetails.totalSpent || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Token Balance</span>
+                      <span className="text-cream font-medium flex items-center gap-1">
+                        <Coins className="w-4 h-4 text-gold" />
+                        {(userDetails.tokenBalance || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Purchases</span>
+                      <span className="text-cream">{userDetails.purchases?.length || 0}</span>
+                    </div>
+                    {userDetails.subscribedAt && (
+                      <div className="pt-2 border-t border-gold/10">
+                        <span className="text-cream/40 text-xs">
+                          Subscribed: {new Date(userDetails.subscribedAt).toLocaleString('de-DE')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Referral Info */}
+                <div className="glass-card p-5">
+                  <h3 className="text-sm font-medium text-cream mb-3 flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-gold" />
+                    Referral Info
+                  </h3>
+                  <div className="space-y-3">
+                    {userDetails.referralCode && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-cream/60 text-sm">My Code</span>
+                        <span className="text-gold font-mono text-sm">{userDetails.referralCode}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Referrals Made</span>
+                      <span className="text-cream">{userDetails.referralsMade?.length || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Successful</span>
+                      <span className="text-green-400">{userDetails.stats?.successfulReferrals || 0}</span>
+                    </div>
+                    {userDetails.referredByInfo && (
+                      <div className="pt-2 border-t border-gold/10">
+                        <span className="text-cream/40 text-xs">Referred by: </span>
+                        <span className="text-cream text-xs">
+                          {userDetails.referredByInfo.firstName} {userDetails.referredByInfo.lastName}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Avatar Images with Details */}
               {userDetails.persona?.avatarImages?.length > 0 && (
                 <div className="glass-card p-6 mb-6">
                   <h3 className="text-lg font-serif text-cream mb-4 flex items-center gap-2">
                     <Image className="w-5 h-5 text-gold" />
                     Avatar Images ({userDetails.persona.avatarImages.length})
                   </h3>
-                  <div className="flex gap-4 overflow-x-auto pb-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {userDetails.persona.avatarImages.map(img => (
-                      <div key={img.id} className="flex-shrink-0">
-                        <div className={`relative w-24 h-24 rounded-xl overflow-hidden border-2 ${
-                          img.isActive ? 'border-gold' : 'border-gold/20'
-                        }`}>
+                      <div key={img.id} className={`p-3 rounded-xl border-2 ${
+                        img.isActive ? 'border-gold bg-gold/5' : 'border-gold/20 bg-navy-dark/30'
+                      }`}>
+                        <div className="relative aspect-square rounded-lg overflow-hidden mb-2">
                           <img src={img.imageData} alt={img.label} className="w-full h-full object-cover" />
                           {img.isActive && (
-                            <div className="absolute top-1 right-1 w-5 h-5 bg-gold rounded-full flex items-center justify-center">
-                              <Check className="w-3 h-3 text-navy" />
+                            <div className="absolute top-1 right-1 px-2 py-0.5 bg-gold text-navy text-xs rounded-full font-medium">
+                              Active
                             </div>
                           )}
                         </div>
-                        <p className="text-cream/50 text-xs text-center mt-1 truncate w-24">{img.label}</p>
+                        <div className="space-y-1">
+                          <p className="text-cream text-sm font-medium truncate">{img.label || 'Unnamed'}</p>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-3 h-3 text-gold" />
+                            <span className="text-cream/60 text-xs capitalize">{img.echoVibe}</span>
+                          </div>
+                          <p className="text-cream/40 text-xs">
+                            {new Date(img.createdAt).toLocaleDateString('de-DE')}
+                          </p>
+                        </div>
                       </div>
                     ))}
+                  </div>
+                  {/* Persona Settings */}
+                  <div className="mt-4 pt-4 border-t border-gold/10 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-3 bg-navy-dark/30 rounded-lg">
+                      <p className="text-cream/50 text-xs">Echo Vibe</p>
+                      <p className="text-gold capitalize">{userDetails.persona.echoVibe}</p>
+                    </div>
+                    <div className="p-3 bg-navy-dark/30 rounded-lg">
+                      <p className="text-cream/50 text-xs">Avatar Style</p>
+                      <p className="text-cream capitalize">{userDetails.persona.avatarStyle}</p>
+                    </div>
+                    <div className="p-3 bg-navy-dark/30 rounded-lg">
+                      <p className="text-cream/50 text-xs">Background</p>
+                      <p className="text-cream capitalize">{userDetails.persona.backgroundType}</p>
+                    </div>
+                    <div className="p-3 bg-navy-dark/30 rounded-lg">
+                      <p className="text-cream/50 text-xs">Legacy Score</p>
+                      <p className="text-gold">{userDetails.persona.legacyScore}%</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2633,6 +2997,321 @@ Ask clarifying questions if needed, then help them write or refine their message
                   </div>
                 </div>
               </div>
+
+              {/* Top 10 Referrers Leaderboard */}
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                      <Award className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif text-cream">Top 10 Referrers</h3>
+                      <p className="text-cream/50 text-sm">Best performing affiliates</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'day', label: 'Today' },
+                      { value: 'week', label: 'Week' },
+                      { value: 'month', label: 'Month' },
+                      { value: 'all', label: 'All Time' }
+                    ].map(period => (
+                      <button
+                        key={period.value}
+                        onClick={() => setTopReferrersPeriod(period.value)}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          topReferrersPeriod === period.value
+                            ? 'bg-gold text-navy font-medium'
+                            : 'bg-navy-light/50 text-cream/70 hover:bg-navy-light'
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {topReferrers.length > 0 ? (
+                  <div className="space-y-3">
+                    {topReferrers.map((referrer, index) => (
+                      <div
+                        key={referrer.user.id}
+                        className={`flex items-center justify-between p-4 rounded-xl ${
+                          index === 0 ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30' :
+                          index === 1 ? 'bg-gradient-to-r from-gray-400/20 to-gray-500/20 border border-gray-400/30' :
+                          index === 2 ? 'bg-gradient-to-r from-amber-600/20 to-amber-700/20 border border-amber-600/30' :
+                          'bg-navy-dark/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                            index === 0 ? 'bg-yellow-500 text-navy' :
+                            index === 1 ? 'bg-gray-400 text-navy' :
+                            index === 2 ? 'bg-amber-600 text-white' :
+                            'bg-navy-light text-cream'
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {referrer.user.avatarUrl ? (
+                              <img
+                                src={referrer.user.avatarUrl}
+                                alt={referrer.user.firstName}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                                <span className="text-gold font-medium">
+                                  {referrer.user.firstName?.[0]}{referrer.user.lastName?.[0]}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-cream font-medium">
+                                {referrer.user.firstName} {referrer.user.lastName}
+                              </p>
+                              <p className="text-cream/50 text-xs">{referrer.user.email}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-cream font-bold text-lg">{referrer.referralCount} Referrals</p>
+                          <p className="text-green-400 text-sm">€{referrer.totalReward?.toFixed(2)} earned</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Award className="w-12 h-12 text-cream/30 mx-auto mb-3" />
+                    <p className="text-cream/50">No referrals in this period</p>
+                    <p className="text-cream/30 text-sm">Completed referrals will appear here</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Shop Tab */}
+          {activeTab === 'shop' && (
+            <motion.div
+              key="shop"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              {/* Header with Add Button */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                    <ShoppingBag className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif text-cream">Shop Products</h2>
+                    <p className="text-cream/50 text-sm">Manage products for the store</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => {
+                    setEditingProduct('new');
+                    setProductDraft({ name: '', description: '', price: 0, imageUrl: '', category: 'addon', isActive: true });
+                  }}
+                  className="px-4 py-2 bg-gold text-navy rounded-lg font-medium flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Product
+                </motion.button>
+              </div>
+
+              {/* Product Edit Form */}
+              {editingProduct && (
+                <div className="glass-card p-6">
+                  <h3 className="text-lg font-serif text-cream mb-4">
+                    {editingProduct === 'new' ? 'New Product' : 'Edit Product'}
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-cream/50 text-sm">Product Name</label>
+                      <input
+                        type="text"
+                        value={productDraft.name}
+                        onChange={(e) => setProductDraft(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full mt-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        placeholder="Product name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-cream/50 text-sm">Price (EUR)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={productDraft.price}
+                        onChange={(e) => setProductDraft(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                        className="w-full mt-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-cream/50 text-sm">Description</label>
+                      <textarea
+                        value={productDraft.description}
+                        onChange={(e) => setProductDraft(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full mt-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 min-h-[100px]"
+                        placeholder="Product description"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-cream/50 text-sm">Image URL</label>
+                      <input
+                        type="text"
+                        value={productDraft.imageUrl}
+                        onChange={(e) => setProductDraft(prev => ({ ...prev, imageUrl: e.target.value }))}
+                        className="w-full mt-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-cream/50 text-sm">Category</label>
+                      <select
+                        value={productDraft.category}
+                        onChange={(e) => setProductDraft(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full mt-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                      >
+                        <option value="subscription">Subscription</option>
+                        <option value="tokens">Tokens</option>
+                        <option value="addon">Add-on</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setProductDraft(prev => ({ ...prev, isActive: !prev.isActive }))}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${
+                          productDraft.isActive ? 'bg-green-500' : 'bg-navy-light'
+                        }`}
+                      >
+                        <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${
+                          productDraft.isActive ? 'left-8' : 'left-1'
+                        }`} />
+                      </button>
+                      <span className="text-cream/70 text-sm">Active</span>
+                    </div>
+                  </div>
+                  {productDraft.imageUrl && (
+                    <div className="mt-4">
+                      <p className="text-cream/50 text-sm mb-2">Preview:</p>
+                      <img
+                        src={productDraft.imageUrl}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded-xl border border-gold/20"
+                      />
+                    </div>
+                  )}
+                  <div className="flex gap-3 mt-6">
+                    <motion.button
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setProductDraft({ name: '', description: '', price: 0, imageUrl: '', category: 'addon', isActive: true });
+                      }}
+                      className="px-4 py-2 bg-navy-light text-cream/70 rounded-lg"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      onClick={saveProduct}
+                      className="px-4 py-2 bg-gold text-navy rounded-lg font-medium flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Save className="w-4 h-4" />
+                      Save Product
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {/* Products Grid */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {shopProducts.map(product => (
+                  <div key={product.id} className="glass-card p-4">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-40 object-cover rounded-xl mb-4"
+                      />
+                    ) : (
+                      <div className="w-full h-40 bg-navy-dark/50 rounded-xl mb-4 flex items-center justify-center">
+                        <Package className="w-12 h-12 text-cream/30" />
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="text-cream font-medium">{product.name}</h3>
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          product.category === 'subscription' ? 'bg-purple-500/20 text-purple-400' :
+                          product.category === 'tokens' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {product.category}
+                        </span>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        product.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {product.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p className="text-cream/60 text-sm mb-3 line-clamp-2">{product.description}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-gold text-xl font-bold">€{product.price.toFixed(2)}</p>
+                      <div className="flex gap-2">
+                        <motion.button
+                          onClick={() => {
+                            setEditingProduct(product.id);
+                            setProductDraft({
+                              name: product.name,
+                              description: product.description,
+                              price: product.price,
+                              imageUrl: product.imageUrl || '',
+                              category: product.category,
+                              isActive: product.isActive
+                            });
+                          }}
+                          className="p-2 bg-navy-light rounded-lg text-cream/70 hover:text-cream"
+                          whileHover={{ scale: 1.05 }}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setConfirmDialog({
+                            isOpen: true,
+                            title: 'Delete Product',
+                            message: `Are you sure you want to delete "${product.name}"?`,
+                            onConfirm: () => {
+                              deleteProduct(product.id);
+                              setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                            }
+                          })}
+                          className="p-2 bg-red-500/20 rounded-lg text-red-400 hover:bg-red-500/30"
+                          whileHover={{ scale: 1.05 }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {shopProducts.length === 0 && !editingProduct && (
+                <div className="glass-card p-8 text-center">
+                  <Package className="w-16 h-16 text-cream/30 mx-auto mb-4" />
+                  <p className="text-cream/50 text-lg">No products yet</p>
+                  <p className="text-cream/30 text-sm">Add your first product to get started</p>
+                </div>
+              )}
             </motion.div>
           )}
 

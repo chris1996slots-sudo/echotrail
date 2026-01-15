@@ -246,6 +246,7 @@ router.get('/users/:id/details', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Get user with all related data
     const user = await req.prisma.user.findUnique({
       where: { id },
       select: {
@@ -255,7 +256,19 @@ router.get('/users/:id/details', async (req, res) => {
         lastName: true,
         role: true,
         subscription: true,
+        subscribedAt: true,
         purpose: true,
+        tokenBalance: true,
+        referralCode: true,
+        referredBy: true,
+        totalSpent: true,
+        lastLoginAt: true,
+        lastActiveAt: true,
+        lastIpAddress: true,
+        lastUserAgent: true,
+        lastCountry: true,
+        lastCity: true,
+        loginCount: true,
         createdAt: true,
         updatedAt: true,
         persona: {
@@ -265,6 +278,9 @@ router.get('/users/:id/details', async (req, res) => {
             },
             avatarImages: {
               orderBy: { createdAt: 'asc' }
+            },
+            voiceSamples: {
+              orderBy: { createdAt: 'desc' }
             }
           }
         },
@@ -276,7 +292,14 @@ router.get('/users/:id/details', async (req, res) => {
         },
         wisdomChats: {
           orderBy: { createdAt: 'desc' },
-          take: 50
+          take: 100
+        },
+        sessions: {
+          orderBy: { loginAt: 'desc' },
+          take: 20
+        },
+        purchases: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -285,7 +308,51 @@ router.get('/users/:id/details', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    // Get support chats for this user
+    const supportChats = await req.prisma.supportChat.findMany({
+      where: { userId: id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Get referrals made by this user
+    const referralsMade = await req.prisma.referral.findMany({
+      where: { referrerId: id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Get referral that brought this user (if any)
+    const referredByInfo = user.referredBy ? await req.prisma.user.findUnique({
+      where: { id: user.referredBy },
+      select: { id: true, firstName: true, lastName: true, email: true }
+    }) : null;
+
+    // Calculate stats
+    const stats = {
+      totalStories: user.persona?.lifeStories?.length || 0,
+      totalMemories: user.memories?.length || 0,
+      totalCapsules: user.timeCapsules?.length || 0,
+      totalAvatars: user.persona?.avatarImages?.length || 0,
+      totalVoiceSamples: user.persona?.voiceSamples?.length || 0,
+      totalWisdomChats: user.wisdomChats?.length || 0,
+      totalSupportChats: supportChats.length,
+      totalReferralsMade: referralsMade.length,
+      successfulReferrals: referralsMade.filter(r => r.status === 'completed').length,
+      totalPurchases: user.purchases?.length || 0,
+      daysActive: Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24))
+    };
+
+    res.json({
+      ...user,
+      supportChats,
+      referralsMade,
+      referredByInfo,
+      stats
+    });
   } catch (error) {
     console.error('User details error:', error);
     res.status(500).json({ error: 'Failed to fetch user details' });
@@ -1106,6 +1173,88 @@ router.get('/referral/list', async (req, res) => {
   }
 });
 
+// Get top 10 referrers with time filter
+router.get('/referral/top', async (req, res) => {
+  try {
+    const { period = 'all' } = req.query;
+
+    // Calculate date filter based on period
+    let dateFilter = {};
+    const now = new Date();
+
+    if (period === 'day') {
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      dateFilter = { gte: dayAgo };
+    } else if (period === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      dateFilter = { gte: weekAgo };
+    } else if (period === 'month') {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      dateFilter = { gte: monthAgo };
+    }
+
+    const periodWhere = period !== 'all' ? { completedAt: dateFilter } : {};
+
+    // Get all completed referrals in period
+    const referrals = await req.prisma.referral.findMany({
+      where: {
+        status: 'completed',
+        ...periodWhere
+      },
+      select: {
+        referrerId: true,
+        referrerReward: true,
+      }
+    });
+
+    // Group by referrer and count
+    const referrerCounts = {};
+    referrals.forEach(r => {
+      if (!referrerCounts[r.referrerId]) {
+        referrerCounts[r.referrerId] = { count: 0, totalReward: 0 };
+      }
+      referrerCounts[r.referrerId].count++;
+      referrerCounts[r.referrerId].totalReward += r.referrerReward || 0;
+    });
+
+    // Sort and get top 10
+    const sortedReferrers = Object.entries(referrerCounts)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10);
+
+    // Get user details for top referrers
+    const userIds = sortedReferrers.map(([id]) => id);
+    const users = await req.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        avatarUrl: true,
+        referralCode: true
+      }
+    });
+
+    const userMap = users.reduce((acc, u) => {
+      acc[u.id] = u;
+      return acc;
+    }, {});
+
+    const topReferrers = sortedReferrers.map(([id, stats], index) => ({
+      rank: index + 1,
+      user: userMap[id] || { id, firstName: 'Unknown', lastName: 'User' },
+      referralCount: stats.count,
+      totalReward: stats.totalReward
+    }));
+
+    res.json(topReferrers);
+  } catch (error) {
+    console.error('Top referrers error:', error);
+    res.status(500).json({ error: 'Failed to fetch top referrers' });
+  }
+});
+
 // =====================
 // SUBSCRIPTION PRICING
 // =====================
@@ -1183,6 +1332,193 @@ router.get('/users/:id/voice-samples', async (req, res) => {
   } catch (error) {
     console.error('Voice samples error:', error);
     res.status(500).json({ error: 'Failed to fetch voice samples' });
+  }
+});
+
+// =====================
+// SHOP PRODUCTS
+// =====================
+
+// Get all products
+router.get('/shop/products', async (req, res) => {
+  try {
+    const products = await req.prisma.shopProduct.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
+    });
+    res.json(products);
+  } catch (error) {
+    console.error('Products error:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// Create product
+router.post('/shop/products', async (req, res) => {
+  try {
+    const { name, description, price, currency, imageUrl, category, isActive, sortOrder } = req.body;
+
+    const product = await req.prisma.shopProduct.create({
+      data: {
+        name,
+        description: description || '',
+        price: parseFloat(price) || 0,
+        currency: currency || 'EUR',
+        imageUrl,
+        category: category || 'addon',
+        isActive: isActive !== false,
+        sortOrder: parseInt(sortOrder) || 0
+      }
+    });
+
+    res.status(201).json(product);
+  } catch (error) {
+    console.error('Create product error:', error);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+// Update product
+router.put('/shop/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, price, currency, imageUrl, category, isActive, sortOrder } = req.body;
+
+    const product = await req.prisma.shopProduct.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        price: parseFloat(price),
+        currency,
+        imageUrl,
+        category,
+        isActive,
+        sortOrder: parseInt(sortOrder) || 0
+      }
+    });
+
+    res.json(product);
+  } catch (error) {
+    console.error('Update product error:', error);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+// Delete product
+router.delete('/shop/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await req.prisma.shopProduct.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete product error:', error);
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+// =====================
+// AVATAR BACKGROUNDS
+// =====================
+
+// Get all backgrounds
+router.get('/avatar-backgrounds', async (req, res) => {
+  try {
+    const backgrounds = await req.prisma.avatarBackground.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
+    });
+    res.json(backgrounds);
+  } catch (error) {
+    console.error('Backgrounds error:', error);
+    res.status(500).json({ error: 'Failed to fetch backgrounds' });
+  }
+});
+
+// Create background
+router.post('/avatar-backgrounds', async (req, res) => {
+  try {
+    const { name, imageUrl, isActive, sortOrder } = req.body;
+
+    const background = await req.prisma.avatarBackground.create({
+      data: {
+        name,
+        imageUrl,
+        isActive: isActive !== false,
+        sortOrder: parseInt(sortOrder) || 0
+      }
+    });
+
+    res.status(201).json(background);
+  } catch (error) {
+    console.error('Create background error:', error);
+    res.status(500).json({ error: 'Failed to create background' });
+  }
+});
+
+// Update background
+router.put('/avatar-backgrounds/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, imageUrl, isActive, sortOrder } = req.body;
+
+    const background = await req.prisma.avatarBackground.update({
+      where: { id },
+      data: { name, imageUrl, isActive, sortOrder: parseInt(sortOrder) || 0 }
+    });
+
+    res.json(background);
+  } catch (error) {
+    console.error('Update background error:', error);
+    res.status(500).json({ error: 'Failed to update background' });
+  }
+});
+
+// Delete background
+router.delete('/avatar-backgrounds/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await req.prisma.avatarBackground.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete background error:', error);
+    res.status(500).json({ error: 'Failed to delete background' });
+  }
+});
+
+// =====================
+// COUNTRY STATS
+// =====================
+
+// Get country usage stats from sessions
+router.get('/stats/countries', async (req, res) => {
+  try {
+    const sessions = await req.prisma.userSession.findMany({
+      where: {
+        country: { not: null }
+      },
+      select: {
+        country: true
+      }
+    });
+
+    // Group by country
+    const countryCounts = {};
+    sessions.forEach(s => {
+      const country = s.country || 'Unknown';
+      countryCounts[country] = (countryCounts[country] || 0) + 1;
+    });
+
+    // Sort and format
+    const sortedCountries = Object.entries(countryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([country, count]) => ({ country, count }));
+
+    const total = sessions.length;
+
+    res.json({ countries: sortedCountries, total });
+  } catch (error) {
+    console.error('Country stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch country stats' });
   }
 });
 
