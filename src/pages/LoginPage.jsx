@@ -22,12 +22,11 @@ export function LoginPage({ onNavigate }) {
       const data = await api.login(email, password);
       setUser(data.user);
 
-      // Navigate based on role
-      if (data.user.role === 'ADMIN') {
-        onNavigate('admin');
-      } else {
-        onNavigate('persona');
-      }
+      // Use setTimeout to defer navigation and avoid React render conflict
+      const targetPage = data.user.role === 'ADMIN' ? 'admin' : 'persona';
+      setTimeout(() => {
+        onNavigate(targetPage);
+      }, 0);
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {

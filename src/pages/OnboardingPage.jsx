@@ -115,8 +115,10 @@ export function OnboardingPage({ onNavigate }) {
           startedAt: new Date().toISOString(),
         });
 
-        // Move to completion step after successful registration
-        setCurrentStep(prev => prev + 1);
+        // Use setTimeout to defer step update and avoid React render conflict
+        setTimeout(() => {
+          setCurrentStep(prev => prev + 1);
+        }, 0);
       } catch (error) {
         setErrors({ submit: error.message || 'Registration failed. Please try again.' });
       } finally {
