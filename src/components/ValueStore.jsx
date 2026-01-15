@@ -77,10 +77,19 @@ export function ValueStore() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isChartReady, setIsChartReady] = useState(false);
 
-  // Delay chart rendering to avoid width/height -1 warnings
+  // Delay chart rendering to ensure container has dimensions
   useEffect(() => {
-    const timer = setTimeout(() => setIsChartReady(true), 100);
-    return () => clearTimeout(timer);
+    // Use requestAnimationFrame + timeout for reliable container sizing
+    let mounted = true;
+    const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (mounted) setIsChartReady(true);
+      });
+    }, 200);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleValueChange = useCallback((trait, value) => {
@@ -165,13 +174,14 @@ export function ValueStore() {
         <div className="space-y-6">
           {/* Chart with delayed rendering */}
           <motion.div
-            className="h-[350px] min-h-[350px] w-full"
+            className="w-full"
+            style={{ height: 350, minHeight: 350, minWidth: 300 }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            {isChartReady && (
-              <ResponsiveContainer width="100%" height="100%" debounce={50}>
+            {isChartReady ? (
+              <ResponsiveContainer width="100%" height={350} minWidth={300} debounce={100}>
                 <RadarChart cx="50%" cy="50%" outerRadius="65%" data={chartData}>
                   <PolarGrid
                     stroke="rgba(212, 175, 55, 0.2)"
@@ -200,9 +210,8 @@ export function ValueStore() {
                   />
                 </RadarChart>
               </ResponsiveContainer>
-            )}
-            {!isChartReady && (
-              <div className="h-full flex items-center justify-center">
+            ) : (
+              <div className="h-full flex items-center justify-center" style={{ height: 350 }}>
                 <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
               </div>
             )}
