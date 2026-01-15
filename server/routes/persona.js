@@ -144,6 +144,37 @@ router.delete('/stories/:id', authenticate, async (req, res) => {
   }
 });
 
+// Update life story
+router.put('/stories/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    // Verify story belongs to user's persona
+    const existingStory = await req.prisma.lifeStory.findFirst({
+      where: { id, personaId: persona.id }
+    });
+
+    if (!existingStory) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    const story = await req.prisma.lifeStory.update({
+      where: { id },
+      data: { content }
+    });
+
+    res.json(story);
+  } catch (error) {
+    console.error('Update story error:', error);
+    res.status(500).json({ error: 'Failed to update story' });
+  }
+});
+
 // =====================
 // AVATAR IMAGES
 // =====================

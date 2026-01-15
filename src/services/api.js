@@ -95,6 +95,13 @@ class ApiService {
     return this.request(`/api/persona/stories/${id}`, { method: 'DELETE' });
   }
 
+  async updateStory(id, content) {
+    return this.request(`/api/persona/stories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
   // Memories
   async getMemories() {
     return this.request('/api/memories');

@@ -235,6 +235,28 @@ export function useEchoTrailStorage() {
     }
   }, [user, persona]);
 
+  // Update story in database
+  const updateStory = useCallback(async (storyId, content) => {
+    const token = localStorage.getItem('echotrail_token');
+    if (!user || !token) return null;
+
+    try {
+      const updatedStory = await api.updateStory(storyId, content);
+      setPersonaState(prev => ({
+        ...prev,
+        lifeStories: prev.lifeStories.map(s => s.id === storyId ? { ...s, content } : s),
+      }));
+      saveToLocal('echotrail_persona', {
+        ...persona,
+        lifeStories: persona.lifeStories.map(s => s.id === storyId ? { ...s, content } : s),
+      });
+      return updatedStory;
+    } catch (error) {
+      console.error('Failed to update story:', error);
+      return null;
+    }
+  }, [user, persona]);
+
   // Save memory to database
   const addMemory = useCallback(async (memoryData) => {
     const token = localStorage.getItem('echotrail_token');
@@ -632,6 +654,7 @@ export function useEchoTrailStorage() {
 
     // Database-synced operations
     addStory,
+    updateStory,
     deleteStory,
     addMemory,
     updateMemory,

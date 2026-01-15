@@ -39,7 +39,9 @@ import {
   Square,
   Volume2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -232,7 +234,7 @@ const voicePrompts = [
 ];
 
 export function PersonaPage({ onNavigate }) {
-  const { persona, setPersona, user, addStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, deleteVoiceSample, isLoading } = useApp();
+  const { persona, setPersona, user, addStory, updateStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, deleteVoiceSample, isLoading } = useApp();
   const [activeTab, setActiveTab] = useState('avatar');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentStory, setCurrentStory] = useState('');
@@ -290,6 +292,12 @@ export function PersonaPage({ onNavigate }) {
 
   // Toast state
   const [toast, setToast] = useState(null);
+
+  // Story editing state
+  const [editingStory, setEditingStory] = useState(null);
+  const [editingStoryContent, setEditingStoryContent] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState({});
+
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -760,6 +768,30 @@ export function PersonaPage({ onNavigate }) {
     await deleteStory(storyId);
     setSaving(false);
   };
+
+  const handleUpdateStory = async (storyId) => {
+    if (!editingStoryContent.trim()) return;
+    setSaving(true);
+    await updateStory(storyId, editingStoryContent.trim());
+    setEditingStory(null);
+    setEditingStoryContent('');
+    setSaving(false);
+  };
+
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  // Group stories by category
+  const groupedStories = (persona.lifeStories || []).reduce((acc, story) => {
+    const cat = story.category || 'interview';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(story);
+    return acc;
+  }, {});
 
   const handleInterviewAnswer = (answer) => {
     if (!selectedChapter) return;
@@ -1666,38 +1698,124 @@ export function PersonaPage({ onNavigate }) {
             {persona.lifeStories?.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-xl font-serif text-cream">Your Stories</h3>
-                <StaggerContainer className="space-y-3">
-                  {persona.lifeStories.map((story) => {
-                    const category = storyCategories.find(c => c.id === story.category);
+                <div className="space-y-3">
+                  {Object.entries(groupedStories).map(([categoryId, stories]) => {
+                    const category = storyCategories.find(c => c.id === categoryId) ||
+                      interviewChapters.find(c => c.id === categoryId) ||
+                      { label: 'Interview', icon: BookOpen };
                     const Icon = category?.icon || BookOpen;
+                    const isExpanded = expandedCategories[categoryId] !== false;
+
                     return (
-                      <StaggerItem key={story.id}>
-                        <motion.div
-                          className="glass-card p-4 flex items-start gap-4"
-                          whileHover={{ scale: 1.01 }}
+                      <div key={categoryId} className="glass-card overflow-hidden">
+                        {/* Category Header - Accordion */}
+                        <motion.button
+                          onClick={() => toggleCategory(categoryId)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-gold/5 transition-colors"
                         >
-                          <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0">
-                            <Icon className="w-5 h-5 text-gold" />
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-gold" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-cream font-medium">{category?.label || category?.title || 'Interview'}</p>
+                              <p className="text-cream/50 text-xs">{stories.length} {stories.length === 1 ? 'story' : 'stories'}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-cream/80 line-clamp-2">{story.content}</p>
-                            <p className="text-cream/40 text-xs mt-2">
-                              {category?.label || 'Interview'} • {new Date(story.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <motion.button
-                            onClick={() => handleDeleteStory(story.id)}
-                            className="text-cream/30 hover:text-red-400 p-2"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </motion.button>
-                        </motion.div>
-                      </StaggerItem>
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5 text-cream/50" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-cream/50" />
+                          )}
+                        </motion.button>
+
+                        {/* Stories List */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="border-t border-gold/10"
+                            >
+                              {stories.map((story) => (
+                                <div key={story.id} className="p-4 border-b border-gold/5 last:border-b-0">
+                                  {editingStory === story.id ? (
+                                    /* Edit Mode */
+                                    <div className="space-y-3">
+                                      {story.question && (
+                                        <p className="text-gold/70 text-sm italic">"{story.question}"</p>
+                                      )}
+                                      <textarea
+                                        value={editingStoryContent}
+                                        onChange={(e) => setEditingStoryContent(e.target.value)}
+                                        className="w-full px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 min-h-[120px] resize-none"
+                                        placeholder="Your story..."
+                                      />
+                                      <div className="flex gap-2 justify-end">
+                                        <motion.button
+                                          onClick={() => {
+                                            setEditingStory(null);
+                                            setEditingStoryContent('');
+                                          }}
+                                          className="px-3 py-1.5 text-cream/50 hover:text-cream text-sm"
+                                          whileHover={{ scale: 1.02 }}
+                                        >
+                                          Cancel
+                                        </motion.button>
+                                        <motion.button
+                                          onClick={() => handleUpdateStory(story.id)}
+                                          disabled={saving}
+                                          className="px-4 py-1.5 bg-gold text-navy rounded-lg text-sm font-medium flex items-center gap-2"
+                                          whileHover={{ scale: 1.02 }}
+                                        >
+                                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                          Save
+                                        </motion.button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    /* View Mode */
+                                    <div>
+                                      {story.question && (
+                                        <p className="text-gold/70 text-sm italic mb-2">"{story.question}"</p>
+                                      )}
+                                      <p className="text-cream/80">{story.content}</p>
+                                      <div className="flex items-center justify-between mt-3">
+                                        <p className="text-cream/40 text-xs">
+                                          {new Date(story.createdAt).toLocaleDateString('de-DE')}
+                                        </p>
+                                        <div className="flex gap-2">
+                                          <motion.button
+                                            onClick={() => {
+                                              setEditingStory(story.id);
+                                              setEditingStoryContent(story.content);
+                                            }}
+                                            className="p-1.5 text-cream/30 hover:text-gold"
+                                            whileHover={{ scale: 1.1 }}
+                                          >
+                                            <Edit3 className="w-4 h-4" />
+                                          </motion.button>
+                                          <motion.button
+                                            onClick={() => handleDeleteStory(story.id)}
+                                            className="p-1.5 text-cream/30 hover:text-red-400"
+                                            whileHover={{ scale: 1.1 }}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </motion.button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     );
                   })}
-                </StaggerContainer>
+                </div>
               </div>
             )}
           </div>
