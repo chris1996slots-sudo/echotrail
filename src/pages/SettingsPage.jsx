@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -19,7 +19,16 @@ import {
   Coins,
   Sparkles,
   Zap,
-  Star
+  Star,
+  Gift,
+  Users,
+  Copy,
+  Share2,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Link
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -60,6 +69,12 @@ export function SettingsPage({ onNavigate }) {
   const [showTokensModal, setShowTokensModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedTokens, setSelectedTokens] = useState(null);
+
+  // Referral state
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralData, setReferralData] = useState(null);
+  const [referrals, setReferrals] = useState([]);
+  const [copied, setCopied] = useState(false);
 
   // Subscription plans
   const subscriptionPlans = [
@@ -113,6 +128,69 @@ export function SettingsPage({ onNavigate }) {
     { id: 'large', tokens: 500, price: 24.99, popular: false, bonus: '+100 bonus' },
     { id: 'xl', tokens: 1000, price: 39.99, popular: false, bonus: '+250 bonus' },
   ];
+
+  // Load referral data when section is opened
+  const loadReferralData = async () => {
+    if (referralData) return; // Already loaded
+    try {
+      setReferralLoading(true);
+      const [myReferral, myReferrals] = await Promise.all([
+        api.getMyReferral(),
+        api.getMyReferrals()
+      ]);
+      setReferralData(myReferral);
+      setReferrals(myReferrals);
+    } catch (error) {
+      console.error('Failed to load referral data:', error);
+    } finally {
+      setReferralLoading(false);
+    }
+  };
+
+  const copyReferralLink = async () => {
+    if (!referralData?.referralCode) return;
+    const link = `${window.location.origin}/register?ref=${referralData.referralCode}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const shareReferral = async () => {
+    if (!referralData?.referralCode) return;
+    const link = `${window.location.origin}/register?ref=${referralData.referralCode}`;
+    const text = `Join EchoTrail and preserve your legacy! Use my referral link to get bonus tokens: ${link}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join EchoTrail', text, url: link });
+      } catch (error) {
+        if (error.name !== 'AbortError') copyReferralLink();
+      }
+    } else {
+      copyReferralLink();
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'text-green-400';
+      case 'pending': return 'text-yellow-400';
+      case 'expired': return 'text-red-400';
+      default: return 'text-cream/50';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return CheckCircle;
+      case 'pending': return Clock;
+      case 'expired': return XCircle;
+      default: return Clock;
+    }
+  };
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
@@ -213,6 +291,13 @@ export function SettingsPage({ onNavigate }) {
       highlight: true,
     },
     {
+      id: 'referral',
+      icon: Gift,
+      title: 'Referral Program',
+      description: 'Invite friends and earn rewards',
+      highlight: true,
+    },
+    {
       id: 'profile',
       icon: User,
       title: 'Profile Information',
@@ -304,7 +389,11 @@ export function SettingsPage({ onNavigate }) {
                   }`}
                 >
                   <button
-                    onClick={() => setActiveSection(isActive ? null : section.id)}
+                    onClick={() => {
+                      const newSection = isActive ? null : section.id;
+                      setActiveSection(newSection);
+                      if (newSection === 'referral') loadReferralData();
+                    }}
                     className={`w-full p-4 flex items-center justify-between transition-colors ${
                       section.danger
                         ? 'hover:bg-red-500/10'
@@ -469,6 +558,116 @@ export function SettingsPage({ onNavigate }) {
                               <CreditCard className="w-4 h-4" />
                               Buy {tokenPackages.find(p => p.id === selectedTokens)?.tokens} Tokens
                             </motion.button>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'referral' && (
+                        <div className="space-y-4">
+                          {referralLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="w-6 h-6 text-gold animate-spin" />
+                            </div>
+                          ) : (
+                            <>
+                              {/* Stats */}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="p-3 rounded-xl bg-navy-dark/50 text-center">
+                                  <Users className="w-5 h-5 text-gold mx-auto mb-1" />
+                                  <p className="text-lg font-bold text-cream">{referralData?.stats?.total || 0}</p>
+                                  <p className="text-xs text-cream/50">Total</p>
+                                </div>
+                                <div className="p-3 rounded-xl bg-navy-dark/50 text-center">
+                                  <CheckCircle className="w-5 h-5 text-green-400 mx-auto mb-1" />
+                                  <p className="text-lg font-bold text-green-400">{referralData?.stats?.successful || 0}</p>
+                                  <p className="text-xs text-cream/50">Successful</p>
+                                </div>
+                                <div className="p-3 rounded-xl bg-navy-dark/50 text-center">
+                                  <Coins className="w-5 h-5 text-gold mx-auto mb-1" />
+                                  <p className="text-lg font-bold text-gold">{referralData?.stats?.totalEarned?.toFixed(2) || '0.00'}€</p>
+                                  <p className="text-xs text-cream/50">Earned</p>
+                                </div>
+                              </div>
+
+                              {/* Referral Link */}
+                              <div className="p-4 rounded-xl bg-navy-dark/50">
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="text-cream/70 text-sm">Your Code</span>
+                                  <span className="px-3 py-1 rounded-full bg-gold/20 text-gold text-sm font-medium">
+                                    {referralData?.referralCode || '...'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 p-3 rounded-lg bg-navy/50 mb-3">
+                                  <Link className="w-4 h-4 text-gold flex-shrink-0" />
+                                  <code className="flex-1 text-cream/70 text-xs break-all">
+                                    {referralData?.referralCode
+                                      ? `${window.location.origin}/register?ref=${referralData.referralCode}`
+                                      : 'Loading...'
+                                    }
+                                  </code>
+                                </div>
+                                <div className="flex gap-2">
+                                  <motion.button
+                                    onClick={copyReferralLink}
+                                    className="flex-1 btn-primary text-sm flex items-center justify-center gap-2"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                  >
+                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                    {copied ? 'Copied!' : 'Copy'}
+                                  </motion.button>
+                                  <motion.button
+                                    onClick={shareReferral}
+                                    className="flex-1 btn-secondary text-sm flex items-center justify-center gap-2"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                  >
+                                    <Share2 className="w-4 h-4" />
+                                    Share
+                                  </motion.button>
+                                </div>
+                              </div>
+
+                              {/* How it works */}
+                              <div className="p-4 rounded-xl bg-gold/10 border border-gold/20">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Star className="w-4 h-4 text-gold" />
+                                  <span className="text-cream font-medium text-sm">How it works</span>
+                                </div>
+                                <p className="text-cream/70 text-xs">
+                                  Share your link → Friend signs up → They purchase 20€+ → You both get <span className="text-gold font-bold">5.00€</span> in tokens!
+                                </p>
+                              </div>
+
+                              {/* Recent Referrals */}
+                              {referrals.length > 0 && (
+                                <div>
+                                  <h4 className="text-cream/70 text-sm mb-2">Recent Referrals</h4>
+                                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                                    {referrals.slice(0, 5).map((referral) => {
+                                      const StatusIcon = getStatusIcon(referral.status);
+                                      return (
+                                        <div
+                                          key={referral.id}
+                                          className="flex items-center justify-between p-2 rounded-lg bg-navy-dark/30"
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <Mail className="w-4 h-4 text-cream/40" />
+                                            <span className="text-cream text-sm truncate max-w-[150px]">
+                                              {referral.refereeEmail || 'Pending'}
+                                            </span>
+                                          </div>
+                                          <div className={`flex items-center gap-1 ${getStatusColor(referral.status)}`}>
+                                            <StatusIcon className="w-3 h-3" />
+                                            <span className="text-xs capitalize">{referral.status}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}

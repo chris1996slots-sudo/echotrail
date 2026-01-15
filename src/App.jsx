@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navigation } from './components/Navigation';
@@ -10,90 +11,98 @@ import { MemoryAnchorPage } from './pages/MemoryAnchorPage';
 import { WisdomGPTPage } from './pages/WisdomGPTPage';
 import { TimeCapsulePage } from './pages/TimeCapsulePage';
 import { SettingsPage } from './pages/SettingsPage';
-import { ReferralPage } from './pages/ReferralPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { LoginPage } from './pages/LoginPage';
 import { SupportChat } from './components/SupportChat';
 
-function AppContent() {
+// Protected route wrapper for user pages
+function UserRoute({ children }) {
   const { user } = useApp();
   const isAdmin = user?.role === 'ADMIN';
-  const userPages = ['persona', 'echo-sim', 'memory-anchor', 'wisdom-gpt', 'time-capsule', 'settings', 'referral'];
-  const adminPages = ['admin'];
 
-  // Set initial page based on user state at mount time
-  const [currentPage, setCurrentPage] = useState(() => {
-    if (user) {
-      return isAdmin ? 'admin' : 'persona';
-    }
-    return 'landing';
-  });
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-  // Track previous user state to detect login/logout
-  const prevUserRef = useRef(user);
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
-  // Note: Navigation after login/logout is handled explicitly in the respective components
-  // (LoginPage, OnboardingPage, Navigation) to avoid React render conflicts.
-  // We only update the ref here to track user state for other purposes.
-  useEffect(() => {
-    prevUserRef.current = user;
-  }, [user]);
+  return children;
+}
 
+// Protected route wrapper for admin pages
+function AdminRoute({ children }) {
+  const { user } = useApp();
+  const isAdmin = user?.role === 'ADMIN';
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/persona" replace />;
+  }
+
+  return children;
+}
+
+// Guest only route (redirect if logged in)
+function GuestRoute({ children }) {
+  const { user } = useApp();
+  const isAdmin = user?.role === 'ADMIN';
+
+  if (user) {
+    return <Navigate to={isAdmin ? '/admin' : '/persona'} replace />;
+  }
+
+  return children;
+}
+
+function AppContent() {
+  const { user } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Navigation handler for components that still use onNavigate
   const handleNavigate = (page) => {
-    const authRequiredPages = [...userPages, ...adminPages];
+    const routes = {
+      'landing': '/',
+      'login': '/login',
+      'onboarding': '/register',
+      'persona': '/persona',
+      'echo-sim': '/echo-sim',
+      'memory-anchor': '/memories',
+      'wisdom-gpt': '/wisdom',
+      'time-capsule': '/time-capsule',
+      'settings': '/settings',
+      'admin': '/admin',
+    };
 
-    // Not logged in - redirect to appropriate auth page
-    if (authRequiredPages.includes(page) && !user) {
-      setCurrentPage('onboarding');
-      return;
-    }
-
-    // Admin trying to access user pages - redirect to admin
-    if (userPages.includes(page) && isAdmin) {
-      setCurrentPage('admin');
-      return;
-    }
-
-    // Non-admin trying to access admin pages - redirect to persona
-    if (adminPages.includes(page) && !isAdmin) {
-      setCurrentPage('persona');
-      return;
-    }
-
-    setCurrentPage(page);
+    const route = routes[page] || '/';
+    navigate(route);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'landing':
-        return <LandingPage onNavigate={handleNavigate} />;
-      case 'onboarding':
-        return <OnboardingPage onNavigate={handleNavigate} />;
-      case 'login':
-        return <LoginPage onNavigate={handleNavigate} />;
-      case 'persona':
-        return <PersonaPage onNavigate={handleNavigate} />;
-      case 'echo-sim':
-        return <EchoSimPage onNavigate={handleNavigate} />;
-      case 'memory-anchor':
-        return <MemoryAnchorPage onNavigate={handleNavigate} />;
-      case 'wisdom-gpt':
-        return <WisdomGPTPage onNavigate={handleNavigate} />;
-      case 'time-capsule':
-        return <TimeCapsulePage onNavigate={handleNavigate} />;
-      case 'settings':
-        return <SettingsPage onNavigate={handleNavigate} />;
-      case 'referral':
-        return <ReferralPage onNavigate={handleNavigate} />;
-      case 'admin':
-        return <AdminDashboard onNavigate={handleNavigate} />;
-      default:
-        return <LandingPage onNavigate={handleNavigate} />;
-    }
+  // Get current page name from path for Navigation component
+  const getCurrentPage = () => {
+    const pathMap = {
+      '/': 'landing',
+      '/login': 'login',
+      '/register': 'onboarding',
+      '/persona': 'persona',
+      '/echo-sim': 'echo-sim',
+      '/memories': 'memory-anchor',
+      '/wisdom': 'wisdom-gpt',
+      '/time-capsule': 'time-capsule',
+      '/settings': 'settings',
+      '/admin': 'admin',
+    };
+    return pathMap[location.pathname] || 'landing';
   };
 
-  const showNavigation = !['onboarding', 'login'].includes(currentPage);
+  const currentPage = getCurrentPage();
+  const showNavigation = !['/register', '/login'].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-navy">
@@ -101,9 +110,68 @@ function AppContent() {
         <Navigation currentPage={currentPage} onNavigate={handleNavigate} />
       )}
       <AnimatePresence mode="wait">
-        <div key={currentPage}>
-          {renderPage()}
-        </div>
+        <Routes location={location} key={location.pathname}>
+          {/* Public routes */}
+          <Route path="/" element={
+            <GuestRoute>
+              <LandingPage onNavigate={handleNavigate} />
+            </GuestRoute>
+          } />
+
+          {/* Auth routes */}
+          <Route path="/login" element={
+            <GuestRoute>
+              <LoginPage onNavigate={handleNavigate} />
+            </GuestRoute>
+          } />
+          <Route path="/register" element={
+            <GuestRoute>
+              <OnboardingPage onNavigate={handleNavigate} />
+            </GuestRoute>
+          } />
+
+          {/* User routes */}
+          <Route path="/persona" element={
+            <UserRoute>
+              <PersonaPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/echo-sim" element={
+            <UserRoute>
+              <EchoSimPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/memories" element={
+            <UserRoute>
+              <MemoryAnchorPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/wisdom" element={
+            <UserRoute>
+              <WisdomGPTPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/time-capsule" element={
+            <UserRoute>
+              <TimeCapsulePage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/settings" element={
+            <UserRoute>
+              <SettingsPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+
+          {/* Admin routes */}
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminDashboard onNavigate={handleNavigate} />
+            </AdminRoute>
+          } />
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </AnimatePresence>
       <SupportChat />
     </div>
@@ -112,9 +180,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <BrowserRouter>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </BrowserRouter>
   );
 }
 
