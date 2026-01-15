@@ -37,9 +37,11 @@ function AppContent() {
 
     // User just logged in (was null, now has value)
     if (!prevUser && user) {
+      // Calculate admin status from current user object
+      const userIsAdmin = user?.role === 'ADMIN';
       // Use setTimeout to defer state update and avoid React render conflict
       setTimeout(() => {
-        setCurrentPage(isAdmin ? 'admin' : 'persona');
+        setCurrentPage(userIsAdmin ? 'admin' : 'persona');
       }, 0);
       return;
     }
@@ -51,7 +53,7 @@ function AppContent() {
       }, 0);
       return;
     }
-  }, [user, isAdmin]);
+  }, [user]);
 
   const handleNavigate = (page) => {
     const authRequiredPages = [...userPages, ...adminPages];
