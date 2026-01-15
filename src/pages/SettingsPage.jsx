@@ -28,7 +28,9 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Link
+  Link,
+  Globe,
+  Languages
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -62,6 +64,14 @@ export function SettingsPage({ onNavigate }) {
     timeCapsuleReminders: true,
     weeklyDigest: false,
   });
+
+  // Language state
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+  ];
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -316,6 +326,13 @@ export function SettingsPage({ onNavigate }) {
       description: 'Manage email and notification preferences',
     },
     {
+      id: 'language',
+      icon: Globe,
+      title: 'Language',
+      description: 'Change the app language',
+      disabled: true,
+    },
+    {
       id: 'privacy',
       icon: Shield,
       title: 'Privacy & Security',
@@ -390,12 +407,15 @@ export function SettingsPage({ onNavigate }) {
                 >
                   <button
                     onClick={() => {
+                      if (section.disabled) return;
                       const newSection = isActive ? null : section.id;
                       setActiveSection(newSection);
                       if (newSection === 'referral') loadReferralData();
                     }}
                     className={`w-full p-4 flex items-center justify-between transition-colors ${
-                      section.danger
+                      section.disabled
+                        ? 'cursor-not-allowed opacity-60'
+                        : section.danger
                         ? 'hover:bg-red-500/10'
                         : section.highlight
                         ? 'hover:bg-gold/10'
@@ -413,17 +433,26 @@ export function SettingsPage({ onNavigate }) {
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="text-left">
-                        <h3 className={`font-medium ${
-                          section.danger ? 'text-red-400' : section.highlight ? 'text-gold' : 'text-cream'
-                        }`}>
-                          {section.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className={`font-medium ${
+                            section.danger ? 'text-red-400' : section.highlight ? 'text-gold' : 'text-cream'
+                          }`}>
+                            {section.title}
+                          </h3>
+                          {section.disabled && (
+                            <span className="px-2 py-0.5 rounded-full bg-cream/10 text-cream/50 text-xs">
+                              Coming Soon
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-cream/50">{section.description}</p>
                       </div>
                     </div>
-                    <ChevronRight className={`w-5 h-5 text-cream/40 transition-transform ${
-                      isActive ? 'rotate-90' : ''
-                    }`} />
+                    {!section.disabled && (
+                      <ChevronRight className={`w-5 h-5 text-cream/40 transition-transform ${
+                        isActive ? 'rotate-90' : ''
+                      }`} />
+                    )}
                   </button>
 
                   {/* Expanded Content */}
@@ -824,6 +853,37 @@ export function SettingsPage({ onNavigate }) {
                                 animate={{ x: notifications.weeklyDigest ? 26 : 2 }}
                               />
                             </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {section.id === 'language' && (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-xl bg-gold/10 border border-gold/20 flex items-center gap-3">
+                            <Languages className="w-5 h-5 text-gold" />
+                            <p className="text-cream/70 text-sm">
+                              Multi-language support is coming soon! You'll be able to use EchoTrail in your preferred language.
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            {languages.map((lang) => (
+                              <div
+                                key={lang.code}
+                                className={`p-3 rounded-xl border-2 flex items-center justify-between ${
+                                  selectedLanguage === lang.code
+                                    ? 'border-gold bg-gold/10'
+                                    : 'border-gold/20 opacity-50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xl">{lang.flag}</span>
+                                  <span className="text-cream">{lang.name}</span>
+                                </div>
+                                {selectedLanguage === lang.code && (
+                                  <Check className="w-5 h-5 text-gold" />
+                                )}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}

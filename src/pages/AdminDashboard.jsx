@@ -368,9 +368,10 @@ Ask clarifying questions if needed, then help them write or refine their message
       }
 
       if (activeTab === 'support') {
-        const [chatsRes, quickRepliesRes] = await Promise.all([
+        const [chatsRes, quickRepliesRes, supportAvatarRes] = await Promise.all([
           fetch(`${API_URL}/api/support/admin/chats?status=all`, { headers }),
-          fetch(`${API_URL}/api/admin/support-quick-replies`, { headers })
+          fetch(`${API_URL}/api/admin/support-quick-replies`, { headers }),
+          fetch(`${API_URL}/api/admin/support-avatar`, { headers })
         ]);
         if (chatsRes.ok) {
           setSupportChats(await chatsRes.json());
@@ -379,6 +380,9 @@ Ask clarifying questions if needed, then help them write or refine their message
           const replies = await quickRepliesRes.json();
           setQuickReplies(replies);
           setQuickRepliesDraft(replies);
+        }
+        if (supportAvatarRes.ok) {
+          setSupportAvatar(await supportAvatarRes.json());
         }
       }
 
@@ -2036,6 +2040,133 @@ Ask clarifying questions if needed, then help them write or refine their message
                   )}
                 </div>
               </div>
+
+              {/* Support Avatar Settings */}
+              <div className="glass-card mt-6 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif text-cream">Support Chat Avatar</h3>
+                      <p className="text-cream/50 text-sm">Name and image shown to users in support chat</p>
+                    </div>
+                  </div>
+                  {!editingSupportAvatar ? (
+                    <motion.button
+                      onClick={() => {
+                        setSupportAvatarDraft({ name: supportAvatar.name, imageUrl: supportAvatar.imageUrl || '' });
+                        setEditingSupportAvatar(true);
+                      }}
+                      className="px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit
+                    </motion.button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => setEditingSupportAvatar(false)}
+                        className="px-4 py-2 bg-navy-light text-cream/70 rounded-lg text-sm"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={saveSupportAvatar}
+                        className="px-4 py-2 bg-gold text-navy rounded-lg text-sm flex items-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Avatar Preview */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-gold/30 bg-navy-dark flex items-center justify-center">
+                      {editingSupportAvatar ? (
+                        supportAvatarDraft.imageUrl ? (
+                          <img src={supportAvatarDraft.imageUrl} alt="Support Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <UserIcon className="w-12 h-12 text-gold/30" />
+                        )
+                      ) : supportAvatar.imageUrl ? (
+                        <img src={supportAvatar.imageUrl} alt="Support Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <UserIcon className="w-12 h-12 text-gold/30" />
+                      )}
+                    </div>
+                    {editingSupportAvatar && (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={supportAvatarInputRef}
+                          onChange={handleSupportAvatarImageUpload}
+                          className="hidden"
+                        />
+                        <motion.button
+                          onClick={() => supportAvatarInputRef.current?.click()}
+                          className="mt-3 px-3 py-1.5 bg-navy-light text-cream/70 rounded-lg text-sm flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          Upload
+                        </motion.button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Name Input */}
+                  <div className="flex-1">
+                    <label className="text-cream/50 text-sm">Display Name</label>
+                    {editingSupportAvatar ? (
+                      <input
+                        type="text"
+                        value={supportAvatarDraft.name}
+                        onChange={(e) => setSupportAvatarDraft(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Support Team, Sarah, Help Desk"
+                        className="w-full mt-1 px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
+                      />
+                    ) : (
+                      <p className="text-cream text-xl font-medium mt-1">{supportAvatar.name}</p>
+                    )}
+                    <p className="text-cream/40 text-xs mt-2">
+                      This name will be shown to users when they receive support messages
+                    </p>
+                  </div>
+                </div>
+
+                {/* Preview Card */}
+                <div className="mt-6 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <p className="text-cream/50 text-sm mb-3">Preview (as seen by users):</p>
+                  <div className="flex items-center gap-3 p-3 bg-navy-dark/50 rounded-lg max-w-sm">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gold/30 bg-navy flex items-center justify-center flex-shrink-0">
+                      {(editingSupportAvatar ? supportAvatarDraft.imageUrl : supportAvatar.imageUrl) ? (
+                        <img
+                          src={editingSupportAvatar ? supportAvatarDraft.imageUrl : supportAvatar.imageUrl}
+                          alt="Support"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="w-5 h-5 text-gold/30" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-cream font-medium text-sm">
+                        {editingSupportAvatar ? (supportAvatarDraft.name || 'Support Team') : supportAvatar.name}
+                      </p>
+                      <p className="text-cream/40 text-xs">EchoTrail Support</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -2879,133 +3010,6 @@ Ask clarifying questions if needed, then help them write or refine their message
                   <p className="text-cream/50 text-sm">
                     💡 Note: Price changes will apply to new subscriptions. Existing subscriptions keep their current rates until renewal.
                   </p>
-                </div>
-              </div>
-
-              {/* Support Avatar Settings */}
-              <div className="glass-card p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-serif text-cream">Support Chat Avatar</h3>
-                      <p className="text-cream/50 text-sm">Name and image shown to users in support chat</p>
-                    </div>
-                  </div>
-                  {!editingSupportAvatar ? (
-                    <motion.button
-                      onClick={() => {
-                        setSupportAvatarDraft({ name: supportAvatar.name, imageUrl: supportAvatar.imageUrl || '' });
-                        setEditingSupportAvatar(true);
-                      }}
-                      className="px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm flex items-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <Edit3 className="w-4 h-4" />
-                      Edit
-                    </motion.button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <motion.button
-                        onClick={() => setEditingSupportAvatar(false)}
-                        className="px-4 py-2 bg-navy-light text-cream/70 rounded-lg text-sm"
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        Cancel
-                      </motion.button>
-                      <motion.button
-                        onClick={saveSupportAvatar}
-                        className="px-4 py-2 bg-gold text-navy rounded-lg text-sm flex items-center gap-2"
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <Save className="w-4 h-4" />
-                        Save
-                      </motion.button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-6 items-start">
-                  {/* Avatar Preview */}
-                  <div className="flex flex-col items-center">
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-gold/30 bg-navy-dark flex items-center justify-center">
-                      {editingSupportAvatar ? (
-                        supportAvatarDraft.imageUrl ? (
-                          <img src={supportAvatarDraft.imageUrl} alt="Support Avatar" className="w-full h-full object-cover" />
-                        ) : (
-                          <UserIcon className="w-12 h-12 text-gold/30" />
-                        )
-                      ) : supportAvatar.imageUrl ? (
-                        <img src={supportAvatar.imageUrl} alt="Support Avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        <UserIcon className="w-12 h-12 text-gold/30" />
-                      )}
-                    </div>
-                    {editingSupportAvatar && (
-                      <>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          ref={supportAvatarInputRef}
-                          onChange={handleSupportAvatarImageUpload}
-                          className="hidden"
-                        />
-                        <motion.button
-                          onClick={() => supportAvatarInputRef.current?.click()}
-                          className="mt-3 px-3 py-1.5 bg-navy-light text-cream/70 rounded-lg text-sm flex items-center gap-2"
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          Upload
-                        </motion.button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Name Input */}
-                  <div className="flex-1">
-                    <label className="text-cream/50 text-sm">Display Name</label>
-                    {editingSupportAvatar ? (
-                      <input
-                        type="text"
-                        value={supportAvatarDraft.name}
-                        onChange={(e) => setSupportAvatarDraft(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Support Team, Sarah, Help Desk"
-                        className="w-full mt-1 px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
-                      />
-                    ) : (
-                      <p className="text-cream text-xl font-medium mt-1">{supportAvatar.name}</p>
-                    )}
-                    <p className="text-cream/40 text-xs mt-2">
-                      This name will be shown to users when they receive support messages
-                    </p>
-                  </div>
-                </div>
-
-                {/* Preview Card */}
-                <div className="mt-6 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
-                  <p className="text-cream/50 text-sm mb-3">Preview (as seen by users):</p>
-                  <div className="flex items-center gap-3 p-3 bg-navy-dark/50 rounded-lg max-w-sm">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gold/30 bg-navy flex items-center justify-center flex-shrink-0">
-                      {(editingSupportAvatar ? supportAvatarDraft.imageUrl : supportAvatar.imageUrl) ? (
-                        <img
-                          src={editingSupportAvatar ? supportAvatarDraft.imageUrl : supportAvatar.imageUrl}
-                          alt="Support"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <UserIcon className="w-5 h-5 text-gold/30" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-cream font-medium text-sm">
-                        {editingSupportAvatar ? (supportAvatarDraft.name || 'Support Team') : supportAvatar.name}
-                      </p>
-                      <p className="text-cream/40 text-xs">EchoTrail Support</p>
-                    </div>
-                  </div>
                 </div>
               </div>
 
