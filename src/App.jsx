@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navigation } from './components/Navigation';
@@ -27,14 +27,28 @@ function AppContent() {
     return 'landing';
   });
 
+  // Track previous user state to detect login/logout
+  const prevUserRef = useRef(user);
+
   useEffect(() => {
-    // Redirect when user logs in (from login/onboarding page)
-    if (user && (currentPage === 'landing' || currentPage === 'login' || currentPage === 'onboarding')) {
-      setCurrentPage(isAdmin ? 'admin' : 'persona');
+    const prevUser = prevUserRef.current;
+    prevUserRef.current = user;
+
+    // User just logged in (was null, now has value)
+    if (!prevUser && user) {
+      // Use setTimeout to defer state update and avoid React render conflict
+      setTimeout(() => {
+        setCurrentPage(isAdmin ? 'admin' : 'persona');
+      }, 0);
+      return;
     }
-    // Redirect when user logs out
-    if (!user && [...userPages, ...adminPages].includes(currentPage)) {
-      setCurrentPage('landing');
+
+    // User just logged out (had value, now null)
+    if (prevUser && !user) {
+      setTimeout(() => {
+        setCurrentPage('landing');
+      }, 0);
+      return;
     }
   }, [user, isAdmin]);
 
