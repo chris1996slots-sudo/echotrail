@@ -464,7 +464,41 @@ async function testGroqApi(apiKey) {
 
 async function testGeminiApi(apiKey) {
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // First, list available models to find the right one
+    const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+
+    if (!listResponse.ok) {
+      const error = await listResponse.json();
+      return { success: false, message: error.error?.message || 'Invalid API key' };
+    }
+
+    const listData = await listResponse.json();
+    const models = listData.models || [];
+
+    // Find a suitable model (prefer gemini-2.0-flash, then gemini-pro)
+    const preferredModels = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-pro'];
+    let modelToUse = null;
+
+    for (const preferred of preferredModels) {
+      const found = models.find(m => m.name.includes(preferred) && m.supportedGenerationMethods?.includes('generateContent'));
+      if (found) {
+        modelToUse = found.name;
+        break;
+      }
+    }
+
+    if (!modelToUse && models.length > 0) {
+      // Use first available model that supports generateContent
+      const fallback = models.find(m => m.supportedGenerationMethods?.includes('generateContent'));
+      modelToUse = fallback?.name;
+    }
+
+    if (!modelToUse) {
+      return { success: false, message: 'No compatible Gemini models found' };
+    }
+
+    // Test the model
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelToUse}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -473,7 +507,8 @@ async function testGeminiApi(apiKey) {
     });
 
     if (response.ok) {
-      return { success: true, message: 'Google Gemini API connected successfully' };
+      const modelName = modelToUse.split('/').pop();
+      return { success: true, message: `Gemini connected! Using ${modelName}` };
     }
 
     const error = await response.json();
