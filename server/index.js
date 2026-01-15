@@ -88,16 +88,24 @@ app.get('/api/health', (req, res) => {
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
 
-  // Handle SPA routing - serve index.html for all non-API/non-asset routes
-  app.use((req, res, next) => {
+  // Serve static files with proper MIME types
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      } else if (filePath.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json');
+      }
+    }
+  }));
+
+  // Handle SPA routing - serve index.html for all non-API routes
+  app.get('*', (req, res, next) => {
     // Skip API routes
     if (req.path.startsWith('/api')) {
-      return next();
-    }
-    // Skip static assets (files with extensions)
-    if (req.path.includes('.')) {
       return next();
     }
     // Serve index.html for SPA routes
