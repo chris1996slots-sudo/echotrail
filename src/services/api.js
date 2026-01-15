@@ -240,6 +240,22 @@ class ApiService {
     return this.request(`/api/persona/voice-samples/${id}`, { method: 'DELETE' });
   }
 
+  // Voice Cloning
+  async getVoiceCloneStatus() {
+    return this.request('/api/ai/voice/clone/status');
+  }
+
+  async createVoiceClone(name, description) {
+    return this.request('/api/ai/voice/clone', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    });
+  }
+
+  async deleteVoiceClone() {
+    return this.request('/api/ai/voice/clone', { method: 'DELETE' });
+  }
+
   // Support Chat
   async getSupportChat() {
     return this.request('/api/support/chat');

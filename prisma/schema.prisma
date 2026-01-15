@@ -68,6 +68,10 @@ model Persona {
   echoVibe       String   @default("compassionate")
   legacyScore    Int      @default(0)
 
+  // ElevenLabs Voice Clone
+  elevenlabsVoiceId   String?  // The cloned voice ID from ElevenLabs
+  elevenlabsVoiceName String?  // Name of the cloned voice
+
   lifeStories    LifeStory[]
   avatarImages   AvatarImage[]
   voiceSamples   VoiceSample[]

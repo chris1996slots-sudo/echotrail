@@ -56,7 +56,7 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
 // =====================
 router.post('/voice/synthesize', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
   try {
-    const { text, voiceId } = req.body;
+    const { text, voiceId, useClonedVoice = true } = req.body;
 
     const config = await req.prisma.apiConfig.findUnique({
       where: { service: 'elevenlabs' }
@@ -66,8 +66,26 @@ router.post('/voice/synthesize', authenticate, requireSubscription('PREMIUM'), a
       return res.status(503).json({ error: 'ElevenLabs API not configured' });
     }
 
+    // Determine which voice to use
+    let selectedVoiceId = voiceId;
+
+    // If no voiceId provided and useClonedVoice is true, try to use user's cloned voice
+    if (!voiceId && useClonedVoice) {
+      const persona = await req.prisma.persona.findUnique({
+        where: { userId: req.user.id },
+        select: { elevenlabsVoiceId: true }
+      });
+
+      if (persona?.elevenlabsVoiceId) {
+        selectedVoiceId = persona.elevenlabsVoiceId;
+      }
+    }
+
+    // Fall back to default voice if no cloned voice available
+    const finalVoiceId = selectedVoiceId || 'pNInz6obpgDQGcFmaJgB';
+
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId || 'pNInz6obpgDQGcFmaJgB'}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${finalVoiceId}`,
       {
         method: 'POST',
         headers: {
@@ -95,11 +113,198 @@ router.post('/voice/synthesize', authenticate, requireSubscription('PREMIUM'), a
 
     res.json({
       audio: `data:audio/mpeg;base64,${base64Audio}`,
-      format: 'mp3'
+      format: 'mp3',
+      voiceId: finalVoiceId,
+      isClonedVoice: finalVoiceId !== 'pNInz6obpgDQGcFmaJgB'
     });
   } catch (error) {
     console.error('ElevenLabs error:', error);
     res.status(500).json({ error: 'Failed to synthesize voice' });
+  }
+});
+
+// =====================
+// ELEVENLABS VOICE CLONING
+// =====================
+
+// Create a voice clone from user's voice samples
+router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    const config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'elevenlabs' }
+    });
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'ElevenLabs API not configured' });
+    }
+
+    // Get user's persona with voice samples
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      include: { voiceSamples: true }
+    });
+
+    if (!persona) {
+      return res.status(404).json({ error: 'Persona not found' });
+    }
+
+    if (!persona.voiceSamples || persona.voiceSamples.length === 0) {
+      return res.status(400).json({ error: 'No voice samples found. Please upload at least one voice sample.' });
+    }
+
+    // ElevenLabs requires at least 1 sample, recommends 3+
+    if (persona.voiceSamples.length < 1) {
+      return res.status(400).json({ error: 'Please upload at least 1 voice sample for cloning.' });
+    }
+
+    // If user already has a cloned voice, delete it first
+    if (persona.elevenlabsVoiceId) {
+      try {
+        await fetch(`https://api.elevenlabs.io/v1/voices/${persona.elevenlabsVoiceId}`, {
+          method: 'DELETE',
+          headers: { 'xi-api-key': config.apiKey }
+        });
+      } catch (deleteError) {
+        console.log('Could not delete old voice clone:', deleteError.message);
+      }
+    }
+
+    // Prepare form data for ElevenLabs
+    const FormData = (await import('form-data')).default;
+    const formData = new FormData();
+
+    formData.append('name', name || `${req.user.firstName}'s Voice`);
+    formData.append('description', description || `Voice clone for ${req.user.firstName} ${req.user.lastName}`);
+
+    // Convert base64 voice samples to files
+    for (let i = 0; i < persona.voiceSamples.length; i++) {
+      const sample = persona.voiceSamples[i];
+      // Remove data URL prefix if present
+      const base64Data = sample.audioData.replace(/^data:audio\/\w+;base64,/, '');
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+
+      formData.append('files', audioBuffer, {
+        filename: `sample_${i + 1}.mp3`,
+        contentType: 'audio/mpeg'
+      });
+    }
+
+    // Create voice clone at ElevenLabs
+    const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': config.apiKey,
+        ...formData.getHeaders()
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('ElevenLabs clone error:', error);
+      return res.status(response.status).json({
+        error: error.detail?.message || error.detail || 'Voice cloning failed'
+      });
+    }
+
+    const data = await response.json();
+
+    // Save the voice ID to persona
+    await req.prisma.persona.update({
+      where: { id: persona.id },
+      data: {
+        elevenlabsVoiceId: data.voice_id,
+        elevenlabsVoiceName: name || `${req.user.firstName}'s Voice`
+      }
+    });
+
+    res.json({
+      success: true,
+      voiceId: data.voice_id,
+      voiceName: name || `${req.user.firstName}'s Voice`,
+      message: 'Voice clone created successfully!'
+    });
+  } catch (error) {
+    console.error('Voice clone error:', error);
+    res.status(500).json({ error: 'Failed to create voice clone' });
+  }
+});
+
+// Get user's cloned voice status
+router.get('/voice/clone/status', authenticate, async (req, res) => {
+  try {
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        elevenlabsVoiceId: true,
+        elevenlabsVoiceName: true,
+        voiceSamples: {
+          select: { id: true, label: true, duration: true, createdAt: true }
+        }
+      }
+    });
+
+    if (!persona) {
+      return res.json({
+        hasClonedVoice: false,
+        samplesCount: 0,
+        samples: []
+      });
+    }
+
+    res.json({
+      hasClonedVoice: !!persona.elevenlabsVoiceId,
+      voiceId: persona.elevenlabsVoiceId,
+      voiceName: persona.elevenlabsVoiceName,
+      samplesCount: persona.voiceSamples?.length || 0,
+      samples: persona.voiceSamples || []
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get voice clone status' });
+  }
+});
+
+// Delete user's cloned voice
+router.delete('/voice/clone', authenticate, async (req, res) => {
+  try {
+    const config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'elevenlabs' }
+    });
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (!persona?.elevenlabsVoiceId) {
+      return res.status(404).json({ error: 'No cloned voice found' });
+    }
+
+    // Delete from ElevenLabs
+    if (config?.apiKey) {
+      try {
+        await fetch(`https://api.elevenlabs.io/v1/voices/${persona.elevenlabsVoiceId}`, {
+          method: 'DELETE',
+          headers: { 'xi-api-key': config.apiKey }
+        });
+      } catch (deleteError) {
+        console.log('Could not delete from ElevenLabs:', deleteError.message);
+      }
+    }
+
+    // Clear from persona
+    await req.prisma.persona.update({
+      where: { id: persona.id },
+      data: {
+        elevenlabsVoiceId: null,
+        elevenlabsVoiceName: null
+      }
+    });
+
+    res.json({ success: true, message: 'Voice clone deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete voice clone' });
   }
 });
 
