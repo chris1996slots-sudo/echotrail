@@ -52,9 +52,12 @@ export function Navigation({ currentPage, onNavigate }) {
     } catch (e) {
       // Ignore logout errors
     }
-    resetAll();
-    onNavigate('landing');
-    setIsOpen(false);
+    // Use setTimeout to defer state updates and avoid React render conflict
+    setTimeout(() => {
+      resetAll();
+      onNavigate('landing');
+      setIsOpen(false);
+    }, 0);
   };
 
   return (
