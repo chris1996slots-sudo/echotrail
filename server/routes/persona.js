@@ -174,12 +174,15 @@ router.post('/avatar', authenticate, async (req, res) => {
       });
     }
 
+    const { echoVibe } = req.body;
+
     const avatarImage = await req.prisma.avatarImage.create({
       data: {
         personaId: persona.id,
         imageData,
         label: label || `Photo ${count + 1}`,
         isActive: setActive || count === 0,
+        echoVibe: echoVibe || 'compassionate',
       }
     });
 
@@ -193,7 +196,7 @@ router.post('/avatar', authenticate, async (req, res) => {
 router.put('/avatar/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const { label, isActive } = req.body;
+    const { label, isActive, echoVibe } = req.body;
 
     const persona = await req.prisma.persona.findUnique({
       where: { userId: req.user.id }
@@ -212,6 +215,7 @@ router.put('/avatar/:id', authenticate, async (req, res) => {
       data: {
         ...(label !== undefined && { label }),
         ...(isActive !== undefined && { isActive }),
+        ...(echoVibe !== undefined && { echoVibe }),
       }
     });
 

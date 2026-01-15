@@ -192,10 +192,10 @@ class ApiService {
   }
 
   // Avatar Images
-  async uploadAvatar(imageData, label, setActive = false) {
+  async uploadAvatar(imageData, label, setActive = false, echoVibe = 'compassionate') {
     return this.request('/api/persona/avatar', {
       method: 'POST',
-      body: JSON.stringify({ imageData, label, setActive }),
+      body: JSON.stringify({ imageData, label, setActive, echoVibe }),
     });
   }
 

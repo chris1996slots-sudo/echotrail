@@ -44,7 +44,6 @@ import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../compon
 import { useApp } from '../context/AppContext';
 import { LegacyScoreCard } from '../components/LegacyScore';
 import { ValueStore } from '../components/ValueStore';
-import { EchoVibe } from '../components/EchoVibe';
 import api from '../services/api';
 
 const storyCategories = [
@@ -284,7 +283,6 @@ export function PersonaPage({ onNavigate }) {
     { id: 'stories', label: 'Life Stories' },
     { id: 'interview', label: 'Deep Interview' },
     { id: 'values', label: 'Value Store' },
-    { id: 'vibe', label: 'Echo Vibe' },
   ];
 
   // Real background images
@@ -327,8 +325,21 @@ export function PersonaPage({ onNavigate }) {
     { id: 'voice', label: 'Voice', icon: Mic, description: 'Record your voice' },
     { id: 'background', label: 'Background', icon: ImageIcon, description: 'Choose a background' },
     { id: 'style', label: 'Style', icon: Palette, description: 'Choose your avatar style' },
+    { id: 'vibe', label: 'Vibe', icon: Heart, description: 'Choose your echo vibe' },
     { id: 'preview', label: 'Preview', icon: Eye, description: 'See your result' },
   ];
+
+  // Echo Vibe options
+  const vibeOptions = [
+    { id: 'compassionate', label: 'Compassionate', icon: '💕', description: 'Warm, nurturing, and deeply caring', color: 'from-pink-500 to-rose-500' },
+    { id: 'strict', label: 'Strict', icon: '🛡️', description: 'Firm, principled, and focused on growth', color: 'from-blue-500 to-indigo-500' },
+    { id: 'storyteller', label: 'Storyteller', icon: '📖', description: 'Narrative-driven and wise', color: 'from-amber-500 to-orange-500' },
+    { id: 'wise', label: 'Wise Mentor', icon: '✨', description: 'Thoughtful and philosophical', color: 'from-purple-500 to-violet-500' },
+    { id: 'playful', label: 'Playful', icon: '😊', description: 'Light-hearted and fun', color: 'from-green-500 to-emerald-500' },
+    { id: 'adventurous', label: 'Adventurous', icon: '🧭', description: 'Bold and encouraging', color: 'from-cyan-500 to-teal-500' },
+  ];
+
+  const [selectedVibe, setSelectedVibe] = useState('compassionate');
 
   const [avatarStep, setAvatarStep] = useState(0);
 
@@ -570,8 +581,8 @@ export function PersonaPage({ onNavigate }) {
     labelParts.push(occasionCat?.label || uploadForm.occasion);
     const imageLabel = labelParts.join(' • ');
 
-    // Save to database with metadata
-    const saved = await uploadAvatar(pendingImage, imageLabel, isFirst);
+    // Save to database with metadata including echo vibe
+    const saved = await uploadAvatar(pendingImage, imageLabel, isFirst, selectedVibe);
 
     if (saved) {
       setShowSaveConfirm(true);
@@ -789,6 +800,7 @@ export function PersonaPage({ onNavigate }) {
         const currentStepData = avatarSteps[avatarStep];
         const selectedBackground = backgrounds.find(b => b.id === persona.backgroundType) || backgrounds[0];
         const selectedStyle = avatarStyles.find(s => s.id === persona.avatarStyle) || avatarStyles[0];
+        const activeAvatar = avatarImages.find(img => img.isActive || persona.activeAvatarId === img.id);
 
         // Render step content
         const renderAvatarStepContent = () => {
@@ -1091,6 +1103,55 @@ export function PersonaPage({ onNavigate }) {
                 </div>
               );
 
+            case 'vibe':
+              return (
+                <div className="space-y-6">
+                  <p className="text-cream/60 text-sm text-center">
+                    Choose the personality style for your AI echo
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {vibeOptions.map((vibe) => (
+                      <motion.button
+                        key={vibe.id}
+                        onClick={() => setSelectedVibe(vibe.id)}
+                        className={`relative p-5 rounded-xl border-2 text-left transition-all ${
+                          selectedVibe === vibe.id
+                            ? 'border-gold bg-gold/10'
+                            : 'border-gold/20 hover:border-gold/40 bg-navy-light/30'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${vibe.color} flex items-center justify-center mb-3`}>
+                          <span className="text-2xl">{vibe.icon}</span>
+                        </div>
+                        <h4 className="text-cream font-medium">{vibe.label}</h4>
+                        <p className="text-cream/50 text-sm mt-1">{vibe.description}</p>
+                        {selectedVibe === vibe.id && (
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-gold rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-4 h-4 text-navy" />
+                          </div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  {/* Vibe Preview */}
+                  <div className="bg-navy-dark/30 rounded-xl p-5">
+                    <p className="text-cream/50 text-sm mb-3">Preview message:</p>
+                    <p className="text-cream italic">
+                      {selectedVibe === 'compassionate' && "I'm here for you, always. Whatever you're going through, know that you carry the strength of our family within you."}
+                      {selectedVibe === 'strict' && "Remember what I've always taught you: discipline creates freedom. Let's look at this situation practically."}
+                      {selectedVibe === 'storyteller' && "Let me tell you a story that might help. When I was about your age, something similar happened..."}
+                      {selectedVibe === 'wise' && "Consider this carefully, as all meaningful decisions deserve reflection. There's wisdom to be found in every challenge."}
+                      {selectedVibe === 'playful' && "Hey there, sunshine! Life's thrown you a curveball, huh? Well, let's figure this out together!"}
+                      {selectedVibe === 'adventurous' && "This is an opportunity in disguise! Every challenge is a chance to grow. Let me share what I learned..."}
+                    </p>
+                  </div>
+                </div>
+              );
+
             case 'preview':
               return (
                 <div className="space-y-6">
@@ -1155,7 +1216,7 @@ export function PersonaPage({ onNavigate }) {
                   {/* Summary */}
                   <div className="bg-navy-dark/30 rounded-xl p-5">
                     <h4 className="text-cream font-medium mb-4">Summary</h4>
-                    <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="grid grid-cols-4 gap-4 text-center">
                       <div className="p-3 bg-navy-light/30 rounded-lg">
                         <Camera className="w-6 h-6 text-gold mx-auto mb-2" />
                         <p className="text-cream/50 text-xs">Photos</p>
@@ -1170,6 +1231,11 @@ export function PersonaPage({ onNavigate }) {
                         <Palette className="w-6 h-6 text-gold mx-auto mb-2" />
                         <p className="text-cream/50 text-xs">Style</p>
                         <p className="text-cream font-medium text-sm">{selectedStyle.label}</p>
+                      </div>
+                      <div className="p-3 bg-navy-light/30 rounded-lg">
+                        <Heart className="w-6 h-6 text-gold mx-auto mb-2" />
+                        <p className="text-cream/50 text-xs">Vibe</p>
+                        <p className="text-cream font-medium text-sm">{vibeOptions.find(v => v.id === selectedVibe)?.label || 'Compassionate'}</p>
                       </div>
                     </div>
                   </div>
@@ -1187,6 +1253,88 @@ export function PersonaPage({ onNavigate }) {
 
         return (
           <div className="space-y-6">
+            {/* Avatar Gallery Preview - Only shown when avatars exist */}
+            {hasImages && (
+              <FadeIn>
+                <div className="glass-card p-6 border-gold/30">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-serif text-cream">Your Avatars</h3>
+                    <span className="text-cream/50 text-sm">{avatarImages.length} avatar{avatarImages.length !== 1 ? 's' : ''}</span>
+                  </div>
+
+                  {/* Active Avatar Preview */}
+                  {activeAvatar && (
+                    <div className="flex flex-col md:flex-row gap-6 mb-6">
+                      <div className="flex-shrink-0">
+                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-gold/60 shadow-xl">
+                          <img
+                            src={activeAvatar.imageData || activeAvatar.image}
+                            alt={activeAvatar.label || 'Active Avatar'}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-1 bg-gold/20 text-gold text-xs font-medium rounded-full">Active</span>
+                          <span className="text-cream font-medium">{activeAvatar.label || 'Unnamed Avatar'}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <span className="px-3 py-1 bg-navy-light/50 text-cream/70 text-xs rounded-full">
+                            {avatarStyles.find(s => s.id === persona.avatarStyle)?.label || 'Realistic'}
+                          </span>
+                          <span className="px-3 py-1 bg-navy-light/50 text-cream/70 text-xs rounded-full">
+                            {backgrounds.find(b => b.id === persona.backgroundType)?.label || 'Beach'}
+                          </span>
+                          <span className="px-3 py-1 bg-navy-light/50 text-cream/70 text-xs rounded-full flex items-center gap-1">
+                            <span>{vibeOptions.find(v => v.id === (activeAvatar.echoVibe || 'compassionate'))?.icon}</span>
+                            {vibeOptions.find(v => v.id === (activeAvatar.echoVibe || 'compassionate'))?.label}
+                          </span>
+                        </div>
+                        <p className="text-cream/50 text-sm">
+                          This avatar will be used in EchoSim conversations
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Avatar Selection Gallery */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                    {avatarImages.map((img) => (
+                      <motion.button
+                        key={img.id}
+                        onClick={() => selectActiveAvatar(img.id)}
+                        className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                          (img.isActive || persona.activeAvatarId === img.id)
+                            ? 'border-gold ring-2 ring-gold/30'
+                            : 'border-gold/20 hover:border-gold/50'
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <img
+                          src={img.imageData || img.image}
+                          alt={img.label}
+                          className="w-full h-full object-cover"
+                        />
+                        {(img.isActive || persona.activeAvatarId === img.id) && (
+                          <div className="absolute inset-0 bg-gold/20 flex items-center justify-center">
+                            <CheckCircle2 className="w-6 h-6 text-gold" />
+                          </div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </FadeIn>
+            )}
+
+            {/* Create New Avatar Section */}
+            <div className="glass-card p-6">
+              <h3 className="text-xl font-serif text-cream mb-6">
+                {hasImages ? 'Create New Avatar' : 'Create Your First Avatar'}
+              </h3>
+
             {/* Step Progress Header */}
             <div className="flex items-center justify-between mb-2">
               {avatarSteps.map((step, index) => {
@@ -1400,6 +1548,7 @@ export function PersonaPage({ onNavigate }) {
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </div>
         );
 
@@ -1725,9 +1874,6 @@ export function PersonaPage({ onNavigate }) {
 
       case 'values':
         return <ValueStore />;
-
-      case 'vibe':
-        return <EchoVibe />;
 
       default:
         return null;

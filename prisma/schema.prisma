@@ -95,6 +95,7 @@ model AvatarImage {
   imageData String   @db.Text
   label     String   @default("")
   isActive  Boolean  @default(false)
+  echoVibe  String   @default("compassionate") // Avatar-specific vibe
 
   createdAt DateTime @default(now())
 

@@ -345,12 +345,12 @@ export function useEchoTrailStorage() {
   }, [subscription]);
 
   // Upload avatar image
-  const uploadAvatar = useCallback(async (imageData, label, setActive = false) => {
+  const uploadAvatar = useCallback(async (imageData, label, setActive = false, echoVibe = 'compassionate') => {
     const token = localStorage.getItem('echotrail_token');
     if (!user || !token) return null;
 
     try {
-      const savedAvatar = await api.uploadAvatar(imageData, label, setActive);
+      const savedAvatar = await api.uploadAvatar(imageData, label, setActive, echoVibe);
 
       setPersonaState(prev => {
         const updatedImages = setActive || prev.avatarImages.length === 0
