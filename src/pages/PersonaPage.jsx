@@ -38,12 +38,14 @@ import {
   Pause,
   Square,
   Volume2,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import { LegacyScoreCard } from '../components/LegacyScore';
 import { ValueStore } from '../components/ValueStore';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import api from '../services/api';
 
 const storyCategories = [
@@ -278,6 +280,21 @@ export function PersonaPage({ onNavigate }) {
   const [processingError, setProcessingError] = useState(null);
   const [processingComplete, setProcessingComplete] = useState(false);
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  // Toast state
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
     { id: 'stories', label: 'Life Stories' },
@@ -389,7 +406,7 @@ export function PersonaPage({ onNavigate }) {
       }, 1000);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Could not access microphone. Please check your permissions.');
+      showToast('Could not access microphone. Please check your permissions.');
     }
   };
 
@@ -451,12 +468,17 @@ export function PersonaPage({ onNavigate }) {
     }
   };
 
-  const handleDeleteVoiceSample = async (sampleId) => {
-    if (confirm('Delete this voice recording?')) {
-      setSaving(true);
-      await deleteVoiceSample(sampleId);
-      setSaving(false);
-    }
+  const handleDeleteVoiceSample = (sampleId) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Voice Recording',
+      message: 'Are you sure you want to delete this voice recording? This action cannot be undone.',
+      onConfirm: async () => {
+        setSaving(true);
+        await deleteVoiceSample(sampleId);
+        setSaving(false);
+      },
+    });
   };
 
   // Handle voice memo file selection
@@ -858,7 +880,12 @@ export function PersonaPage({ onNavigate }) {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm('Delete this photo?')) deleteAvatarImage(img.id);
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Delete Photo',
+                                  message: 'Are you sure you want to delete this photo? This action cannot be undone.',
+                                  onConfirm: () => deleteAvatarImage(img.id),
+                                });
                               }}
                               className="w-7 h-7 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                             >
@@ -2457,6 +2484,32 @@ export function PersonaPage({ onNavigate }) {
                 </motion.button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText="Delete"
+        type="danger"
+      />
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-4 right-4 z-50 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 bg-red-500/90 text-white"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">{toast.message}</span>
           </motion.div>
         )}
       </AnimatePresence>

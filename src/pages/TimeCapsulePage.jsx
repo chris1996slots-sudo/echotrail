@@ -21,7 +21,8 @@ import {
   Upload,
   Play,
   FileImage,
-  FileVideo
+  FileVideo,
+  AlertCircle
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -40,6 +41,7 @@ export function TimeCapsulePage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
   const [currentCapsule, setCurrentCapsule] = useState({
     title: '',
     occasion: '',
@@ -48,6 +50,11 @@ export function TimeCapsulePage() {
     deliveryDate: '',
     attachments: [], // Array of { type: 'image' | 'video', data: base64, name: string }
   });
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
   const fileInputRef = useRef(null);
   const [uploadingFile, setUploadingFile] = useState(false);
 
@@ -61,7 +68,7 @@ export function TimeCapsulePage() {
       // Check file size (max 50MB for videos, 10MB for images)
       const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert(`File "${file.name}" is too large. Max size: ${file.type.startsWith('video/') ? '50MB' : '10MB'}`);
+        showToast(`File "${file.name}" is too large. Max size: ${file.type.startsWith('video/') ? '50MB' : '10MB'}`);
         continue;
       }
 
@@ -554,6 +561,21 @@ export function TimeCapsulePage() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-4 right-4 z-50 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 bg-red-500/90 text-white"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">{toast.message}</span>
           </motion.div>
         )}
       </AnimatePresence>

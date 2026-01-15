@@ -39,6 +39,7 @@ import {
   Upload
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useApp } from '../context/AppContext';
 
 // In production, use relative URLs (same origin). In development, use localhost
@@ -152,6 +153,17 @@ export function AdminDashboard({ onNavigate }) {
   const [blacklist, setBlacklist] = useState([]);
   const [newTopic, setNewTopic] = useState('');
   const [newTopicDescription, setNewTopicDescription] = useState('');
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  // Toast message state
+  const [toast, setToast] = useState(null);
 
   // Voice samples state
   const [userVoiceSamples, setUserVoiceSamples] = useState(null);
@@ -693,9 +705,12 @@ Ask clarifying questions if needed, then help them write or refine their message
         setNewTopic('');
         setNewTopicDescription('');
         fetchData();
+        setToast({ type: 'success', message: 'Topic added successfully' });
+        setTimeout(() => setToast(null), 3000);
       } else {
         const error = await res.json();
-        alert(error.error || 'Failed to add topic');
+        setToast({ type: 'error', message: error.error || 'Failed to add topic' });
+        setTimeout(() => setToast(null), 3000);
       }
     } catch (error) {
       console.error('Failed to add topic:', error);
@@ -721,18 +736,28 @@ Ask clarifying questions if needed, then help them write or refine their message
   };
 
   // Delete blacklist topic
-  const deleteBlacklistTopic = async (id) => {
-    if (!confirm('Are you sure you want to delete this topic?')) return;
-    try {
-      const token = localStorage.getItem('echotrail_token');
-      await fetch(`${API_URL}/api/admin/blacklist/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchData();
-    } catch (error) {
-      console.error('Failed to delete topic:', error);
-    }
+  const deleteBlacklistTopic = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Topic',
+      message: 'Are you sure you want to delete this blacklisted topic? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('echotrail_token');
+          await fetch(`${API_URL}/api/admin/blacklist/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          fetchData();
+          setToast({ type: 'success', message: 'Topic deleted successfully' });
+          setTimeout(() => setToast(null), 3000);
+        } catch (error) {
+          console.error('Failed to delete topic:', error);
+          setToast({ type: 'error', message: 'Failed to delete topic' });
+          setTimeout(() => setToast(null), 3000);
+        }
+      },
+    });
   };
 
   // Play voice sample
@@ -3135,6 +3160,40 @@ Ask clarifying questions if needed, then help them write or refine their message
           )}
         </AnimatePresence>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText="Delete"
+        type="danger"
+      />
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 ${
+              toast.type === 'success'
+                ? 'bg-green-500/90 text-white'
+                : 'bg-red-500/90 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span className="font-medium">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 }

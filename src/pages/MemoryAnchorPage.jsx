@@ -11,7 +11,8 @@ import {
   Save,
   Camera,
   Loader2,
-  Play
+  Play,
+  AlertCircle
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -30,15 +31,21 @@ export function MemoryAnchorPage() {
   const [editingId, setEditingId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [toast, setToast] = useState(null);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       // Check file size (max 5MB for images)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be smaller than 5MB');
+        showToast('Image must be smaller than 5MB');
         return;
       }
       setUploadProgress(0);
@@ -66,7 +73,7 @@ export function MemoryAnchorPage() {
     if (file) {
       // Check file size (max 50MB for videos)
       if (file.size > 50 * 1024 * 1024) {
-        alert('Video must be smaller than 50MB');
+        showToast('Video must be smaller than 50MB');
         return;
       }
       setUploadProgress(0);
@@ -445,6 +452,21 @@ export function MemoryAnchorPage() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-4 right-4 z-50 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 bg-red-500/90 text-white"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">{toast.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
