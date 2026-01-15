@@ -1291,11 +1291,125 @@ export function AdminDashboard({ onNavigate }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
             >
-              <div className="glass-card p-8 text-center">
-                <Settings className="w-16 h-16 text-gold/30 mx-auto mb-4" />
-                <h3 className="text-xl font-serif text-cream mb-2">System Settings</h3>
-                <p className="text-cream/50">Additional system settings coming soon.</p>
+              {/* Avatar Background Management */}
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                    <Image className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-serif text-cream">Avatar Hintergründe</h3>
+                    <p className="text-cream/50 text-sm">Verwalte die verfügbaren Hintergrundbilder</p>
+                  </div>
+                </div>
+
+                {/* Default Backgrounds */}
+                <div className="mb-6">
+                  <h4 className="text-cream/70 text-sm mb-3">Standard Hintergründe</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { id: 'beach', label: 'Am Strand', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop' },
+                      { id: 'library', label: 'Bibliothek', url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400&h=300&fit=crop' },
+                      { id: 'nature', label: 'In der Natur', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop' },
+                      { id: 'home', label: 'Gemütliches Zuhause', url: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&h=300&fit=crop' },
+                    ].map(bg => (
+                      <div key={bg.id} className="relative group">
+                        <div className="aspect-video rounded-xl overflow-hidden border-2 border-gold/20">
+                          <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
+                        </div>
+                        <p className="text-cream/70 text-sm mt-2 text-center">{bg.label}</p>
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-green-500/80 rounded-full">
+                          <span className="text-white text-xs">Aktiv</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Info about custom backgrounds */}
+                <div className="p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-cream/70 text-sm">
+                        Die Hintergrundbilder werden über Unsplash bereitgestellt. Benutzer können zusätzlich eigene Bilder hochladen.
+                      </p>
+                      <p className="text-cream/50 text-xs mt-2">
+                        Um eigene Standard-Hintergründe hinzuzufügen, bearbeite die <code className="bg-navy-dark px-1 rounded">backgrounds</code> Array in <code className="bg-navy-dark px-1 rounded">PersonaPage.jsx</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Avatar Styles */}
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <UserIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-serif text-cream">Avatar Stile</h3>
+                    <p className="text-cream/50 text-sm">Verfügbare Rendering-Stile für Avatare</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {[
+                    { id: 'realistic', label: 'Realistic', icon: '🎭', active: true },
+                    { id: 'enhanced', label: 'Enhanced', icon: '✨', active: true },
+                    { id: 'cartoon', label: 'Cartoon', icon: '🎨', active: true },
+                    { id: 'artistic', label: 'Artistic', icon: '🖼️', active: true },
+                    { id: 'anime', label: 'Anime', icon: '🌸', active: true },
+                    { id: 'pixar', label: '3D Pixar', icon: '🎬', active: true },
+                  ].map(style => (
+                    <div key={style.id} className="p-4 bg-navy-dark/30 rounded-xl border border-gold/20 text-center">
+                      <span className="text-3xl block mb-2">{style.icon}</span>
+                      <p className="text-cream font-medium text-sm">{style.label}</p>
+                      <span className={`text-xs mt-2 inline-block px-2 py-0.5 rounded-full ${
+                        style.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {style.active ? 'Aktiv' : 'Inaktiv'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* System Info */}
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <Database className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-serif text-cream">System Info</h3>
+                    <p className="text-cream/50 text-sm">Übersicht über Systemeinstellungen</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-navy-dark/30 rounded-xl">
+                    <p className="text-cream/60 text-sm mb-1">Max. Fotos pro Benutzer</p>
+                    <p className="text-cream font-medium">10 Fotos</p>
+                  </div>
+                  <div className="p-4 bg-navy-dark/30 rounded-xl">
+                    <p className="text-cream/60 text-sm mb-1">Unterstützte Bildformate</p>
+                    <p className="text-cream font-medium">JPG, PNG, WebP</p>
+                  </div>
+                  <div className="p-4 bg-navy-dark/30 rounded-xl">
+                    <p className="text-cream/60 text-sm mb-1">Max. Bildgröße</p>
+                    <p className="text-cream font-medium">10 MB</p>
+                  </div>
+                  <div className="p-4 bg-navy-dark/30 rounded-xl">
+                    <p className="text-cream/60 text-sm mb-1">Video-Avatar Provider</p>
+                    <p className="text-cream font-medium">
+                      {stats?.avatarProvider || 'Nicht konfiguriert'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}

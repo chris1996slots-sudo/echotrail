@@ -28,7 +28,10 @@ import {
   Lightbulb,
   Clock,
   X,
-  Tag
+  Tag,
+  Edit3,
+  Palette,
+  Eye
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -240,14 +243,49 @@ export function PersonaPage({ onNavigate }) {
     { id: 'vibe', label: 'Echo Vibe' },
   ];
 
+  // Real background images
   const backgrounds = [
-    { id: 'office', label: 'Modern Office', preview: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' },
-    { id: 'nature', label: 'Nature Scene', preview: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)' },
-    { id: 'library', label: 'Classic Library', preview: 'linear-gradient(135deg, #3e2723 0%, #5d4037 100%)' },
-    { id: 'studio', label: 'Professional Studio', preview: 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%)' },
-    { id: 'home', label: 'Cozy Home', preview: 'linear-gradient(135deg, #8e7a61 0%, #c4a77d 100%)' },
-    { id: 'custom', label: 'Custom Upload', preview: null },
+    {
+      id: 'beach',
+      label: 'Am Strand',
+      preview: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop',
+      fullUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=1080&fit=crop'
+    },
+    {
+      id: 'library',
+      label: 'Bibliothek',
+      preview: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400&h=300&fit=crop',
+      fullUrl: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1920&h=1080&fit=crop'
+    },
+    {
+      id: 'nature',
+      label: 'In der Natur',
+      preview: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
+      fullUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop'
+    },
+    {
+      id: 'home',
+      label: 'Gemütliches Zuhause',
+      preview: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&h=300&fit=crop',
+      fullUrl: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1920&h=1080&fit=crop'
+    },
+    {
+      id: 'custom',
+      label: 'Eigenes Bild',
+      preview: null,
+      fullUrl: null
+    },
   ];
+
+  // Avatar creation step flow
+  const avatarSteps = [
+    { id: 'photos', label: 'Fotos', icon: Camera, description: 'Lade deine Fotos hoch' },
+    { id: 'background', label: 'Hintergrund', icon: ImageIcon, description: 'Wähle einen Hintergrund' },
+    { id: 'style', label: 'Stil', icon: Palette, description: 'Wähle deinen Avatar-Stil' },
+    { id: 'preview', label: 'Vorschau', icon: Eye, description: 'Schau dir dein Ergebnis an' },
+  ];
+
+  const [avatarStep, setAvatarStep] = useState(0);
 
   const avatarStyles = [
     { id: 'realistic', label: 'Realistic', description: 'Lifelike digital twin', icon: '🎭' },
@@ -463,258 +501,402 @@ export function PersonaPage({ onNavigate }) {
       case 'avatar':
         const avatarImages = persona.avatarImages || [];
         const hasImages = avatarImages.length > 0;
+        const currentStepData = avatarSteps[avatarStep];
+        const selectedBackground = backgrounds.find(b => b.id === persona.backgroundType) || backgrounds[0];
+        const selectedStyle = avatarStyles.find(s => s.id === persona.avatarStyle) || avatarStyles[0];
+
+        // Render step content
+        const renderAvatarStepContent = () => {
+          switch (avatarSteps[avatarStep].id) {
+            case 'photos':
+              return (
+                <div className="space-y-6">
+                  {/* Photo Gallery */}
+                  <div className="bg-navy-dark/30 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-cream font-medium">Deine Fotos</h4>
+                      <span className="text-cream/40 text-xs">{avatarImages.length}/10 Fotos</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {/* Existing Photos */}
+                      {avatarImages.map((img) => (
+                        <motion.div
+                          key={img.id}
+                          className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                            persona.activeAvatarId === img.id
+                              ? 'border-gold ring-2 ring-gold/30'
+                              : 'border-gold/20 hover:border-gold/50'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          onClick={() => selectActiveAvatar(img.id)}
+                        >
+                          <img
+                            src={img.imageData || img.image}
+                            alt={img.label}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Label */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                            <p className="text-cream text-xs text-center truncate">{img.label || 'Kein Label'}</p>
+                          </div>
+                          {/* Active Badge */}
+                          {(img.isActive || persona.activeAvatarId === img.id) && (
+                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-gold rounded-full">
+                              <span className="text-navy text-xs font-medium">Aktiv</span>
+                            </div>
+                          )}
+                          {/* Action Buttons */}
+                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newLabel = prompt('Neuer Name:', img.label || '');
+                                if (newLabel !== null) updateAvatarLabel(img.id, newLabel);
+                              }}
+                              className="w-7 h-7 bg-navy/80 backdrop-blur rounded-full flex items-center justify-center hover:bg-gold/80 transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-cream" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Foto wirklich löschen?')) deleteAvatarImage(img.id);
+                              }}
+                              className="w-7 h-7 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+
+                      {/* Add New Photo Button */}
+                      {avatarImages.length < 10 && (
+                        <label className="aspect-square rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-navy-light/50">
+                          <Plus className="w-10 h-10 text-gold/50 mb-2" />
+                          <span className="text-cream/50 text-sm">Foto hinzufügen</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            ref={fileInputRef}
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Info about required tags */}
+                    <div className="mt-4 pt-4 border-t border-gold/10">
+                      <div className="flex items-center gap-2 text-cream/50 text-sm">
+                        <Tag className="w-4 h-4" />
+                        <span>Beim Hochladen werden Altersgruppe und Anlass abgefragt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!hasImages && (
+                    <div className="text-center p-6 bg-gold/10 rounded-xl border border-gold/20">
+                      <Camera className="w-12 h-12 text-gold/60 mx-auto mb-3" />
+                      <p className="text-cream/70">Lade mindestens ein Foto hoch, um fortzufahren</p>
+                    </div>
+                  )}
+                </div>
+              );
+
+            case 'background':
+              return (
+                <div className="space-y-6">
+                  <p className="text-cream/60 text-sm text-center">
+                    Wähle einen Hintergrund für dein sprechendes Avatar-Video
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {backgrounds.map((bg) => (
+                      <motion.button
+                        key={bg.id}
+                        onClick={() => bg.id === 'custom' ? null : selectBackground(bg.id)}
+                        className={`relative h-40 rounded-xl overflow-hidden border-2 transition-all ${
+                          persona.backgroundType === bg.id
+                            ? 'border-gold ring-2 ring-gold/30'
+                            : 'border-gold/20 hover:border-gold/40'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {bg.id === 'custom' ? (
+                          <label className="w-full h-full flex flex-col items-center justify-center bg-navy-light cursor-pointer">
+                            {persona.backgroundImage && persona.backgroundType === 'custom' ? (
+                              <img
+                                src={persona.backgroundImage}
+                                alt="Custom background"
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <>
+                                <Upload className="w-10 h-10 text-gold/50 mb-2" />
+                                <span className="text-cream/60 text-sm">Eigenes Bild</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleBackgroundUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        ) : (
+                          <img
+                            src={bg.preview}
+                            alt={bg.label}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                          <span className="text-cream font-medium">{bg.label}</span>
+                        </div>
+                        {persona.backgroundType === bg.id && (
+                          <div className="absolute top-3 right-3 w-8 h-8 bg-gold rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-5 h-5 text-navy" />
+                          </div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              );
+
+            case 'style':
+              return (
+                <div className="space-y-6">
+                  <p className="text-cream/60 text-sm text-center">
+                    Wähle den Stil für deinen sprechenden Avatar
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {avatarStyles.map((style) => (
+                      <motion.button
+                        key={style.id}
+                        onClick={() => selectAvatarStyle(style.id)}
+                        className={`relative p-5 rounded-xl border-2 text-left transition-all ${
+                          persona.avatarStyle === style.id
+                            ? 'border-gold bg-gold/10'
+                            : 'border-gold/20 hover:border-gold/40 bg-navy-light/30'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <span className="text-4xl mb-3 block">{style.icon}</span>
+                        <h4 className="text-cream font-medium">{style.label}</h4>
+                        <p className="text-cream/50 text-sm mt-1">{style.description}</p>
+                        {persona.avatarStyle === style.id && (
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-gold rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-4 h-4 text-navy" />
+                          </div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              );
+
+            case 'preview':
+              return (
+                <div className="space-y-6">
+                  {/* Main Preview */}
+                  <div
+                    className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-gold/30 shadow-xl"
+                    style={{
+                      backgroundImage: persona.backgroundType === 'custom' && persona.backgroundImage
+                        ? `url(${persona.backgroundImage})`
+                        : selectedBackground.preview
+                        ? `url(${selectedBackground.preview})`
+                        : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  >
+                    {/* Overlay for better visibility */}
+                    <div className="absolute inset-0 bg-black/20" />
+
+                    {/* Avatar in center */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex flex-col items-center">
+                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-gold/60 shadow-2xl">
+                          {persona.avatarImage ? (
+                            <img
+                              src={persona.avatarImage}
+                              alt="Avatar preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-navy-dark flex items-center justify-center">
+                              <UserIcon className="w-16 h-16 text-gold/30" />
+                            </div>
+                          )}
+                        </div>
+                        {/* Active Photo Label */}
+                        {persona.activeAvatarId && avatarImages.find(img => img.id === persona.activeAvatarId)?.label && (
+                          <span className="mt-3 px-4 py-1.5 bg-navy/80 backdrop-blur text-cream rounded-full text-sm">
+                            {avatarImages.find(img => img.id === persona.activeAvatarId)?.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Style Badge */}
+                    <div className="absolute top-4 right-4 px-4 py-2 bg-navy/80 backdrop-blur rounded-full border border-gold/30">
+                      <span className="text-cream flex items-center gap-2">
+                        <span className="text-xl">{selectedStyle.icon}</span>
+                        <span className="font-medium">{selectedStyle.label}</span>
+                      </span>
+                    </div>
+
+                    {/* Background Label */}
+                    <div className="absolute bottom-4 left-4 px-4 py-2 bg-navy/80 backdrop-blur rounded-full border border-gold/30">
+                      <span className="text-cream text-sm">
+                        <ImageIcon className="w-4 h-4 inline mr-2" />
+                        {selectedBackground.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-navy-dark/30 rounded-xl p-5">
+                    <h4 className="text-cream font-medium mb-4">Zusammenfassung</h4>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="p-3 bg-navy-light/30 rounded-lg">
+                        <Camera className="w-6 h-6 text-gold mx-auto mb-2" />
+                        <p className="text-cream/50 text-xs">Fotos</p>
+                        <p className="text-cream font-medium">{avatarImages.length}</p>
+                      </div>
+                      <div className="p-3 bg-navy-light/30 rounded-lg">
+                        <ImageIcon className="w-6 h-6 text-gold mx-auto mb-2" />
+                        <p className="text-cream/50 text-xs">Hintergrund</p>
+                        <p className="text-cream font-medium text-sm">{selectedBackground.label}</p>
+                      </div>
+                      <div className="p-3 bg-navy-light/30 rounded-lg">
+                        <Palette className="w-6 h-6 text-gold mx-auto mb-2" />
+                        <p className="text-cream/50 text-xs">Stil</p>
+                        <p className="text-cream font-medium text-sm">{selectedStyle.label}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-cream/50 text-center text-sm">
+                    Dein Avatar wird animiert und spricht deine Weisheiten
+                  </p>
+                </div>
+              );
+
+            default:
+              return null;
+          }
+        };
 
         return (
-          <div className="space-y-8">
-            {/* Avatar Upload Section */}
-            <div>
-              <h3 className="text-xl font-serif text-cream mb-2 text-center">Your Avatar Photos</h3>
-              <p className="text-cream/60 text-sm mb-6 text-center">
-                Upload multiple photos of yourself from different ages. Your echo can switch between them.
-              </p>
-
-              {/* Current Active Avatar */}
-              <div className="flex justify-center mb-6">
-                <div className="relative">
-                  <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-gold/50 bg-navy-light flex items-center justify-center shadow-lg shadow-gold/20">
-                    {persona.avatarImage ? (
-                      <img
-                        src={persona.avatarImage}
-                        alt="Active avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <UserIcon className="w-16 h-16 text-gold/30" />
-                    )}
-                  </div>
-                  {persona.avatarImage && (
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gold text-navy text-xs font-medium rounded-full">
-                      Active
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Photo Gallery */}
-              <div className="bg-navy-dark/30 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-cream font-medium">Photo Gallery</h4>
-                  <span className="text-cream/40 text-xs">{avatarImages.length}/10 photos</span>
-                </div>
-
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                  {/* Existing Photos */}
-                  {avatarImages.map((img) => (
-                    <motion.div
-                      key={img.id}
-                      className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                        persona.activeAvatarId === img.id
-                          ? 'border-gold ring-2 ring-gold/30'
-                          : 'border-gold/20 hover:border-gold/50'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      onClick={() => selectActiveAvatar(img.id)}
+          <div className="space-y-6">
+            {/* Step Progress Header */}
+            <div className="flex items-center justify-between mb-2">
+              {avatarSteps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = index === avatarStep;
+                const isCompleted = index < avatarStep;
+                return (
+                  <div key={step.id} className="flex items-center">
+                    <motion.button
+                      onClick={() => setAvatarStep(index)}
+                      className={`flex flex-col items-center ${isActive || isCompleted ? 'cursor-pointer' : 'cursor-default'}`}
+                      whileHover={isActive || isCompleted ? { scale: 1.05 } : {}}
                     >
-                      <img
-                        src={img.imageData || img.image}
-                        alt={img.label}
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Label */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <input
-                          type="text"
-                          value={img.label || ''}
-                          onChange={(e) => updateAvatarLabel(img.id, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-full bg-transparent text-cream text-xs text-center focus:outline-none"
-                          placeholder="Label..."
-                        />
-                      </div>
-                      {/* Active Badge */}
-                      {(img.isActive || persona.activeAvatarId === img.id) && (
-                        <div className="absolute top-1 left-1 w-5 h-5 bg-gold rounded-full flex items-center justify-center">
-                          <CheckCircle2 className="w-3 h-3 text-navy" />
-                        </div>
-                      )}
-                      {/* Delete Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteAvatarImage(img.id);
-                        }}
-                        className="absolute top-1 right-1 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-3 h-3 text-white" />
-                      </button>
-                    </motion.div>
-                  ))}
-
-                  {/* Add New Photo Button */}
-                  {avatarImages.length < 10 && (
-                    <label className="aspect-square rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/30 flex flex-col items-center justify-center cursor-pointer transition-all">
-                      <Plus className="w-8 h-8 text-gold/50 mb-1" />
-                      <span className="text-cream/40 text-xs">Foto hinzufügen</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        ref={fileInputRef}
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {/* Info about required tags */}
-                {avatarImages.length < 10 && (
-                  <div className="mt-4 pt-4 border-t border-gold/10">
-                    <div className="flex items-center gap-2 text-cream/50 text-xs">
-                      <Tag className="w-4 h-4" />
-                      <span>Jedes Foto benötigt Altersgruppe und Anlass</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <p className="text-cream/40 text-xs text-center mt-4">
-                For best results, use a well-lit, front-facing photo with a neutral background
-              </p>
-            </div>
-
-            {/* Background Selection */}
-            <div>
-              <h3 className="text-xl font-serif text-cream mb-4">Avatar Background</h3>
-              <p className="text-cream/60 text-sm mb-6">
-                Choose a background for your speaking avatar videos.
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {backgrounds.map((bg) => (
-                  <motion.button
-                    key={bg.id}
-                    onClick={() => bg.id === 'custom' ? null : selectBackground(bg.id)}
-                    className={`relative h-32 rounded-xl overflow-hidden border-2 transition-all ${
-                      persona.backgroundType === bg.id
-                        ? 'border-gold ring-2 ring-gold/30'
-                        : 'border-gold/20 hover:border-gold/40'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {bg.id === 'custom' ? (
-                      <label className="w-full h-full flex flex-col items-center justify-center bg-navy-light cursor-pointer">
-                        {persona.backgroundImage && persona.backgroundType === 'custom' ? (
-                          <img
-                            src={persona.backgroundImage}
-                            alt="Custom background"
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                        isActive
+                          ? 'bg-gold text-navy'
+                          : isCompleted
+                          ? 'bg-gold/30 text-gold'
+                          : 'bg-navy-light/50 text-cream/40'
+                      }`}>
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-6 h-6" />
                         ) : (
-                          <>
-                            <Upload className="w-8 h-8 text-gold/50 mb-2" />
-                            <span className="text-cream/60 text-sm">Upload Custom</span>
-                          </>
+                          <Icon className="w-6 h-6" />
                         )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleBackgroundUpload}
-                          className="hidden"
-                        />
-                      </label>
-                    ) : (
-                      <div
-                        className="w-full h-full"
-                        style={{ background: bg.preview }}
-                      />
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                      <span className="text-cream text-xs font-medium">{bg.label}</span>
-                    </div>
-                    {persona.backgroundType === bg.id && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-gold rounded-full flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-navy" />
                       </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* Avatar Style Selection */}
-            <div>
-              <h3 className="text-xl font-serif text-cream mb-4">Avatar Style</h3>
-              <p className="text-cream/60 text-sm mb-6">
-                Choose how your speaking avatar will look.
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {avatarStyles.map((style) => (
-                  <motion.button
-                    key={style.id}
-                    onClick={() => selectAvatarStyle(style.id)}
-                    className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-                      persona.avatarStyle === style.id
-                        ? 'border-gold bg-gold/10'
-                        : 'border-gold/20 hover:border-gold/40 bg-navy-light/30'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span className="text-3xl mb-2 block">{style.icon}</span>
-                    <h4 className="text-cream font-medium text-sm">{style.label}</h4>
-                    <p className="text-cream/50 text-xs mt-1">{style.description}</p>
-                    {persona.avatarStyle === style.id && (
-                      <div className="absolute top-2 right-2 w-5 h-5 bg-gold rounded-full flex items-center justify-center">
-                        <CheckCircle2 className="w-3 h-3 text-navy" />
-                      </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* Preview Section */}
-            {persona.avatarImage && (
-              <div className="mt-8">
-                <h3 className="text-xl font-serif text-cream mb-4">Preview</h3>
-                <div
-                  className="relative w-full max-w-md mx-auto aspect-video rounded-xl overflow-hidden border-2 border-gold/20"
-                  style={{
-                    background: persona.backgroundType === 'custom' && persona.backgroundImage
-                      ? `url(${persona.backgroundImage}) center/cover`
-                      : backgrounds.find(b => b.id === persona.backgroundType)?.preview || backgrounds[0].preview
-                  }}
-                >
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-gold/50">
-                      <img
-                        src={persona.avatarImage}
-                        alt="Avatar preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    {/* Active Photo Label */}
-                    {persona.activeAvatarId && avatarImages.find(img => img.id === persona.activeAvatarId)?.label && (
-                      <span className="mt-2 px-2 py-0.5 bg-navy/70 backdrop-blur text-cream text-xs rounded-full">
-                        {avatarImages.find(img => img.id === persona.activeAvatarId)?.label}
+                      <span className={`mt-2 text-xs font-medium ${
+                        isActive ? 'text-gold' : isCompleted ? 'text-cream/70' : 'text-cream/40'
+                      }`}>
+                        {step.label}
                       </span>
+                    </motion.button>
+                    {index < avatarSteps.length - 1 && (
+                      <div className={`w-12 md:w-20 h-0.5 mx-2 ${
+                        index < avatarStep ? 'bg-gold/50' : 'bg-navy-light/50'
+                      }`} />
                     )}
                   </div>
-                  {/* Style Badge */}
-                  <div className="absolute top-3 right-3 px-3 py-1 bg-navy/80 backdrop-blur rounded-full border border-gold/30">
-                    <span className="text-cream text-xs">
-                      {avatarStyles.find(s => s.id === persona.avatarStyle)?.icon || '🎭'}{' '}
-                      {avatarStyles.find(s => s.id === persona.avatarStyle)?.label || 'Realistic'}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-cream/40 text-xs text-center mt-4">
-                  Your avatar will be animated and speak your wisdom
-                </p>
-              </div>
-            )}
+                );
+              })}
+            </div>
+
+            {/* Current Step Title */}
+            <div className="text-center py-4 border-b border-gold/10">
+              <h3 className="text-2xl font-serif text-cream">{currentStepData.description}</h3>
+              <p className="text-cream/50 text-sm mt-1">Schritt {avatarStep + 1} von {avatarSteps.length}</p>
+            </div>
+
+            {/* Step Content */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={avatarStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderAvatarStepContent()}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-4 border-t border-gold/10">
+              {avatarStep > 0 ? (
+                <motion.button
+                  onClick={() => setAvatarStep(prev => prev - 1)}
+                  className="btn-secondary flex items-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Zurück
+                </motion.button>
+              ) : (
+                <div />
+              )}
+
+              {avatarStep < avatarSteps.length - 1 ? (
+                <motion.button
+                  onClick={() => setAvatarStep(prev => prev + 1)}
+                  disabled={avatarStep === 0 && !hasImages}
+                  className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Weiter
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={() => onNavigate('echo-sim')}
+                  className="btn-primary flex items-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Avatar testen
+                </motion.button>
+              )}
+            </div>
           </div>
         );
 
