@@ -43,18 +43,35 @@ router.post('/chat', authenticate, async (req, res) => {
 
     // Get all API configs to find active LLM
     const apiConfigs = await req.prisma.apiConfig.findMany();
-    const llmProviders = ['groq', 'openai', 'claude', 'gemini'];
 
-    console.log('Available API configs:', apiConfigs.map(c => ({ service: c.service, isActive: c.isActive, hasKey: !!c.apiKey })));
+    console.log('Available API configs:', apiConfigs.map(c => ({
+      service: c.service,
+      isActive: c.isActive,
+      hasKey: !!c.apiKey,
+      settings: c.settings
+    })));
 
-    // Find the first active LLM provider
+    // Find active LLM provider - check both new format (service='llm') and legacy format
     let activeProvider = null;
-    for (const provider of llmProviders) {
-      const config = apiConfigs.find(c => c.service === provider);
-      if (config?.isActive && config?.apiKey) {
-        activeProvider = { service: provider, apiKey: config.apiKey };
-        console.log(`Using LLM provider: ${provider}`);
-        break;
+
+    // First check new format: service='llm' with provider in settings
+    const llmConfig = apiConfigs.find(c => c.service === 'llm');
+    if (llmConfig?.isActive && llmConfig?.apiKey) {
+      const provider = llmConfig.settings?.provider || 'groq';
+      activeProvider = { service: provider, apiKey: llmConfig.apiKey };
+      console.log(`Using LLM provider (new format): ${provider}`);
+    }
+
+    // Fallback to legacy format: individual service names
+    if (!activeProvider) {
+      const llmProviders = ['groq', 'openai', 'claude', 'gemini'];
+      for (const provider of llmProviders) {
+        const config = apiConfigs.find(c => c.service === provider);
+        if (config?.isActive && config?.apiKey) {
+          activeProvider = { service: provider, apiKey: config.apiKey };
+          console.log(`Using LLM provider (legacy format): ${provider}`);
+          break;
+        }
       }
     }
 
