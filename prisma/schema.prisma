@@ -205,6 +205,14 @@ model SupportChat {
 
   status    String   @default("open") // open, closed
 
+  userTyping    Boolean  @default(false)
+  adminTyping   Boolean  @default(false)
+  userTypingAt  DateTime?
+  adminTypingAt DateTime?
+
+  userLastRead  DateTime?
+  adminLastRead DateTime?
+
   messages  SupportMessage[]
 
   createdAt DateTime @default(now())
@@ -220,6 +228,7 @@ model SupportMessage {
 
   sender    String   // user, admin
   content   String   @db.Text
+  imageUrl  String?  @db.Text
 
   createdAt DateTime @default(now())
 

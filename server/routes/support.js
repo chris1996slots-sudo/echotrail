@@ -3,6 +3,12 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Helper to check if typing is still active (within 3 seconds)
+const isTypingActive = (typingAt) => {
+  if (!typingAt) return false;
+  return (Date.now() - new Date(typingAt).getTime()) < 3000;
+};
+
 // =====================
 // USER ENDPOINTS
 // =====================
@@ -35,6 +41,15 @@ router.get('/chat', authenticate, async (req, res) => {
       });
     }
 
+    // Mark as read by user
+    await req.prisma.supportChat.update({
+      where: { id: chat.id },
+      data: { userLastRead: new Date() }
+    });
+
+    // Add computed typing status
+    chat.isAdminTyping = isTypingActive(chat.adminTypingAt);
+
     res.json(chat);
   } catch (error) {
     console.error('Support chat error:', error);
@@ -42,10 +57,72 @@ router.get('/chat', authenticate, async (req, res) => {
   }
 });
 
+// Poll for new messages (lightweight)
+router.get('/chat/poll', authenticate, async (req, res) => {
+  try {
+    const { lastMessageId, lastCheck } = req.query;
+
+    const chat = await req.prisma.supportChat.findFirst({
+      where: {
+        userId: req.user.id,
+        status: 'open'
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          ...(lastCheck && {
+            where: {
+              createdAt: { gt: new Date(lastCheck) }
+            }
+          })
+        }
+      }
+    });
+
+    if (!chat) {
+      return res.json({ messages: [], isAdminTyping: false });
+    }
+
+    res.json({
+      messages: chat.messages,
+      isAdminTyping: isTypingActive(chat.adminTypingAt),
+      chatId: chat.id
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to poll messages' });
+  }
+});
+
+// Set typing status
+router.post('/chat/typing', authenticate, async (req, res) => {
+  try {
+    const chat = await req.prisma.supportChat.findFirst({
+      where: {
+        userId: req.user.id,
+        status: 'open'
+      }
+    });
+
+    if (chat) {
+      await req.prisma.supportChat.update({
+        where: { id: chat.id },
+        data: {
+          userTyping: true,
+          userTypingAt: new Date()
+        }
+      });
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update typing status' });
+  }
+});
+
 // Send message as user
 router.post('/chat/message', authenticate, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, imageUrl } = req.body;
 
     // Get or create chat
     let chat = await req.prisma.supportChat.findFirst({
@@ -69,14 +146,19 @@ router.post('/chat/message', authenticate, async (req, res) => {
       data: {
         chatId: chat.id,
         sender: 'user',
-        content,
+        content: content || '',
+        imageUrl: imageUrl || null,
       }
     });
 
-    // Update chat timestamp
+    // Update chat timestamp and clear typing
     await req.prisma.supportChat.update({
       where: { id: chat.id },
-      data: { updatedAt: new Date() }
+      data: {
+        updatedAt: new Date(),
+        userTyping: false,
+        userTypingAt: null
+      }
     });
 
     res.status(201).json(message);
@@ -107,7 +189,7 @@ router.post('/chat/close', authenticate, async (req, res) => {
 // ADMIN ENDPOINTS
 // =====================
 
-// Get all open support chats
+// Get all open support chats with unread count
 router.get('/admin/chats', authenticate, requireAdmin, async (req, res) => {
   try {
     const { status = 'open' } = req.query;
@@ -117,15 +199,102 @@ router.get('/admin/chats', authenticate, requireAdmin, async (req, res) => {
       include: {
         messages: {
           orderBy: { createdAt: 'desc' },
-          take: 1, // Just get last message for preview
+          take: 1,
+        },
+        _count: {
+          select: { messages: true }
         }
       },
       orderBy: { updatedAt: 'desc' }
     });
 
-    res.json(chats);
+    // Calculate unread count for each chat
+    const chatsWithUnread = await Promise.all(chats.map(async (chat) => {
+      let unreadCount = 0;
+      if (chat.adminLastRead) {
+        unreadCount = await req.prisma.supportMessage.count({
+          where: {
+            chatId: chat.id,
+            sender: 'user',
+            createdAt: { gt: chat.adminLastRead }
+          }
+        });
+      } else {
+        unreadCount = await req.prisma.supportMessage.count({
+          where: {
+            chatId: chat.id,
+            sender: 'user'
+          }
+        });
+      }
+      return {
+        ...chat,
+        unreadCount,
+        isUserTyping: isTypingActive(chat.userTypingAt)
+      };
+    }));
+
+    res.json(chatsWithUnread);
   } catch (error) {
+    console.error('Get chats error:', error);
     res.status(500).json({ error: 'Failed to get chats' });
+  }
+});
+
+// Poll for admin overview (new chats, unread counts)
+router.get('/admin/chats/poll', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { lastCheck } = req.query;
+
+    // Get open chats with unread
+    const openChats = await req.prisma.supportChat.findMany({
+      where: { status: 'open' },
+      select: {
+        id: true,
+        userName: true,
+        userTypingAt: true,
+        adminLastRead: true,
+        updatedAt: true,
+        _count: {
+          select: { messages: true }
+        }
+      }
+    });
+
+    // Calculate total unread
+    let totalUnread = 0;
+    const chatStatuses = await Promise.all(openChats.map(async (chat) => {
+      let unread = 0;
+      if (chat.adminLastRead) {
+        unread = await req.prisma.supportMessage.count({
+          where: {
+            chatId: chat.id,
+            sender: 'user',
+            createdAt: { gt: chat.adminLastRead }
+          }
+        });
+      } else {
+        unread = await req.prisma.supportMessage.count({
+          where: { chatId: chat.id, sender: 'user' }
+        });
+      }
+      totalUnread += unread;
+      return {
+        id: chat.id,
+        userName: chat.userName,
+        unreadCount: unread,
+        isUserTyping: isTypingActive(chat.userTypingAt),
+        updatedAt: chat.updatedAt
+      };
+    }));
+
+    res.json({
+      totalUnread,
+      openChats: chatStatuses.length,
+      chats: chatStatuses
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to poll' });
   }
 });
 
@@ -147,9 +316,76 @@ router.get('/admin/chats/:id', authenticate, requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
+    // Mark as read by admin
+    await req.prisma.supportChat.update({
+      where: { id },
+      data: { adminLastRead: new Date() }
+    });
+
+    chat.isUserTyping = isTypingActive(chat.userTypingAt);
+
     res.json(chat);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get chat' });
+  }
+});
+
+// Poll specific chat for new messages
+router.get('/admin/chats/:id/poll', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lastCheck } = req.query;
+
+    const chat = await req.prisma.supportChat.findUnique({
+      where: { id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          ...(lastCheck && {
+            where: {
+              createdAt: { gt: new Date(lastCheck) }
+            }
+          })
+        }
+      }
+    });
+
+    if (!chat) {
+      return res.json({ messages: [], isUserTyping: false });
+    }
+
+    // Mark as read
+    await req.prisma.supportChat.update({
+      where: { id },
+      data: { adminLastRead: new Date() }
+    });
+
+    res.json({
+      messages: chat.messages,
+      isUserTyping: isTypingActive(chat.userTypingAt),
+      status: chat.status
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to poll chat' });
+  }
+});
+
+// Set admin typing status
+router.post('/admin/chats/:id/typing', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await req.prisma.supportChat.update({
+      where: { id },
+      data: {
+        adminTyping: true,
+        adminTypingAt: new Date()
+      }
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update typing status' });
   }
 });
 
@@ -157,7 +393,7 @@ router.get('/admin/chats/:id', authenticate, requireAdmin, async (req, res) => {
 router.post('/admin/chats/:id/message', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { content } = req.body;
+    const { content, imageUrl } = req.body;
 
     const chat = await req.prisma.supportChat.findUnique({
       where: { id }
@@ -171,14 +407,19 @@ router.post('/admin/chats/:id/message', authenticate, requireAdmin, async (req, 
       data: {
         chatId: id,
         sender: 'admin',
-        content,
+        content: content || '',
+        imageUrl: imageUrl || null,
       }
     });
 
-    // Update chat timestamp
+    // Update chat timestamp and clear typing
     await req.prisma.supportChat.update({
       where: { id },
-      data: { updatedAt: new Date() }
+      data: {
+        updatedAt: new Date(),
+        adminTyping: false,
+        adminTypingAt: null
+      }
     });
 
     res.status(201).json(message);

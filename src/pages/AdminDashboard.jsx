@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
@@ -33,7 +33,9 @@ import {
   Play,
   Pause,
   Plus,
-  Save
+  Save,
+  Loader2,
+  Upload
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -109,6 +111,15 @@ export function AdminDashboard({ onNavigate }) {
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const [totalUnread, setTotalUnread] = useState(0);
+  const [pendingImage, setPendingImage] = useState(null);
+  const supportPollRef = useRef(null);
+  const chatPollRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const lastChatCheckRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   // User details state
   const [selectedUser, setSelectedUser] = useState(null);
@@ -128,6 +139,13 @@ export function AdminDashboard({ onNavigate }) {
   // Voice samples state
   const [userVoiceSamples, setUserVoiceSamples] = useState(null);
   const [playingAudio, setPlayingAudio] = useState(null);
+
+  // Pricing state
+  const [pricing, setPricing] = useState({
+    standard: { monthly: 9.99, yearly: 99.99 },
+    premium: { monthly: 19.99, yearly: 199.99 }
+  });
+  const [editingPricing, setEditingPricing] = useState(false);
 
   // Default prompts configuration
   const defaultPrompts = [
@@ -220,10 +238,11 @@ Draw from their life stories and memories to provide authentic, personal respons
       }
 
       if (activeTab === 'settings') {
-        // Fetch prompts and blacklist
-        const [promptsRes, blacklistRes] = await Promise.all([
+        // Fetch prompts, blacklist, and pricing
+        const [promptsRes, blacklistRes, pricingRes] = await Promise.all([
           fetch(`${API_URL}/api/admin/prompts`, { headers }),
-          fetch(`${API_URL}/api/admin/blacklist`, { headers })
+          fetch(`${API_URL}/api/admin/blacklist`, { headers }),
+          fetch(`${API_URL}/api/admin/pricing`, { headers })
         ]);
 
         if (promptsRes.ok) {
@@ -232,12 +251,111 @@ Draw from their life stories and memories to provide authentic, personal respons
         if (blacklistRes.ok) {
           setBlacklist(await blacklistRes.json());
         }
+        if (pricingRes.ok) {
+          setPricing(await pricingRes.json());
+        }
       }
     } catch (error) {
       console.error('Failed to fetch admin data:', error);
     }
     setLoading(false);
   };
+
+  // Scroll to bottom of messages
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Poll support chat overview
+  const pollSupportOverview = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/support/admin/chats/poll`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTotalUnread(data.totalUnread || 0);
+        // Update chat list with typing status and unread
+        setSupportChats(prev => {
+          return prev.map(chat => {
+            const updated = data.chats.find(c => c.id === chat.id);
+            if (updated) {
+              return { ...chat, unreadCount: updated.unreadCount, isUserTyping: updated.isUserTyping };
+            }
+            return chat;
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Poll overview error:', error);
+    }
+  }, []);
+
+  // Poll specific chat for new messages
+  const pollChatMessages = useCallback(async () => {
+    if (!selectedChat) return;
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(
+        `${API_URL}/api/support/admin/chats/${selectedChat.id}/poll?lastCheck=${lastChatCheckRef.current || ''}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          setChatMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMsgs = data.messages.filter(m => !existingIds.has(m.id));
+            return [...prev, ...newMsgs];
+          });
+        }
+        setIsUserTyping(data.isUserTyping || false);
+        lastChatCheckRef.current = new Date().toISOString();
+      }
+    } catch (error) {
+      console.error('Poll chat error:', error);
+    }
+  }, [selectedChat]);
+
+  // Start/stop polling based on tab and selection
+  useEffect(() => {
+    if (activeTab === 'support') {
+      // Start overview polling
+      supportPollRef.current = setInterval(pollSupportOverview, 3000);
+    } else {
+      if (supportPollRef.current) {
+        clearInterval(supportPollRef.current);
+      }
+    }
+    return () => {
+      if (supportPollRef.current) {
+        clearInterval(supportPollRef.current);
+      }
+    };
+  }, [activeTab, pollSupportOverview]);
+
+  // Start/stop chat-specific polling
+  useEffect(() => {
+    if (selectedChat) {
+      lastChatCheckRef.current = new Date().toISOString();
+      chatPollRef.current = setInterval(pollChatMessages, 2000);
+    } else {
+      if (chatPollRef.current) {
+        clearInterval(chatPollRef.current);
+      }
+    }
+    return () => {
+      if (chatPollRef.current) {
+        clearInterval(chatPollRef.current);
+      }
+    };
+  }, [selectedChat, pollChatMessages]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages, isUserTyping, scrollToBottom]);
 
   // Load specific chat
   const loadChat = async (chatId) => {
@@ -250,30 +368,75 @@ Draw from their life stories and memories to provide authentic, personal respons
         const chat = await res.json();
         setSelectedChat(chat);
         setChatMessages(chat.messages || []);
+        setIsUserTyping(chat.isUserTyping || false);
+        lastChatCheckRef.current = new Date().toISOString();
       }
     } catch (error) {
       console.error('Failed to load chat:', error);
     }
   };
 
+  // Send typing indicator
+  const sendTypingIndicator = useCallback(async () => {
+    if (!selectedChat) return;
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/support/admin/chats/${selectedChat.id}/typing`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      // Ignore typing errors
+    }
+  }, [selectedChat]);
+
+  // Handle message input change
+  const handleMessageChange = (e) => {
+    setNewMessage(e.target.value);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    sendTypingIndicator();
+    typingTimeoutRef.current = setTimeout(() => {}, 2000);
+  };
+
+  // Handle image selection
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPendingImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Send message as admin
   const sendAdminMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChat || sendingMessage) return;
+    if ((!newMessage.trim() && !pendingImage) || !selectedChat || sendingMessage) return;
 
     setSendingMessage(true);
     try {
       const token = localStorage.getItem('echotrail_token');
-      await fetch(`${API_URL}/api/support/admin/chats/${selectedChat.id}/message`, {
+      const res = await fetch(`${API_URL}/api/support/admin/chats/${selectedChat.id}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ content: newMessage.trim() })
+        body: JSON.stringify({
+          content: newMessage.trim(),
+          imageUrl: pendingImage
+        })
       });
-      setNewMessage('');
-      await loadChat(selectedChat.id);
+      if (res.ok) {
+        const msg = await res.json();
+        setChatMessages(prev => [...prev, msg]);
+        setNewMessage('');
+        setPendingImage(null);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -436,6 +599,64 @@ Draw from their life stories and memories to provide authentic, personal respons
     setPlayingAudio(audio);
   };
 
+  // Update user subscription
+  const updateUserSubscription = async (userId, subscription) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ subscription })
+      });
+      if (res.ok) {
+        // Update local state
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscription } : u));
+        if (userDetails?.id === userId) {
+          setUserDetails(prev => ({ ...prev, subscription }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update subscription:', error);
+    }
+  };
+
+  // Fetch and save pricing
+  const fetchPricing = async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/admin/pricing`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setPricing(await res.json());
+      }
+    } catch (error) {
+      console.error('Failed to fetch pricing:', error);
+    }
+  };
+
+  const savePricing = async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/admin/pricing`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(pricing)
+      });
+      if (res.ok) {
+        setEditingPricing(false);
+      }
+    } catch (error) {
+      console.error('Failed to save pricing:', error);
+    }
+  };
+
   const testApiConnection = async (service) => {
     setTestResults(prev => ({ ...prev, [service]: { loading: true } }));
     try {
@@ -479,7 +700,7 @@ Draw from their life stories and memories to provide authentic, personal respons
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'support', label: 'Support', icon: MessageCircle, badge: supportChats.filter(c => c.status === 'open').length },
+    { id: 'support', label: 'Support', icon: MessageCircle, badge: totalUnread || supportChats.filter(c => c.status === 'open').length },
     { id: 'apis', label: 'AI Services', icon: Key },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -976,15 +1197,21 @@ Draw from their life stories and memories to provide authentic, personal respons
                             </span>
                           </td>
                           <td className="p-4">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              u.subscription === 'PREMIUM'
-                                ? 'bg-gold/20 text-gold'
-                                : u.subscription === 'STANDARD'
-                                ? 'bg-blue-500/20 text-blue-400'
-                                : 'bg-cream/10 text-cream/60'
-                            }`}>
-                              {u.subscription}
-                            </span>
+                            <select
+                              value={u.subscription}
+                              onChange={(e) => updateUserSubscription(u.id, e.target.value)}
+                              className={`px-2 py-1 rounded text-xs cursor-pointer border-0 ${
+                                u.subscription === 'PREMIUM'
+                                  ? 'bg-gold/20 text-gold'
+                                  : u.subscription === 'STANDARD'
+                                  ? 'bg-blue-500/20 text-blue-400'
+                                  : 'bg-cream/10 text-cream/60'
+                              }`}
+                            >
+                              <option value="FREE" className="bg-navy text-cream">FREE</option>
+                              <option value="STANDARD" className="bg-navy text-cream">STANDARD</option>
+                              <option value="PREMIUM" className="bg-navy text-cream">PREMIUM</option>
+                            </select>
                           </td>
                           <td className="p-4 text-cream/60 text-sm">
                             {u._count?.memories || 0} memories, {u._count?.timeCapsules || 0} capsules
@@ -1403,8 +1630,15 @@ Draw from their life stories and memories to provide authentic, personal respons
                         className="p-4 hover:bg-navy-light/30 cursor-pointer flex items-center gap-4"
                         onClick={() => loadChat(chat.id)}
                       >
-                        <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-                          <UserIcon className="w-5 h-5 text-gold/60" />
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
+                            <UserIcon className="w-5 h-5 text-gold/60" />
+                          </div>
+                          {chat.unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                              {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                            </span>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -1412,10 +1646,15 @@ Draw from their life stories and memories to provide authentic, personal respons
                             <span className={`px-2 py-0.5 text-xs rounded ${
                               chat.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-cream/10 text-cream/50'
                             }`}>{chat.status}</span>
+                            {chat.isUserTyping && (
+                              <span className="text-gold text-xs animate-pulse">typing...</span>
+                            )}
                           </div>
                           <p className="text-cream/50 text-sm truncate">{chat.userEmail}</p>
                           {chat.messages?.[0] && (
-                            <p className="text-cream/40 text-xs truncate mt-1">{chat.messages[0].content}</p>
+                            <p className="text-cream/40 text-xs truncate mt-1">
+                              {chat.messages[0].imageUrl ? '📷 Image' : ''} {chat.messages[0].content}
+                            </p>
                           )}
                         </div>
                         <div className="text-right flex-shrink-0">
@@ -1478,10 +1717,19 @@ Draw from their life stories and memories to provide authentic, personal respons
 
               {/* Messages */}
               <div className="glass-card flex-1 flex flex-col overflow-hidden">
+                {/* Typing indicator in header */}
+                {isUserTyping && (
+                  <div className="px-4 py-2 border-b border-gold/10 bg-gold/5">
+                    <span className="text-gold text-sm animate-pulse">User is typing...</span>
+                  </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {chatMessages.map(msg => (
-                    <div
+                    <motion.div
                       key={msg.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${
@@ -1489,39 +1737,101 @@ Draw from their life stories and memories to provide authentic, personal respons
                           ? 'bg-gold text-navy rounded-br-md'
                           : 'bg-navy-dark text-cream rounded-bl-md'
                       }`}>
-                        <p className="text-sm">{msg.content}</p>
+                        {msg.imageUrl && (
+                          <img
+                            src={msg.imageUrl}
+                            alt="Attached"
+                            className="max-w-full rounded-lg mb-2 cursor-pointer"
+                            onClick={() => window.open(msg.imageUrl, '_blank')}
+                          />
+                        )}
+                        {msg.content && <p className="text-sm">{msg.content}</p>}
                         <p className={`text-xs mt-1 ${msg.sender === 'admin' ? 'text-navy/50' : 'text-cream/40'}`}>
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
-                  {chatMessages.length === 0 && (
+
+                  {/* Typing indicator bubbles */}
+                  {isUserTyping && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex justify-start"
+                    >
+                      <div className="bg-navy-dark rounded-2xl rounded-bl-md px-4 py-3">
+                        <div className="flex gap-1">
+                          <span className="w-2 h-2 bg-gold/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-2 h-2 bg-gold/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2 h-2 bg-gold/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {chatMessages.length === 0 && !isUserTyping && (
                     <div className="flex items-center justify-center h-full">
                       <p className="text-cream/40">No messages yet</p>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
+
+                {/* Image Preview */}
+                {pendingImage && (
+                  <div className="px-4 py-2 border-t border-gold/20 bg-navy-light/30">
+                    <div className="relative inline-block">
+                      <img src={pendingImage} alt="Preview" className="h-20 rounded-lg" />
+                      <button
+                        onClick={() => setPendingImage(null)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Input */}
                 {selectedChat.status === 'open' && (
                   <form onSubmit={sendAdminMessage} className="p-4 border-t border-gold/10">
                     <div className="flex gap-3">
                       <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageSelect}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <motion.button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-12 h-12 rounded-xl bg-navy-dark/50 border border-gold/20 flex items-center justify-center text-cream/50 hover:text-cream hover:border-gold/40 transition-colors"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Upload className="w-5 h-5" />
+                      </motion.button>
+                      <input
                         type="text"
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={handleMessageChange}
                         placeholder="Type your reply..."
                         className="flex-1 px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
                       />
                       <motion.button
                         type="submit"
-                        disabled={!newMessage.trim() || sendingMessage}
+                        disabled={(!newMessage.trim() && !pendingImage) || sendingMessage}
                         className="px-6 py-3 bg-gold text-navy rounded-xl font-medium disabled:opacity-50 flex items-center gap-2"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <Send className="w-4 h-4" />
+                        {sendingMessage ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
                         Send
                       </motion.button>
                     </div>
@@ -1726,6 +2036,139 @@ Draw from their life stories and memories to provide authentic, personal respons
                       </p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Subscription Pricing */}
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold to-gold-light flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-navy" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif text-cream">Subscription Pricing</h3>
+                      <p className="text-cream/50 text-sm">Configure subscription plan prices</p>
+                    </div>
+                  </div>
+                  {!editingPricing ? (
+                    <motion.button
+                      onClick={() => setEditingPricing(true)}
+                      className="px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit
+                    </motion.button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => setEditingPricing(false)}
+                        className="px-4 py-2 bg-cream/10 text-cream/60 rounded-lg text-sm"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={savePricing}
+                        className="px-4 py-2 bg-gold text-navy rounded-lg text-sm flex items-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Standard Plan */}
+                  <div className="p-4 bg-navy-dark/30 rounded-xl border border-blue-500/30">
+                    <h4 className="text-blue-400 font-medium mb-4">Standard Plan</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-cream/50 text-sm">Monthly Price ($)</label>
+                        {editingPricing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={pricing.standard.monthly}
+                            onChange={(e) => setPricing(prev => ({
+                              ...prev,
+                              standard: { ...prev.standard, monthly: parseFloat(e.target.value) || 0 }
+                            }))}
+                            className="w-full mt-1 px-3 py-2 bg-navy-dark/50 border border-gold/20 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        ) : (
+                          <p className="text-cream text-xl font-medium">${pricing.standard.monthly}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-cream/50 text-sm">Yearly Price ($)</label>
+                        {editingPricing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={pricing.standard.yearly}
+                            onChange={(e) => setPricing(prev => ({
+                              ...prev,
+                              standard: { ...prev.standard, yearly: parseFloat(e.target.value) || 0 }
+                            }))}
+                            className="w-full mt-1 px-3 py-2 bg-navy-dark/50 border border-gold/20 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        ) : (
+                          <p className="text-cream text-xl font-medium">${pricing.standard.yearly}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Premium Plan */}
+                  <div className="p-4 bg-navy-dark/30 rounded-xl border border-gold/30">
+                    <h4 className="text-gold font-medium mb-4">Premium Plan</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-cream/50 text-sm">Monthly Price ($)</label>
+                        {editingPricing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={pricing.premium.monthly}
+                            onChange={(e) => setPricing(prev => ({
+                              ...prev,
+                              premium: { ...prev.premium, monthly: parseFloat(e.target.value) || 0 }
+                            }))}
+                            className="w-full mt-1 px-3 py-2 bg-navy-dark/50 border border-gold/20 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        ) : (
+                          <p className="text-cream text-xl font-medium">${pricing.premium.monthly}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-cream/50 text-sm">Yearly Price ($)</label>
+                        {editingPricing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={pricing.premium.yearly}
+                            onChange={(e) => setPricing(prev => ({
+                              ...prev,
+                              premium: { ...prev.premium, yearly: parseFloat(e.target.value) || 0 }
+                            }))}
+                            className="w-full mt-1 px-3 py-2 bg-navy-dark/50 border border-gold/20 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        ) : (
+                          <p className="text-cream text-xl font-medium">${pricing.premium.yearly}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-navy-dark/30 rounded-lg border border-gold/10">
+                  <p className="text-cream/50 text-sm">
+                    💡 Note: Price changes will apply to new subscriptions. Existing subscriptions keep their current rates until renewal.
+                  </p>
                 </div>
               </div>
 

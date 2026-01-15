@@ -37,7 +37,8 @@ import {
   Play,
   Pause,
   Square,
-  Volume2
+  Volume2,
+  Loader2
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -263,6 +264,14 @@ export function PersonaPage({ onNavigate }) {
   const timerRef = useRef(null);
   const audioRef = useRef(null);
 
+  // Voice memo upload state
+  const [showVoiceMemoModal, setShowVoiceMemoModal] = useState(false);
+  const [voiceMemoFile, setVoiceMemoFile] = useState(null);
+  const [voiceMemoDuration, setVoiceMemoDuration] = useState(0);
+  const [voiceMemoUploading, setVoiceMemoUploading] = useState(false);
+  const [voiceMemoError, setVoiceMemoError] = useState('');
+  const voiceMemoInputRef = useRef(null);
+
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
     { id: 'stories', label: 'Life Stories' },
@@ -429,6 +438,74 @@ export function PersonaPage({ onNavigate }) {
       setSaving(true);
       await deleteVoiceSample(sampleId);
       setSaving(false);
+    }
+  };
+
+  // Handle voice memo file selection
+  const handleVoiceMemoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('audio/')) {
+      setVoiceMemoError('Please select an audio file (MP3, WAV, etc.)');
+      return;
+    }
+
+    // Check file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      setVoiceMemoError('File size must be less than 100MB');
+      return;
+    }
+
+    // Get duration
+    const audio = new Audio();
+    audio.src = URL.createObjectURL(file);
+    audio.onloadedmetadata = () => {
+      const duration = Math.floor(audio.duration);
+      if (duration < 300) { // 5 minutes = 300 seconds
+        setVoiceMemoError(`Recording must be at least 5 minutes. Current: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`);
+        URL.revokeObjectURL(audio.src);
+        return;
+      }
+      setVoiceMemoDuration(duration);
+      setVoiceMemoFile(file);
+      setVoiceMemoError('');
+      URL.revokeObjectURL(audio.src);
+    };
+    audio.onerror = () => {
+      setVoiceMemoError('Could not read audio file');
+      URL.revokeObjectURL(audio.src);
+    };
+
+    // Reset input
+    if (e.target) e.target.value = '';
+  };
+
+  // Upload voice memo
+  const handleVoiceMemoUpload = async () => {
+    if (!voiceMemoFile) return;
+
+    setVoiceMemoUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        await saveVoiceSample(
+          reader.result,
+          `Book Reading (${Math.floor(voiceMemoDuration / 60)} min)`,
+          'Reading from a book for voice cloning',
+          voiceMemoDuration
+        );
+        setVoiceMemoFile(null);
+        setVoiceMemoDuration(0);
+        setShowVoiceMemoModal(false);
+        setVoiceMemoUploading(false);
+      };
+      reader.readAsDataURL(voiceMemoFile);
+    } catch (error) {
+      console.error('Failed to upload voice memo:', error);
+      setVoiceMemoError('Failed to upload. Please try again.');
+      setVoiceMemoUploading(false);
     }
   };
 
@@ -804,17 +881,29 @@ export function PersonaPage({ onNavigate }) {
                       </div>
                     )}
 
-                    {/* Add Recording Button */}
+                    {/* Add Recording Buttons */}
                     {voiceSamples.length < 5 && (
-                      <motion.button
-                        onClick={() => setShowVoiceModal(true)}
-                        className="w-full mt-4 p-4 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-xl flex items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all"
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                      >
-                        <Plus className="w-5 h-5" />
-                        <span>Add Voice Recording</span>
-                      </motion.button>
+                      <div className="mt-4 space-y-3">
+                        <motion.button
+                          onClick={() => setShowVoiceModal(true)}
+                          className="w-full p-4 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-xl flex items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          <Mic className="w-5 h-5" />
+                          <span>Record Voice Sample</span>
+                        </motion.button>
+
+                        <motion.button
+                          onClick={() => setShowVoiceMemoModal(true)}
+                          className="w-full p-4 border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/50 rounded-xl flex items-center justify-center gap-3 text-emerald-400/70 hover:text-emerald-400 transition-all bg-emerald-500/5"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          <Upload className="w-5 h-5" />
+                          <span>Upload Book Reading (5+ min)</span>
+                        </motion.button>
+                      </div>
                     )}
                   </div>
 
@@ -1884,6 +1973,157 @@ export function PersonaPage({ onNavigate }) {
                     <>
                       <Save className="w-4 h-4 mr-2" />
                       Save Recording
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voice Memo Upload Modal */}
+      <AnimatePresence>
+        {showVoiceMemoModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              if (!voiceMemoUploading) {
+                setShowVoiceMemoModal(false);
+                setVoiceMemoFile(null);
+                setVoiceMemoDuration(0);
+                setVoiceMemoError('');
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-navy-dark border border-gold/30 rounded-2xl p-6 max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-serif text-cream">Upload Book Reading</h3>
+                <button
+                  onClick={() => {
+                    if (!voiceMemoUploading) {
+                      setShowVoiceMemoModal(false);
+                      setVoiceMemoFile(null);
+                      setVoiceMemoDuration(0);
+                      setVoiceMemoError('');
+                    }
+                  }}
+                  disabled={voiceMemoUploading}
+                  className="p-2 rounded-lg hover:bg-navy-light/50 text-cream/60 hover:text-cream transition-colors disabled:opacity-50"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Description */}
+              <div className="mb-6 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                <p className="text-emerald-300 text-sm">
+                  Upload a recording of yourself reading from a book. This helps create a more accurate voice clone.
+                  The recording must be at least <strong>5 minutes</strong> long.
+                </p>
+              </div>
+
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={voiceMemoInputRef}
+                onChange={handleVoiceMemoSelect}
+                accept="audio/*"
+                className="hidden"
+              />
+
+              {/* Upload Area */}
+              <div className="text-center py-6">
+                {voiceMemoError && (
+                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                    <p className="text-red-400 text-sm">{voiceMemoError}</p>
+                  </div>
+                )}
+
+                {!voiceMemoFile ? (
+                  <motion.button
+                    onClick={() => voiceMemoInputRef.current?.click()}
+                    className="w-full p-8 border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/50 rounded-xl flex flex-col items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all bg-emerald-500/5"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Upload className="w-10 h-10 text-emerald-400" />
+                    <span className="text-lg">Click to select audio file</span>
+                    <span className="text-cream/40 text-sm">MP3, WAV, M4A, etc. (max 100MB)</span>
+                  </motion.button>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <Mic className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-cream font-medium truncate">{voiceMemoFile.name}</p>
+                          <p className="text-emerald-400 text-sm">
+                            Duration: {Math.floor(voiceMemoDuration / 60)}:{(voiceMemoDuration % 60).toString().padStart(2, '0')}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setVoiceMemoFile(null);
+                            setVoiceMemoDuration(0);
+                          }}
+                          className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-cream/50 text-sm">
+                      File ready to upload
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <motion.button
+                  onClick={() => {
+                    setShowVoiceMemoModal(false);
+                    setVoiceMemoFile(null);
+                    setVoiceMemoDuration(0);
+                    setVoiceMemoError('');
+                  }}
+                  disabled={voiceMemoUploading}
+                  className="flex-1 btn-secondary disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={handleVoiceMemoUpload}
+                  disabled={!voiceMemoFile || voiceMemoUploading}
+                  className="flex-1 btn-primary flex items-center justify-center disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {voiceMemoUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Upload Recording
                     </>
                   )}
                 </motion.button>

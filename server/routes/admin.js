@@ -858,6 +858,46 @@ router.delete('/blacklist/:id', async (req, res) => {
 });
 
 // =====================
+// SUBSCRIPTION PRICING
+// =====================
+
+// Get subscription pricing
+router.get('/pricing', async (req, res) => {
+  try {
+    const pricing = await req.prisma.systemSettings.findUnique({
+      where: { key: 'subscription_pricing' }
+    });
+
+    // Default pricing if not set
+    const defaultPricing = {
+      standard: { monthly: 9.99, yearly: 99.99 },
+      premium: { monthly: 19.99, yearly: 199.99 }
+    };
+
+    res.json(pricing?.value ? JSON.parse(pricing.value) : defaultPricing);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch pricing' });
+  }
+});
+
+// Update subscription pricing
+router.put('/pricing', async (req, res) => {
+  try {
+    const { standard, premium } = req.body;
+
+    const pricing = await req.prisma.systemSettings.upsert({
+      where: { key: 'subscription_pricing' },
+      update: { value: JSON.stringify({ standard, premium }) },
+      create: { key: 'subscription_pricing', value: JSON.stringify({ standard, premium }), description: 'Subscription pricing configuration' }
+    });
+
+    res.json(JSON.parse(pricing.value));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update pricing' });
+  }
+});
+
+// =====================
 // USER VOICE SAMPLES VIEW
 // =====================
 
