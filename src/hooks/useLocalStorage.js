@@ -38,6 +38,7 @@ export function useLocalStorage(key, initialValue) {
 const defaultPersona = {
   lifeStories: [],
   avatarImages: [],
+  voiceSamples: [],
   currentStep: 0,
   humor: 50,
   empathy: 50,
@@ -445,6 +446,65 @@ export function useEchoTrailStorage() {
     }
   }, [user]);
 
+  // Upload voice sample
+  const uploadVoiceSample = useCallback(async (audioData, label, duration, prompt) => {
+    const token = localStorage.getItem('echotrail_token');
+    if (!user || !token) return null;
+
+    try {
+      const savedSample = await api.uploadVoiceSample(audioData, label, duration, prompt);
+
+      setPersonaState(prev => ({
+        ...prev,
+        voiceSamples: [savedSample, ...(prev.voiceSamples || [])],
+      }));
+
+      return savedSample;
+    } catch (error) {
+      console.error('Failed to upload voice sample:', error);
+      return null;
+    }
+  }, [user]);
+
+  // Update voice sample
+  const updateVoiceSample = useCallback(async (sampleId, data) => {
+    const token = localStorage.getItem('echotrail_token');
+    if (!user || !token) return null;
+
+    try {
+      const updated = await api.updateVoiceSample(sampleId, data);
+
+      setPersonaState(prev => ({
+        ...prev,
+        voiceSamples: prev.voiceSamples.map(s =>
+          s.id === sampleId ? { ...s, ...updated } : s
+        ),
+      }));
+
+      return updated;
+    } catch (error) {
+      console.error('Failed to update voice sample:', error);
+      return null;
+    }
+  }, [user]);
+
+  // Delete voice sample
+  const deleteVoiceSample = useCallback(async (sampleId) => {
+    const token = localStorage.getItem('echotrail_token');
+    if (!user || !token) return;
+
+    try {
+      await api.deleteVoiceSample(sampleId);
+
+      setPersonaState(prev => ({
+        ...prev,
+        voiceSamples: prev.voiceSamples.filter(s => s.id !== sampleId),
+      }));
+    } catch (error) {
+      console.error('Failed to delete voice sample:', error);
+    }
+  }, [user]);
+
   // Calculate legacy score
   const calculateLegacyScore = useCallback(() => {
     let score = 0;
@@ -581,6 +641,9 @@ export function useEchoTrailStorage() {
     uploadAvatar,
     updateAvatar,
     deleteAvatar,
+    uploadVoiceSample,
+    updateVoiceSample,
+    deleteVoiceSample,
 
     // Utilities
     syncFromDatabase,

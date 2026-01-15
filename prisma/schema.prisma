@@ -70,6 +70,7 @@ model Persona {
 
   lifeStories    LifeStory[]
   avatarImages   AvatarImage[]
+  voiceSamples   VoiceSample[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -89,6 +90,21 @@ model AvatarImage {
   createdAt DateTime @default(now())
 
   @@map("avatar_images")
+}
+
+model VoiceSample {
+  id        String   @id @default(cuid())
+  personaId String
+  persona   Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  audioData String   @db.Text  // Base64 encoded audio
+  label     String   @default("")
+  duration  Int      @default(0) // Duration in seconds
+  prompt    String?  @db.Text  // The text/prompt that was read
+
+  createdAt DateTime @default(now())
+
+  @@map("voice_samples")
 }
 
 model LifeStory {

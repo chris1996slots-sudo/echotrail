@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Mail,
@@ -13,7 +13,13 @@ import {
   X,
   Eye,
   EyeOff,
-  AlertTriangle
+  AlertTriangle,
+  CreditCard,
+  Crown,
+  Coins,
+  Sparkles,
+  Zap,
+  Star
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -50,6 +56,63 @@ export function SettingsPage({ onNavigate }) {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showTokensModal, setShowTokensModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedTokens, setSelectedTokens] = useState(null);
+
+  // Subscription plans
+  const subscriptionPlans = [
+    {
+      id: 'FREE',
+      name: 'Free',
+      price: 0,
+      features: [
+        '2 Memory Anchors',
+        '3 Time Capsules',
+        'Basic Echo Sim',
+        'Browser voice only',
+      ],
+      current: user?.subscription === 'FREE',
+    },
+    {
+      id: 'STANDARD',
+      name: 'Standard',
+      price: 9.99,
+      features: [
+        '5 Memory Anchors',
+        '10 Time Capsules',
+        'Full Echo Sim',
+        'Voice cloning (5 samples)',
+        '100 AI tokens/month',
+      ],
+      current: user?.subscription === 'STANDARD',
+      popular: true,
+    },
+    {
+      id: 'PREMIUM',
+      name: 'Premium',
+      price: 24.99,
+      features: [
+        'Unlimited Memory Anchors',
+        'Unlimited Time Capsules',
+        'Priority Echo Sim',
+        'Unlimited voice samples',
+        'Unlimited AI tokens',
+        'Priority support',
+        'Custom avatar styles',
+      ],
+      current: user?.subscription === 'PREMIUM',
+    },
+  ];
+
+  // Token packages
+  const tokenPackages = [
+    { id: 'small', tokens: 50, price: 4.99, popular: false },
+    { id: 'medium', tokens: 150, price: 9.99, popular: true, bonus: '+25 bonus' },
+    { id: 'large', tokens: 500, price: 24.99, popular: false, bonus: '+100 bonus' },
+    { id: 'xl', tokens: 1000, price: 39.99, popular: false, bonus: '+250 bonus' },
+  ];
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
@@ -135,6 +198,20 @@ export function SettingsPage({ onNavigate }) {
   };
 
   const settingsSections = [
+    {
+      id: 'subscription',
+      icon: Crown,
+      title: 'Subscription',
+      description: `Current plan: ${user?.subscription || 'FREE'}`,
+      highlight: true,
+    },
+    {
+      id: 'tokens',
+      icon: Coins,
+      title: 'AI Tokens',
+      description: 'Purchase tokens for AI features',
+      highlight: true,
+    },
     {
       id: 'profile',
       icon: User,
@@ -223,7 +300,7 @@ export function SettingsPage({ onNavigate }) {
                 <motion.div
                   key={section.id}
                   className={`glass-card overflow-hidden ${
-                    section.danger ? 'border-red-500/30' : ''
+                    section.danger ? 'border-red-500/30' : section.highlight ? 'border-gold/30' : ''
                   }`}
                 >
                   <button
@@ -231,6 +308,8 @@ export function SettingsPage({ onNavigate }) {
                     className={`w-full p-4 flex items-center justify-between transition-colors ${
                       section.danger
                         ? 'hover:bg-red-500/10'
+                        : section.highlight
+                        ? 'hover:bg-gold/10'
                         : 'hover:bg-navy-light/30'
                     }`}
                   >
@@ -238,13 +317,15 @@ export function SettingsPage({ onNavigate }) {
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                         section.danger
                           ? 'bg-red-500/20 text-red-400'
+                          : section.highlight
+                          ? 'bg-gold/20 text-gold'
                           : 'bg-gold/10 text-gold'
                       }`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="text-left">
                         <h3 className={`font-medium ${
-                          section.danger ? 'text-red-400' : 'text-cream'
+                          section.danger ? 'text-red-400' : section.highlight ? 'text-gold' : 'text-cream'
                         }`}>
                           {section.title}
                         </h3>
@@ -264,6 +345,134 @@ export function SettingsPage({ onNavigate }) {
                       exit={{ height: 0, opacity: 0 }}
                       className="border-t border-white/5 p-4"
                     >
+                      {section.id === 'subscription' && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {subscriptionPlans.map((plan) => (
+                              <motion.div
+                                key={plan.id}
+                                className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                                  plan.current
+                                    ? 'border-gold bg-gold/10'
+                                    : selectedPlan === plan.id
+                                    ? 'border-gold/50 bg-gold/5'
+                                    : 'border-gold/20 hover:border-gold/40'
+                                }`}
+                                onClick={() => !plan.current && setSelectedPlan(plan.id)}
+                                whileHover={{ scale: plan.current ? 1 : 1.02 }}
+                              >
+                                {plan.popular && (
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-gold rounded-full">
+                                    <span className="text-navy text-xs font-medium">Popular</span>
+                                  </div>
+                                )}
+                                {plan.current && (
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-green-500 rounded-full">
+                                    <span className="text-white text-xs font-medium">Current</span>
+                                  </div>
+                                )}
+                                <div className="text-center mb-4 pt-2">
+                                  <h4 className="text-lg font-medium text-cream">{plan.name}</h4>
+                                  <div className="mt-2">
+                                    <span className="text-3xl font-bold text-gold">${plan.price}</span>
+                                    <span className="text-cream/50 text-sm">/month</span>
+                                  </div>
+                                </div>
+                                <ul className="space-y-2">
+                                  {plan.features.map((feature, idx) => (
+                                    <li key={idx} className="flex items-center gap-2 text-sm text-cream/70">
+                                      <Check className="w-4 h-4 text-gold flex-shrink-0" />
+                                      {feature}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </motion.div>
+                            ))}
+                          </div>
+                          {selectedPlan && selectedPlan !== user?.subscription && (
+                            <motion.button
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="w-full btn-primary flex items-center justify-center gap-2"
+                              onClick={() => {
+                                showMessage('Payment integration coming soon!');
+                                setSelectedPlan(null);
+                              }}
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              Upgrade to {subscriptionPlans.find(p => p.id === selectedPlan)?.name}
+                            </motion.button>
+                          )}
+                        </div>
+                      )}
+
+                      {section.id === 'tokens' && (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-xl bg-navy-dark/50 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
+                                <Coins className="w-6 h-6 text-gold" />
+                              </div>
+                              <div>
+                                <p className="text-cream/50 text-sm">Your Balance</p>
+                                <p className="text-2xl font-bold text-gold">0 <span className="text-sm font-normal text-cream/50">tokens</span></p>
+                              </div>
+                            </div>
+                            <Sparkles className="w-8 h-8 text-gold/30" />
+                          </div>
+
+                          <p className="text-cream/60 text-sm text-center">
+                            AI tokens are used for voice cloning, avatar generation, and WisdomGPT conversations.
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            {tokenPackages.map((pkg) => (
+                              <motion.div
+                                key={pkg.id}
+                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                  selectedTokens === pkg.id
+                                    ? 'border-gold bg-gold/10'
+                                    : 'border-gold/20 hover:border-gold/40'
+                                }`}
+                                onClick={() => setSelectedTokens(pkg.id)}
+                                whileHover={{ scale: 1.02 }}
+                              >
+                                {pkg.popular && (
+                                  <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gold rounded-full">
+                                    <span className="text-navy text-xs font-medium">Best Value</span>
+                                  </div>
+                                )}
+                                <div className="text-center">
+                                  <div className="flex items-center justify-center gap-1 mb-1">
+                                    <Zap className="w-5 h-5 text-gold" />
+                                    <span className="text-2xl font-bold text-cream">{pkg.tokens}</span>
+                                  </div>
+                                  {pkg.bonus && (
+                                    <span className="text-xs text-green-400">{pkg.bonus}</span>
+                                  )}
+                                  <p className="text-lg font-medium text-gold mt-2">${pkg.price}</p>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+
+                          {selectedTokens && (
+                            <motion.button
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="w-full btn-primary flex items-center justify-center gap-2"
+                              onClick={() => {
+                                showMessage('Payment integration coming soon!');
+                                setSelectedTokens(null);
+                              }}
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              Buy {tokenPackages.find(p => p.id === selectedTokens)?.tokens} Tokens
+                            </motion.button>
+                          )}
+                        </div>
+                      )}
+
                       {section.id === 'profile' && (
                         <div className="space-y-4">
                           <div>

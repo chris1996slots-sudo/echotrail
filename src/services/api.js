@@ -217,6 +217,29 @@ class ApiService {
     });
   }
 
+  // Voice Samples
+  async getVoiceSamples() {
+    return this.request('/api/persona/voice-samples');
+  }
+
+  async uploadVoiceSample(audioData, label, duration, prompt) {
+    return this.request('/api/persona/voice-samples', {
+      method: 'POST',
+      body: JSON.stringify({ audioData, label, duration, prompt }),
+    });
+  }
+
+  async updateVoiceSample(id, data) {
+    return this.request(`/api/persona/voice-samples/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVoiceSample(id) {
+    return this.request(`/api/persona/voice-samples/${id}`, { method: 'DELETE' });
+  }
+
   // Support Chat
   async getSupportChat() {
     return this.request('/api/support/chat');

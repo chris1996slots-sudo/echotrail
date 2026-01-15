@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -31,7 +31,13 @@ import {
   Tag,
   Edit3,
   Palette,
-  Eye
+  Eye,
+  Mic,
+  MicOff,
+  Play,
+  Pause,
+  Square,
+  Volume2
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -213,8 +219,17 @@ const occasionCategories = [
   { id: 'special', label: 'Special Occasion' },
 ];
 
+// Voice recording prompts
+const voicePrompts = [
+  "Hello, my name is [your name] and I'm recording my voice for my digital legacy.",
+  "The most important lesson I've learned in life is to always be kind to others.",
+  "Family means everything to me. They are my strength and my joy.",
+  "I want my grandchildren to know that I love them deeply.",
+  "Life is too short to hold grudges. Forgive often and love always.",
+];
+
 export function PersonaPage({ onNavigate }) {
-  const { persona, setPersona, user, addStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, isLoading } = useApp();
+  const { persona, setPersona, user, addStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, deleteVoiceSample, isLoading } = useApp();
   const [activeTab, setActiveTab] = useState('stories');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentStory, setCurrentStory] = useState('');
@@ -234,6 +249,19 @@ export function PersonaPage({ onNavigate }) {
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const fileInputRef = useRef(null);
+
+  // Voice recording state
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const audioRef = useRef(null);
 
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
@@ -280,6 +308,7 @@ export function PersonaPage({ onNavigate }) {
   // Avatar creation step flow
   const avatarSteps = [
     { id: 'photos', label: 'Photos', icon: Camera, description: 'Upload your photos' },
+    { id: 'voice', label: 'Voice', icon: Mic, description: 'Record your voice' },
     { id: 'background', label: 'Background', icon: ImageIcon, description: 'Choose a background' },
     { id: 'style', label: 'Style', icon: Palette, description: 'Choose your avatar style' },
     { id: 'preview', label: 'Preview', icon: Eye, description: 'See your result' },
@@ -304,6 +333,118 @@ export function PersonaPage({ onNavigate }) {
     setShowSaveConfirm(true);
     setTimeout(() => setShowSaveConfirm(false), 2000);
   };
+
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setAudioBlob(audioBlob);
+        setAudioUrl(audioUrl);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      alert('Could not access microphone. Please check your permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+  };
+
+  const resetRecording = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+    setIsPlaying(false);
+  };
+
+  const togglePlayback = () => {
+    if (!audioRef.current) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const saveVoiceSample = async () => {
+    if (!audioBlob) return;
+
+    setSaving(true);
+    try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Audio = reader.result;
+        const prompt = voicePrompts[selectedPrompt];
+        const label = `Recording ${(persona.voiceSamples?.length || 0) + 1}`;
+
+        await uploadVoiceSample(base64Audio, label, recordingTime, prompt);
+
+        setShowVoiceModal(false);
+        resetRecording();
+        setShowSaveConfirm(true);
+        setTimeout(() => setShowSaveConfirm(false), 2000);
+        setSaving(false);
+      };
+      reader.readAsDataURL(audioBlob);
+    } catch (error) {
+      console.error('Failed to save voice sample:', error);
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteVoiceSample = async (sampleId) => {
+    if (confirm('Delete this voice recording?')) {
+      setSaving(true);
+      await deleteVoiceSample(sampleId);
+      setSaving(false);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
 
   // Handle file selection - show modal for metadata
   const handleFileSelect = (e) => {
@@ -600,6 +741,99 @@ export function PersonaPage({ onNavigate }) {
                     <div className="text-center p-6 bg-gold/10 rounded-xl border border-gold/20">
                       <Camera className="w-12 h-12 text-gold/60 mx-auto mb-3" />
                       <p className="text-cream/70">Upload at least one photo to continue</p>
+                    </div>
+                  )}
+                </div>
+              );
+
+            case 'voice':
+              const voiceSamples = persona.voiceSamples || [];
+              const hasVoiceSamples = voiceSamples.length > 0;
+
+              return (
+                <div className="space-y-6">
+                  <p className="text-cream/60 text-sm text-center">
+                    Record voice samples to create your personalized AI voice clone
+                  </p>
+
+                  {/* Voice Samples Gallery */}
+                  <div className="bg-navy-dark/30 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-cream font-medium">Your Voice Recordings</h4>
+                      <span className="text-cream/40 text-xs">{voiceSamples.length}/5 Samples</span>
+                    </div>
+
+                    {voiceSamples.length > 0 ? (
+                      <div className="space-y-3">
+                        {voiceSamples.map((sample, index) => (
+                          <motion.div
+                            key={sample.id}
+                            className="flex items-center gap-4 p-4 bg-navy-light/30 rounded-xl border border-gold/20"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                          >
+                            <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
+                              <Volume2 className="w-6 h-6 text-gold" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-cream font-medium">{sample.label}</p>
+                              <p className="text-cream/50 text-sm truncate">
+                                {sample.prompt || 'Custom recording'}
+                              </p>
+                              <p className="text-cream/30 text-xs mt-1">
+                                Duration: {formatTime(sample.duration || 0)}
+                              </p>
+                            </div>
+                            <motion.button
+                              onClick={() => handleDeleteVoiceSample(sample.id)}
+                              className="p-2 rounded-full hover:bg-red-500/20 text-cream/50 hover:text-red-400 transition-colors"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </motion.button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center p-8 border-2 border-dashed border-gold/20 rounded-xl">
+                        <Mic className="w-12 h-12 text-gold/40 mx-auto mb-3" />
+                        <p className="text-cream/50">No voice recordings yet</p>
+                        <p className="text-cream/30 text-sm mt-1">Record samples to train your voice clone</p>
+                      </div>
+                    )}
+
+                    {/* Add Recording Button */}
+                    {voiceSamples.length < 5 && (
+                      <motion.button
+                        onClick={() => setShowVoiceModal(true)}
+                        className="w-full mt-4 p-4 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-xl flex items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <Plus className="w-5 h-5" />
+                        <span>Add Voice Recording</span>
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {/* Tips */}
+                  <div className="bg-gold/10 rounded-xl p-4 border border-gold/20">
+                    <h5 className="text-gold font-medium mb-2">Tips for better voice cloning:</h5>
+                    <ul className="text-cream/60 text-sm space-y-1">
+                      <li>• Record in a quiet environment</li>
+                      <li>• Speak clearly and at your natural pace</li>
+                      <li>• Record at least 3 samples for best results</li>
+                      <li>• Each recording should be 10-30 seconds</li>
+                    </ul>
+                  </div>
+
+                  {!hasVoiceSamples && (
+                    <div className="text-center p-4 bg-navy-dark/50 rounded-xl">
+                      <p className="text-cream/50 text-sm">
+                        Voice samples are optional but recommended for a personalized experience
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1471,6 +1705,185 @@ export function PersonaPage({ onNavigate }) {
                     <>
                       <Save className="w-4 h-4 mr-2" />
                       Save
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voice Recording Modal */}
+      <AnimatePresence>
+        {showVoiceModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              if (!isRecording) {
+                setShowVoiceModal(false);
+                resetRecording();
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-navy-dark border border-gold/30 rounded-2xl p-6 max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-serif text-cream">Record Voice Sample</h3>
+                <button
+                  onClick={() => {
+                    if (!isRecording) {
+                      setShowVoiceModal(false);
+                      resetRecording();
+                    }
+                  }}
+                  disabled={isRecording}
+                  className="p-2 rounded-lg hover:bg-navy-light/50 text-cream/60 hover:text-cream transition-colors disabled:opacity-50"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Prompt Selection */}
+              <div className="mb-6">
+                <label className="block text-cream/70 text-sm mb-3">
+                  Read this prompt aloud:
+                </label>
+                <div className="space-y-2">
+                  {voicePrompts.map((prompt, index) => (
+                    <motion.button
+                      key={index}
+                      onClick={() => setSelectedPrompt(index)}
+                      disabled={isRecording || audioBlob}
+                      className={`w-full p-3 rounded-lg border-2 text-left text-sm transition-all ${
+                        selectedPrompt === index
+                          ? 'border-gold bg-gold/10 text-cream'
+                          : 'border-gold/20 hover:border-gold/40 text-cream/70'
+                      } disabled:opacity-50`}
+                      whileHover={{ scale: 1.01 }}
+                    >
+                      {prompt}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recording Interface */}
+              <div className="text-center py-6">
+                {/* Timer Display */}
+                <div className="text-4xl font-mono text-gold mb-6">
+                  {formatTime(recordingTime)}
+                </div>
+
+                {/* Recording Button */}
+                <div className="flex items-center justify-center gap-4">
+                  {!audioBlob ? (
+                    <>
+                      {isRecording ? (
+                        <motion.button
+                          onClick={stopRecording}
+                          className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          animate={{ scale: [1, 1.05, 1] }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                        >
+                          <Square className="w-8 h-8 text-white" />
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          onClick={startRecording}
+                          className="w-20 h-20 rounded-full bg-gold flex items-center justify-center shadow-lg"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Mic className="w-8 h-8 text-navy" />
+                        </motion.button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Playback Controls */}
+                      <motion.button
+                        onClick={togglePlayback}
+                        className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-6 h-6 text-gold" />
+                        ) : (
+                          <Play className="w-6 h-6 text-gold ml-1" />
+                        )}
+                      </motion.button>
+                      <motion.button
+                        onClick={resetRecording}
+                        className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Trash2 className="w-5 h-5 text-red-400" />
+                      </motion.button>
+                    </>
+                  )}
+                </div>
+
+                {/* Hidden audio element for playback */}
+                {audioUrl && (
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onEnded={() => setIsPlaying(false)}
+                    className="hidden"
+                  />
+                )}
+
+                {/* Status Text */}
+                <p className="text-cream/50 text-sm mt-4">
+                  {isRecording
+                    ? 'Recording... Click to stop'
+                    : audioBlob
+                    ? 'Review your recording or re-record'
+                    : 'Click to start recording'}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <motion.button
+                  onClick={() => {
+                    setShowVoiceModal(false);
+                    resetRecording();
+                  }}
+                  disabled={isRecording}
+                  className="flex-1 btn-secondary disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={saveVoiceSample}
+                  disabled={!audioBlob || saving}
+                  className="flex-1 btn-primary flex items-center justify-center disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {saving ? (
+                    <>Saving...</>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Recording
                     </>
                   )}
                 </motion.button>

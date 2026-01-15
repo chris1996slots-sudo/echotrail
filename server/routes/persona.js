@@ -14,6 +14,9 @@ router.get('/', authenticate, async (req, res) => {
         },
         avatarImages: {
           orderBy: { createdAt: 'asc' }
+        },
+        voiceSamples: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -26,6 +29,7 @@ router.get('/', authenticate, async (req, res) => {
         include: {
           lifeStories: true,
           avatarImages: true,
+          voiceSamples: true,
         }
       });
     }
@@ -273,6 +277,131 @@ router.put('/avatar-settings', authenticate, async (req, res) => {
     res.json(persona);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update avatar settings' });
+  }
+});
+
+// =====================
+// VOICE SAMPLES
+// =====================
+
+// Get all voice samples
+router.get('/voice-samples', authenticate, async (req, res) => {
+  try {
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (!persona) {
+      return res.json([]);
+    }
+
+    const samples = await req.prisma.voiceSample.findMany({
+      where: { personaId: persona.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(samples);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch voice samples' });
+  }
+});
+
+// Upload voice sample
+router.post('/voice-samples', authenticate, async (req, res) => {
+  try {
+    const { audioData, label, duration, prompt } = req.body;
+
+    if (!audioData) {
+      return res.status(400).json({ error: 'Audio data is required' });
+    }
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (!persona) {
+      return res.status(404).json({ error: 'Persona not found' });
+    }
+
+    // Limit voice samples (max 5)
+    const count = await req.prisma.voiceSample.count({
+      where: { personaId: persona.id }
+    });
+
+    if (count >= 5) {
+      return res.status(400).json({ error: 'Maximum 5 voice samples allowed. Delete some to add more.' });
+    }
+
+    const voiceSample = await req.prisma.voiceSample.create({
+      data: {
+        personaId: persona.id,
+        audioData,
+        label: label || `Recording ${count + 1}`,
+        duration: duration || 0,
+        prompt,
+      }
+    });
+
+    res.status(201).json(voiceSample);
+  } catch (error) {
+    console.error('Failed to upload voice sample:', error);
+    res.status(500).json({ error: 'Failed to upload voice sample' });
+  }
+});
+
+// Update voice sample label
+router.put('/voice-samples/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { label } = req.body;
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    const sample = await req.prisma.voiceSample.findUnique({
+      where: { id }
+    });
+
+    if (!sample || sample.personaId !== persona.id) {
+      return res.status(404).json({ error: 'Voice sample not found' });
+    }
+
+    const updated = await req.prisma.voiceSample.update({
+      where: { id },
+      data: { label }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update voice sample' });
+  }
+});
+
+// Delete voice sample
+router.delete('/voice-samples/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    const sample = await req.prisma.voiceSample.findUnique({
+      where: { id }
+    });
+
+    if (!sample || sample.personaId !== persona.id) {
+      return res.status(404).json({ error: 'Voice sample not found' });
+    }
+
+    await req.prisma.voiceSample.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Voice sample deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete voice sample' });
   }
 });
 
