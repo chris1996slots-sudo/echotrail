@@ -14,15 +14,15 @@ export function SupportChat() {
   const messagesEndRef = useRef(null);
   const pollIntervalRef = useRef(null);
 
-  // Don't show for admins
-  if (!user || user.role === 'ADMIN') return null;
+  // Check if should show (after hooks, before early return logic in render)
+  const shouldShow = user && user.role !== 'ADMIN';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && shouldShow) {
       loadChat();
       // Poll for new messages every 5 seconds
       pollIntervalRef.current = setInterval(loadChat, 5000);
@@ -37,11 +37,14 @@ export function SupportChat() {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, shouldShow]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Don't render for admins or non-logged-in users
+  if (!shouldShow) return null;
 
   const loadChat = async () => {
     try {
