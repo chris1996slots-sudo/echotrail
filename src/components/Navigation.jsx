@@ -52,12 +52,15 @@ export function Navigation({ currentPage, onNavigate }) {
     } catch (e) {
       // Ignore logout errors
     }
-    // Use setTimeout to defer state updates and avoid React render conflict
+    // Close mobile menu immediately
+    setIsOpen(false);
+    // Navigate first, then reset state with separate timeouts to avoid React render conflict
+    setTimeout(() => {
+      onNavigate('landing');
+    }, 0);
     setTimeout(() => {
       resetAll();
-      onNavigate('landing');
-      setIsOpen(false);
-    }, 0);
+    }, 10);
   };
 
   return (

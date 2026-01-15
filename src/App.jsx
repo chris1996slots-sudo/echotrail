@@ -31,28 +31,11 @@ function AppContent() {
   // Track previous user state to detect login/logout
   const prevUserRef = useRef(user);
 
+  // Note: Navigation after login/logout is handled explicitly in the respective components
+  // (LoginPage, OnboardingPage, Navigation) to avoid React render conflicts.
+  // We only update the ref here to track user state for other purposes.
   useEffect(() => {
-    const prevUser = prevUserRef.current;
     prevUserRef.current = user;
-
-    // User just logged in (was null, now has value)
-    if (!prevUser && user) {
-      // Calculate admin status from current user object
-      const userIsAdmin = user?.role === 'ADMIN';
-      // Use setTimeout to defer state update and avoid React render conflict
-      setTimeout(() => {
-        setCurrentPage(userIsAdmin ? 'admin' : 'persona');
-      }, 0);
-      return;
-    }
-
-    // User just logged out (had value, now null)
-    if (prevUser && !user) {
-      setTimeout(() => {
-        setCurrentPage('landing');
-      }, 0);
-      return;
-    }
   }, [user]);
 
   const handleNavigate = (page) => {
