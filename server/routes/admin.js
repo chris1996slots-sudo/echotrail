@@ -657,20 +657,32 @@ async function testClaudeApi(apiKey) {
 
 async function testElevenLabsApi(apiKey) {
   try {
-    const response = await fetch('https://api.elevenlabs.io/v1/user', {
+    // Use /v1/user/subscription for detailed quota info
+    const response = await fetch('https://api.elevenlabs.io/v1/user/subscription', {
       headers: { 'xi-api-key': apiKey }
     });
 
     if (response.ok) {
       const data = await response.json();
+      const remaining = (data.character_limit || 0) - (data.character_count || 0);
+      const tier = data.tier || 'free';
       return {
         success: true,
-        message: `Connected as ${data.subscription?.tier || 'user'}`,
-        data: { tier: data.subscription?.tier }
+        message: `Connected! ${tier} plan, ${remaining.toLocaleString()} chars remaining`,
+        data: {
+          tier,
+          characterLimit: data.character_limit,
+          characterCount: data.character_count,
+          remaining
+        }
       };
     }
 
-    return { success: false, message: 'Invalid API key' };
+    const errorData = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      return { success: false, message: 'Invalid API key' };
+    }
+    return { success: false, message: errorData.detail?.message || 'API error' };
   } catch (error) {
     return { success: false, message: error.message };
   }
