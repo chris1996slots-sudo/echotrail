@@ -326,6 +326,40 @@ async function generateGeminiResponse(message, systemPrompt, chatHistory, apiKey
   throw new Error('Invalid Gemini response');
 }
 
+// Get global system instructions from database
+async function getGlobalSystemInstructions(prisma) {
+  try {
+    const globalSetting = await prisma.systemSettings.findUnique({
+      where: { key: 'prompt_global_system' }
+    });
+    if (globalSetting?.value) {
+      return globalSetting.value;
+    }
+  } catch (error) {
+    console.log('No global prompt found, using default');
+  }
+
+  // Default global instructions
+  return `You are an AI assistant for EchoTrail, a digital legacy platform that helps people preserve their memories, wisdom, and personality for future generations.
+
+CORE PRINCIPLES:
+1. You represent the preserved "echo" of a real person - be respectful, authentic, and meaningful
+2. Never generate harmful, offensive, or inappropriate content
+3. Be supportive, empathetic, and encouraging in all interactions
+4. Focus on positive memories, life lessons, and family connections
+5. If asked about topics outside your scope, politely redirect to appropriate channels
+
+PLATFORM CONTEXT:
+- EchoTrail preserves digital legacies through: Memory Anchors, Time Capsules, WisdomGPT conversations, and Echo Simulations
+- Users are typically creating content for loved ones and future generations
+- The emotional tone should be warm, personal, and meaningful
+
+LANGUAGE:
+- Respond in the same language the user writes in
+- Be conversational but thoughtful
+- Avoid jargon unless specifically discussing technical features`;
+}
+
 // Build system prompt from persona
 async function buildSystemPrompt(persona, user, prisma) {
   const vibeDescriptions = {
@@ -339,7 +373,10 @@ async function buildSystemPrompt(persona, user, prisma) {
 
   const stories = persona?.lifeStories?.map(s => s.content).join('\n\n') || '';
 
-  // Try to get custom prompt from database
+  // Get global system instructions (hardcoded master prompt)
+  const globalInstructions = await getGlobalSystemInstructions(prisma);
+
+  // Try to get custom wisdom prompt from database
   let customPrompt = null;
   try {
     const promptSetting = await prisma.systemSettings.findUnique({
@@ -349,12 +386,13 @@ async function buildSystemPrompt(persona, user, prisma) {
       customPrompt = promptSetting.value;
     }
   } catch (error) {
-    console.log('No custom prompt found, using default');
+    console.log('No custom wisdom prompt found, using default');
   }
 
-  // If custom prompt exists, replace placeholders
+  // Build the persona-specific prompt
+  let personaPrompt;
   if (customPrompt) {
-    return customPrompt
+    personaPrompt = customPrompt
       .replace(/{userName}/g, `${user.firstName} ${user.lastName}`)
       .replace(/{humor}/g, persona?.humor || 50)
       .replace(/{empathy}/g, persona?.empathy || 50)
@@ -368,16 +406,22 @@ async function buildSystemPrompt(persona, user, prisma) {
       .replace(/{lifePhilosophy}/g, persona?.lifePhilosophy || 'Not specified')
       .replace(/{echoVibe}/g, vibeDescriptions[persona?.echoVibe || 'compassionate'])
       .replace(/{stories}/g, stories || 'No specific stories recorded yet.');
-  }
-
-  // Default prompt
-  return `You are the digital echo of ${user.firstName} ${user.lastName}. You embody their personality, values, and wisdom to guide their descendants.
+  } else {
+    // Default persona prompt
+    personaPrompt = `You are the digital echo of ${user.firstName} ${user.lastName}. You embody their personality, values, and wisdom to guide their descendants.
 
 PERSONALITY TRAITS (scale 0-100):
 - Humor: ${persona?.humor || 50}/100
 - Empathy: ${persona?.empathy || 50}/100
 - Tradition: ${persona?.tradition || 50}/100
 - Adventure: ${persona?.adventure || 50}/100
+- Wisdom: ${persona?.wisdom || 50}/100
+- Creativity: ${persona?.creativity || 50}/100
+- Patience: ${persona?.patience || 50}/100
+- Optimism: ${persona?.optimism || 50}/100
+
+Core values: ${persona?.coreValues?.join(', ') || 'Not specified'}
+Life philosophy: ${persona?.lifePhilosophy || 'Not specified'}
 
 COMMUNICATION STYLE: ${vibeDescriptions[persona?.echoVibe || 'compassionate']}
 
@@ -391,6 +435,14 @@ GUIDELINES:
 4. Be supportive, wise, and authentic
 5. Keep responses conversational and warm
 6. If asked about something not in the stories, respond thoughtfully based on the personality traits`;
+  }
+
+  // Combine global instructions with persona-specific prompt
+  return `${globalInstructions}
+
+---
+
+${personaPrompt}`;
 }
 
 // Mock response generator

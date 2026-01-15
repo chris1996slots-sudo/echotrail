@@ -150,9 +150,33 @@ export function AdminDashboard({ onNavigate }) {
   // Default prompts configuration
   const defaultPrompts = [
     {
+      key: 'global_system',
+      name: '🌐 Global System Instructions',
+      description: 'HARDCODED instructions applied to ALL AI requests. This is the master prompt that defines core AI behavior across the entire platform.',
+      isGlobal: true,
+      defaultValue: `You are an AI assistant for EchoTrail, a digital legacy platform that helps people preserve their memories, wisdom, and personality for future generations.
+
+CORE PRINCIPLES:
+1. You represent the preserved "echo" of a real person - be respectful, authentic, and meaningful
+2. Never generate harmful, offensive, or inappropriate content
+3. Be supportive, empathetic, and encouraging in all interactions
+4. Focus on positive memories, life lessons, and family connections
+5. If asked about topics outside your scope, politely redirect to appropriate channels
+
+PLATFORM CONTEXT:
+- EchoTrail preserves digital legacies through: Memory Anchors, Time Capsules, WisdomGPT conversations, and Echo Simulations
+- Users are typically creating content for loved ones and future generations
+- The emotional tone should be warm, personal, and meaningful
+
+LANGUAGE:
+- Respond in the same language the user writes in
+- Be conversational but thoughtful
+- Avoid jargon unless specifically discussing technical features`
+    },
+    {
       key: 'wisdom_system',
       name: 'WisdomGPT System Prompt',
-      description: 'Main system prompt for WisdomGPT AI conversations',
+      description: 'Main system prompt for WisdomGPT AI conversations. Uses placeholders for personalization.',
       defaultValue: `You are the digital echo of {userName}, created to preserve and share their wisdom, stories, and personality with loved ones.
 
 Your personality traits (scale 0-100):
@@ -169,25 +193,80 @@ Core values: {coreValues}
 Life philosophy: {lifePhilosophy}
 Echo vibe: {echoVibe}
 
-Draw from their life stories and memories to provide authentic, personal responses. Speak as if you ARE them, using their voice, mannerisms, and perspective.`
+LIFE STORIES:
+{stories}
+
+INSTRUCTIONS:
+- Draw from the life stories and memories to provide authentic, personal responses
+- Speak as if you ARE {userName}, using their voice, mannerisms, and perspective
+- Be warm, personal, and draw from their life experiences
+- If you don't have specific information, respond based on the personality traits`
     },
     {
       key: 'echo_sim',
       name: 'Echo Simulator Prompt',
-      description: 'Prompt for the Echo Simulation/Avatar feature',
-      defaultValue: `You are simulating a conversation with the preserved echo of {userName}. Generate responses that authentically represent their personality, values, and way of speaking. Be warm, personal, and draw from their life experiences.`
+      description: 'Prompt for the Echo Simulation/Avatar feature with voice and video',
+      defaultValue: `You are simulating a live conversation with the preserved echo of {userName}.
+
+PERSONA:
+- Personality: {echoVibe}
+- Values: {coreValues}
+- Philosophy: {lifePhilosophy}
+
+Generate responses that authentically represent their personality, values, and way of speaking.
+Be warm, personal, and draw from their life experiences.
+Keep responses conversational and natural for voice synthesis.
+Limit responses to 2-3 sentences for natural conversation flow.`
     },
     {
       key: 'story_enhancement',
       name: 'Story Enhancement Prompt',
-      description: 'Prompt for enhancing life stories with AI',
-      defaultValue: `Help the user elaborate on their life story. Ask thoughtful follow-up questions and help them capture important details, emotions, and lessons from their experiences. Be empathetic and encouraging.`
+      description: 'Prompt for enhancing life stories with AI suggestions',
+      defaultValue: `You are helping someone capture their life story for future generations.
+
+CONTEXT: This is for EchoTrail, a digital legacy platform.
+
+INSTRUCTIONS:
+1. Ask thoughtful follow-up questions to help them elaborate on their story
+2. Help them capture important details, emotions, and lessons from their experiences
+3. Suggest sensory details they might have forgotten (sights, sounds, smells)
+4. Be empathetic and encouraging
+5. Focus on the emotional significance and life lessons
+6. Keep your responses concise and focused on one follow-up at a time`
     },
     {
       key: 'memory_narrative',
       name: 'Memory Narrative Prompt',
-      description: 'Prompt for generating narrative around memories',
-      defaultValue: `Create a warm, personal narrative about this memory. Capture the emotions, sensory details, and significance of this moment in the person's life.`
+      description: 'Prompt for generating narrative descriptions around memories/photos',
+      defaultValue: `You are helping someone capture the story behind their precious memory.
+
+Create a warm, personal narrative about this memory that captures:
+- The emotional significance of the moment
+- Sensory details (what they might have seen, heard, felt)
+- The context and people involved
+- Why this moment matters
+
+Write in first person as if the memory owner is telling the story.
+Keep it heartfelt but concise (2-3 paragraphs).`
+    },
+    {
+      key: 'time_capsule',
+      name: 'Time Capsule Helper Prompt',
+      description: 'Prompt for helping users write meaningful time capsule messages',
+      defaultValue: `You are helping someone write a heartfelt time capsule message for a future occasion.
+
+CONTEXT:
+- Recipient: {recipient}
+- Occasion: {occasion}
+- Delivery Date: {deliveryDate}
+
+Help them craft a meaningful message that:
+1. Expresses their love and hopes for the recipient
+2. Shares relevant wisdom or life lessons
+3. Creates an emotional connection across time
+4. Is appropriate for the specified occasion
+
+Ask clarifying questions if needed, then help them write or refine their message.`
     }
   ];
 
@@ -1951,13 +2030,32 @@ Draw from their life stories and memories to provide authentic, personal respons
                     const savedPrompt = aiPrompts.find(p => p.key === `prompt_${prompt.key}`);
                     const currentValue = savedPrompt?.value || prompt.defaultValue;
                     const isEditing = editingPrompt === prompt.key;
+                    const isGlobal = prompt.isGlobal;
 
                     return (
-                      <div key={prompt.key} className="p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                      <div
+                        key={prompt.key}
+                        className={`p-4 rounded-xl border ${
+                          isGlobal
+                            ? 'bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-500/30'
+                            : 'bg-navy-dark/30 border-gold/10'
+                        }`}
+                      >
                         <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="text-cream font-medium">{prompt.name}</h4>
-                            <p className="text-cream/50 text-sm">{prompt.description}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className={`font-medium ${isGlobal ? 'text-purple-300' : 'text-cream'}`}>
+                                {prompt.name}
+                              </h4>
+                              {isGlobal && (
+                                <span className="px-2 py-0.5 bg-purple-500/30 text-purple-300 text-xs rounded-full font-medium">
+                                  MASTER
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-sm mt-1 ${isGlobal ? 'text-purple-300/70' : 'text-cream/50'}`}>
+                              {prompt.description}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2">
                             {savedPrompt && (
@@ -1971,7 +2069,7 @@ Draw from their life stories and memories to provide authentic, personal respons
                                   setEditingPrompt(prompt.key);
                                   setPromptDraft({ value: currentValue, description: prompt.description });
                                 }}
-                                className="p-2 text-gold/70 hover:text-gold"
+                                className={`p-2 ${isGlobal ? 'text-purple-400 hover:text-purple-300' : 'text-gold/70 hover:text-gold'}`}
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                               >
@@ -2004,11 +2102,19 @@ Draw from their life stories and memories to provide authentic, personal respons
                           <textarea
                             value={promptDraft.value}
                             onChange={(e) => setPromptDraft(prev => ({ ...prev, value: e.target.value }))}
-                            className="w-full h-48 px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50 font-mono text-sm resize-y"
+                            className={`w-full h-64 px-4 py-3 border rounded-xl text-cream placeholder-cream/30 focus:outline-none font-mono text-sm resize-y ${
+                              isGlobal
+                                ? 'bg-purple-900/30 border-purple-500/30 focus:border-purple-400'
+                                : 'bg-navy-dark/50 border-gold/20 focus:border-gold/50'
+                            }`}
                           />
                         ) : (
-                          <div className="bg-navy-dark/50 rounded-lg p-3 max-h-32 overflow-y-auto">
-                            <pre className="text-cream/70 text-sm whitespace-pre-wrap font-mono">{currentValue}</pre>
+                          <div className={`rounded-lg p-3 max-h-40 overflow-y-auto ${
+                            isGlobal ? 'bg-purple-900/20' : 'bg-navy-dark/50'
+                          }`}>
+                            <pre className={`text-sm whitespace-pre-wrap font-mono ${
+                              isGlobal ? 'text-purple-200/80' : 'text-cream/70'
+                            }`}>{currentValue}</pre>
                           </div>
                         )}
 
@@ -2030,9 +2136,28 @@ Draw from their life stories and memories to provide authentic, personal respons
                 <div className="mt-4 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-cream/70 text-sm">
-                        Use placeholders like <code className="bg-navy-dark px-1 rounded">{'{userName}'}</code>, <code className="bg-navy-dark px-1 rounded">{'{humor}'}</code>, etc. for dynamic content.
+                    <div className="space-y-2">
+                      <p className="text-cream/70 text-sm font-medium">Available Placeholders:</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{userName}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{humor}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{empathy}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{tradition}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{adventure}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{wisdom}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{creativity}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{patience}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{optimism}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{coreValues}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{lifePhilosophy}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{echoVibe}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{stories}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{recipient}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{occasion}'}</code>
+                        <code className="bg-navy-dark px-2 py-1 rounded text-gold/80">{'{deliveryDate}'}</code>
+                      </div>
+                      <p className="text-cream/50 text-xs mt-2">
+                        The Global System Instructions are prepended to ALL AI requests and do not support placeholders.
                       </p>
                     </div>
                   </div>
