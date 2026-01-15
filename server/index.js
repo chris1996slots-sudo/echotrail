@@ -103,9 +103,13 @@ if (process.env.NODE_ENV === 'production') {
   }));
 
   // Handle SPA routing - serve index.html for all non-API routes
-  app.get('*', (req, res, next) => {
+  app.use((req, res, next) => {
     // Skip API routes
     if (req.path.startsWith('/api')) {
+      return next();
+    }
+    // Skip requests for static files that exist
+    if (req.method !== 'GET') {
       return next();
     }
     // Serve index.html for SPA routes
