@@ -678,42 +678,41 @@ async function testElevenLabsApi(apiKey) {
 
 async function testHeyGenApi(apiKey) {
   try {
-    // Try v2 avatars endpoint first (more reliable)
-    const response = await fetch('https://api.heygen.com/v2/avatars', {
+    // Use v2 remaining quota endpoint (official method)
+    const response = await fetch('https://api.heygen.com/v2/user/remaining_quota', {
       headers: { 'X-Api-Key': apiKey }
     });
 
     if (response.ok) {
       const data = await response.json();
-      const avatarCount = data.data?.avatars?.length || 0;
+      // Quota is in seconds, divide by 60 for credits
+      const quota = data.data?.remaining_quota || 0;
+      const credits = Math.floor(quota / 60);
       return {
         success: true,
-        message: `Connected! ${avatarCount} avatars available.`,
-        data: { avatarCount }
+        message: `Connected! ${credits} credits remaining.`,
+        data: { credits, quota }
       };
     }
 
-    // Try v1 endpoint as fallback
-    const v1Response = await fetch('https://api.heygen.com/v1/avatar.list', {
-      headers: { 'X-Api-Key': apiKey }
-    });
-
-    if (v1Response.ok) {
-      const data = await v1Response.json();
-      return {
-        success: true,
-        message: `Connected via v1 API.`,
-        data: data.data
-      };
-    }
-
-    // Check the error response
+    // Parse error response
     const errorData = await response.json().catch(() => ({}));
+    console.log('HeyGen API error:', response.status, errorData);
+
+    if (response.status === 401) {
+      return { success: false, message: 'Invalid API key' };
+    }
+
+    if (response.status === 403) {
+      return { success: false, message: 'API key does not have permission for this endpoint' };
+    }
+
     return {
       success: false,
-      message: errorData.message || errorData.error || 'Invalid API key or insufficient permissions'
+      message: errorData.message || errorData.error || `API error (${response.status})`
     };
   } catch (error) {
+    console.error('HeyGen connection error:', error);
     return { success: false, message: `Connection error: ${error.message}` };
   }
 }
