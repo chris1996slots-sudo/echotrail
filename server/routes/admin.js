@@ -678,22 +678,43 @@ async function testElevenLabsApi(apiKey) {
 
 async function testHeyGenApi(apiKey) {
   try {
-    const response = await fetch('https://api.heygen.com/v1/user/remaining_quota', {
-      headers: { 'x-api-key': apiKey }
+    // Try v2 avatars endpoint first (more reliable)
+    const response = await fetch('https://api.heygen.com/v2/avatars', {
+      headers: { 'X-Api-Key': apiKey }
     });
 
     if (response.ok) {
       const data = await response.json();
+      const avatarCount = data.data?.avatars?.length || 0;
       return {
         success: true,
-        message: `Connected. Remaining quota: ${data.data?.remaining_quota || 'unknown'}`,
+        message: `Connected! ${avatarCount} avatars available.`,
+        data: { avatarCount }
+      };
+    }
+
+    // Try v1 endpoint as fallback
+    const v1Response = await fetch('https://api.heygen.com/v1/avatar.list', {
+      headers: { 'X-Api-Key': apiKey }
+    });
+
+    if (v1Response.ok) {
+      const data = await v1Response.json();
+      return {
+        success: true,
+        message: `Connected via v1 API.`,
         data: data.data
       };
     }
 
-    return { success: false, message: 'Invalid API key' };
+    // Check the error response
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      success: false,
+      message: errorData.message || errorData.error || 'Invalid API key or insufficient permissions'
+    };
   } catch (error) {
-    return { success: false, message: error.message };
+    return { success: false, message: `Connection error: ${error.message}` };
   }
 }
 
