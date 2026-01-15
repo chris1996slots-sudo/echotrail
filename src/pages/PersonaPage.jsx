@@ -45,6 +45,7 @@ import { useApp } from '../context/AppContext';
 import { LegacyScoreCard } from '../components/LegacyScore';
 import { ValueStore } from '../components/ValueStore';
 import { EchoVibe } from '../components/EchoVibe';
+import api from '../services/api';
 
 const storyCategories = [
   { id: 'childhood', label: 'Childhood Memories', icon: Star, prompt: 'Share a defining moment from your childhood...' },
@@ -271,6 +272,12 @@ export function PersonaPage({ onNavigate }) {
   const [voiceMemoUploading, setVoiceMemoUploading] = useState(false);
   const [voiceMemoError, setVoiceMemoError] = useState('');
   const voiceMemoInputRef = useRef(null);
+
+  // Avatar processing state (Step 5 completion)
+  const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
+  const [processingStep, setProcessingStep] = useState('');
+  const [processingError, setProcessingError] = useState(null);
+  const [processingComplete, setProcessingComplete] = useState(false);
 
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
@@ -633,6 +640,66 @@ export function PersonaPage({ onNavigate }) {
     }));
     setShowSaveConfirm(true);
     setTimeout(() => setShowSaveConfirm(false), 2000);
+  };
+
+  // Handle avatar creation completion (Step 5)
+  const handleAvatarCreation = async () => {
+    setIsProcessingAvatar(true);
+    setProcessingError(null);
+    setProcessingComplete(false);
+
+    const voiceSamples = persona.voiceSamples || [];
+    const hasVoiceSamples = voiceSamples.length > 0;
+
+    try {
+      // Step 1: Create voice clone if samples exist
+      if (hasVoiceSamples) {
+        setProcessingStep('Creating your voice clone...');
+        try {
+          const voiceResult = await api.createVoiceClone(
+            `${user.firstName}'s Voice`,
+            `Voice clone for ${user.firstName} ${user.lastName}`
+          );
+          if (voiceResult.success) {
+            // Update persona with voice clone info
+            setPersona(prev => ({
+              ...prev,
+              elevenlabsVoiceId: voiceResult.voiceId,
+              elevenlabsVoiceName: voiceResult.voiceName,
+            }));
+          }
+        } catch (voiceError) {
+          console.error('Voice clone error:', voiceError);
+          // Continue even if voice clone fails - don't block the whole process
+        }
+      }
+
+      // Step 2: Save avatar settings
+      setProcessingStep('Saving avatar settings...');
+      await api.updateAvatarSettings({
+        avatarStyle: persona.avatarStyle,
+        backgroundType: persona.backgroundType,
+      });
+
+      // Step 3: Complete
+      setProcessingStep('Finalizing your digital avatar...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause for UX
+
+      setProcessingComplete(true);
+      setProcessingStep('');
+
+      // Auto-close after success
+      setTimeout(() => {
+        setIsProcessingAvatar(false);
+        setProcessingComplete(false);
+        onNavigate('echo-sim');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Avatar creation error:', error);
+      setProcessingError(error.message || 'Failed to create avatar. Please try again.');
+      setProcessingStep('');
+    }
   };
 
   const handleSaveStory = async () => {
@@ -1210,16 +1277,129 @@ export function PersonaPage({ onNavigate }) {
                 </motion.button>
               ) : (
                 <motion.button
-                  onClick={() => onNavigate('echo-sim')}
+                  onClick={handleAvatarCreation}
                   className="btn-primary flex items-center"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Test Avatar
+                  Create Avatar
                 </motion.button>
               )}
             </div>
+
+            {/* Processing Modal */}
+            <AnimatePresence>
+              {isProcessingAvatar && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-navy-dark border-2 border-gold/30 rounded-2xl p-8 max-w-md w-full mx-4 text-center"
+                  >
+                    {processingComplete ? (
+                      <>
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 200 }}
+                          className="w-20 h-20 mx-auto mb-6 bg-green-500/20 rounded-full flex items-center justify-center"
+                        >
+                          <CheckCircle2 className="w-12 h-12 text-green-400" />
+                        </motion.div>
+                        <h3 className="text-2xl font-serif text-cream mb-2">Avatar Created!</h3>
+                        <p className="text-cream/60">Your digital echo is ready to speak.</p>
+                      </>
+                    ) : processingError ? (
+                      <>
+                        <div className="w-20 h-20 mx-auto mb-6 bg-red-500/20 rounded-full flex items-center justify-center">
+                          <X className="w-12 h-12 text-red-400" />
+                        </div>
+                        <h3 className="text-2xl font-serif text-cream mb-2">Creation Failed</h3>
+                        <p className="text-cream/60 mb-6">{processingError}</p>
+                        <div className="flex gap-4 justify-center">
+                          <motion.button
+                            onClick={() => {
+                              setIsProcessingAvatar(false);
+                              setProcessingError(null);
+                            }}
+                            className="btn-secondary"
+                            whileHover={{ scale: 1.05 }}
+                          >
+                            Close
+                          </motion.button>
+                          <motion.button
+                            onClick={handleAvatarCreation}
+                            className="btn-primary"
+                            whileHover={{ scale: 1.05 }}
+                          >
+                            Try Again
+                          </motion.button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-20 h-20 mx-auto mb-6 relative">
+                          <div className="absolute inset-0 border-4 border-gold/20 rounded-full" />
+                          <motion.div
+                            className="absolute inset-0 border-4 border-gold border-t-transparent rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Sparkles className="w-8 h-8 text-gold" />
+                          </div>
+                        </div>
+                        <h3 className="text-2xl font-serif text-cream mb-2">Creating Your Avatar</h3>
+                        <p className="text-cream/60 mb-4">{processingStep || 'Please wait...'}</p>
+                        <div className="space-y-3 text-left bg-navy-light/30 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            {(persona.voiceSamples?.length || 0) > 0 ? (
+                              processingStep.includes('voice') ? (
+                                <Loader2 className="w-5 h-5 text-gold animate-spin" />
+                              ) : processingStep.includes('Saving') || processingStep.includes('Finalizing') ? (
+                                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                              ) : (
+                                <div className="w-5 h-5 border-2 border-cream/30 rounded-full" />
+                              )
+                            ) : (
+                              <div className="w-5 h-5 border-2 border-cream/20 rounded-full" />
+                            )}
+                            <span className={`text-sm ${(persona.voiceSamples?.length || 0) > 0 ? 'text-cream' : 'text-cream/40'}`}>
+                              Voice Clone {(persona.voiceSamples?.length || 0) > 0 ? `(${persona.voiceSamples.length} samples)` : '(no samples)'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {processingStep.includes('Saving') ? (
+                              <Loader2 className="w-5 h-5 text-gold animate-spin" />
+                            ) : processingStep.includes('Finalizing') ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            ) : (
+                              <div className="w-5 h-5 border-2 border-cream/30 rounded-full" />
+                            )}
+                            <span className="text-cream text-sm">Avatar Settings</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {processingStep.includes('Finalizing') ? (
+                              <Loader2 className="w-5 h-5 text-gold animate-spin" />
+                            ) : (
+                              <div className="w-5 h-5 border-2 border-cream/30 rounded-full" />
+                            )}
+                            <span className="text-cream text-sm">Finalize</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
 

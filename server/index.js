@@ -15,6 +15,7 @@ import wisdomRoutes from './routes/wisdom.js';
 import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import supportRoutes from './routes/support.js';
+import referralRoutes from './routes/referral.js';
 
 dotenv.config();
 
@@ -77,6 +78,7 @@ app.use('/api/wisdom', wisdomRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/referral', referralRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

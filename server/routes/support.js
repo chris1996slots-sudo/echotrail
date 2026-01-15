@@ -10,6 +10,29 @@ const isTypingActive = (typingAt) => {
 };
 
 // =====================
+// PUBLIC ENDPOINTS
+// =====================
+
+// Get support avatar (public, no auth required)
+router.get('/avatar', async (req, res) => {
+  try {
+    const setting = await req.prisma.systemSettings.findUnique({
+      where: { key: 'support_avatar' }
+    });
+
+    if (setting) {
+      const avatar = JSON.parse(setting.value);
+      res.json(avatar);
+    } else {
+      res.json({ name: 'Support Team', imageUrl: null });
+    }
+  } catch (error) {
+    console.error('Failed to get support avatar:', error);
+    res.json({ name: 'Support Team', imageUrl: null });
+  }
+});
+
+// =====================
 // USER ENDPOINTS
 // =====================
 

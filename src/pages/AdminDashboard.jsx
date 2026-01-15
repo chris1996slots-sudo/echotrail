@@ -147,6 +147,35 @@ export function AdminDashboard({ onNavigate }) {
   });
   const [editingPricing, setEditingPricing] = useState(false);
 
+  // Support Avatar state
+  const [supportAvatar, setSupportAvatar] = useState({ name: 'Support Team', imageUrl: null });
+  const [editingSupportAvatar, setEditingSupportAvatar] = useState(false);
+  const [supportAvatarDraft, setSupportAvatarDraft] = useState({ name: '', imageUrl: '' });
+  const supportAvatarInputRef = useRef(null);
+
+  // Quick Reply Buttons state
+  const [quickReplies, setQuickReplies] = useState([]);
+  const [editingQuickReplies, setEditingQuickReplies] = useState(false);
+  const [quickRepliesDraft, setQuickRepliesDraft] = useState([]);
+
+  // Referral System state
+  const [referralSettings, setReferralSettings] = useState({
+    enabled: true,
+    referrerReward: 5.00,
+    refereeReward: 5.00,
+    minPurchaseAmount: 20.00,
+    rewardType: 'tokens', // 'tokens' or 'discount'
+    expirationDays: 30,
+    maxReferralsPerUser: 0, // 0 = unlimited
+  });
+  const [editingReferral, setEditingReferral] = useState(false);
+  const [referralStats, setReferralStats] = useState({
+    totalReferrals: 0,
+    successfulReferrals: 0,
+    pendingReferrals: 0,
+    totalRewardsGiven: 0,
+  });
+
   // Default prompts configuration
   const defaultPrompts = [
     {
@@ -310,18 +339,27 @@ Ask clarifying questions if needed, then help them write or refine their message
       }
 
       if (activeTab === 'support') {
-        const chatsRes = await fetch(`${API_URL}/api/support/admin/chats?status=all`, { headers });
+        const [chatsRes, quickRepliesRes] = await Promise.all([
+          fetch(`${API_URL}/api/support/admin/chats?status=all`, { headers }),
+          fetch(`${API_URL}/api/admin/support-quick-replies`, { headers })
+        ]);
         if (chatsRes.ok) {
           setSupportChats(await chatsRes.json());
+        }
+        if (quickRepliesRes.ok) {
+          const replies = await quickRepliesRes.json();
+          setQuickReplies(replies);
+          setQuickRepliesDraft(replies);
         }
       }
 
       if (activeTab === 'settings') {
-        // Fetch prompts, blacklist, and pricing
-        const [promptsRes, blacklistRes, pricingRes] = await Promise.all([
+        // Fetch prompts, blacklist, pricing, and support avatar
+        const [promptsRes, blacklistRes, pricingRes, supportAvatarRes] = await Promise.all([
           fetch(`${API_URL}/api/admin/prompts`, { headers }),
           fetch(`${API_URL}/api/admin/blacklist`, { headers }),
-          fetch(`${API_URL}/api/admin/pricing`, { headers })
+          fetch(`${API_URL}/api/admin/pricing`, { headers }),
+          fetch(`${API_URL}/api/admin/support-avatar`, { headers })
         ]);
 
         if (promptsRes.ok) {
@@ -332,6 +370,24 @@ Ask clarifying questions if needed, then help them write or refine their message
         }
         if (pricingRes.ok) {
           setPricing(await pricingRes.json());
+        }
+        if (supportAvatarRes.ok) {
+          setSupportAvatar(await supportAvatarRes.json());
+        }
+      }
+
+      if (activeTab === 'referral') {
+        // Fetch referral settings and stats
+        const [settingsRes, statsRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/referral/settings`, { headers }),
+          fetch(`${API_URL}/api/admin/referral/stats`, { headers })
+        ]);
+
+        if (settingsRes.ok) {
+          setReferralSettings(await settingsRes.json());
+        }
+        if (statsRes.ok) {
+          setReferralStats(await statsRes.json());
         }
       }
     } catch (error) {
@@ -736,6 +792,61 @@ Ask clarifying questions if needed, then help them write or refine their message
     }
   };
 
+  // Support Avatar functions
+  const handleSupportAvatarImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSupportAvatarDraft(prev => ({ ...prev, imageUrl: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveSupportAvatar = async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/admin/support-avatar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(supportAvatarDraft)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSupportAvatar(data);
+        setEditingSupportAvatar(false);
+      }
+    } catch (error) {
+      console.error('Failed to save support avatar:', error);
+    }
+  };
+
+  // Referral System functions
+  const saveReferralSettings = async () => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const res = await fetch(`${API_URL}/api/admin/referral/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(referralSettings)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReferralSettings(data);
+        setEditingReferral(false);
+      }
+    } catch (error) {
+      console.error('Failed to save referral settings:', error);
+    }
+  };
+
   const testApiConnection = async (service) => {
     setTestResults(prev => ({ ...prev, [service]: { loading: true } }));
     try {
@@ -780,6 +891,7 @@ Ask clarifying questions if needed, then help them write or refine their message
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'support', label: 'Support', icon: MessageCircle, badge: totalUnread || supportChats.filter(c => c.status === 'open').length },
+    { id: 'referral', label: 'Referral', icon: Heart },
     { id: 'apis', label: 'AI Services', icon: Key },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -1745,6 +1857,143 @@ Ask clarifying questions if needed, then help them write or refine their message
                   </div>
                 )}
               </div>
+
+              {/* Quick Reply Buttons Management */}
+              <div className="glass-card mt-6">
+                <div className="p-4 border-b border-gold/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gold/20 flex items-center justify-center">
+                      <MessageCircle className="w-4 h-4 text-gold" />
+                    </div>
+                    <div>
+                      <h3 className="text-cream font-medium">Quick Reply Buttons</h3>
+                      <p className="text-cream/50 text-xs">Predefined responses for fast replies</p>
+                    </div>
+                  </div>
+                  {!editingQuickReplies ? (
+                    <motion.button
+                      onClick={() => {
+                        setQuickRepliesDraft([...quickReplies]);
+                        setEditingQuickReplies(true);
+                      }}
+                      className="px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-sm flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      Edit
+                    </motion.button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => {
+                          setEditingQuickReplies(false);
+                          setQuickRepliesDraft([...quickReplies]);
+                        }}
+                        className="px-3 py-1.5 bg-navy-light text-cream/70 rounded-lg text-sm"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('echotrail_token');
+                            const res = await fetch(`${API_URL}/api/admin/support-quick-replies`, {
+                              method: 'PUT',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`
+                              },
+                              body: JSON.stringify({ replies: quickRepliesDraft })
+                            });
+                            if (res.ok) {
+                              setQuickReplies(quickRepliesDraft);
+                              setEditingQuickReplies(false);
+                            }
+                          } catch (error) {
+                            console.error('Failed to save quick replies:', error);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-gold text-navy rounded-lg text-sm flex items-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <Save className="w-3 h-3" />
+                        Save
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 space-y-3">
+                  {(editingQuickReplies ? quickRepliesDraft : quickReplies).map((reply, index) => (
+                    <div key={reply.id} className="flex gap-3 items-start">
+                      {editingQuickReplies ? (
+                        <>
+                          <input
+                            type="text"
+                            value={reply.label}
+                            onChange={(e) => {
+                              const updated = [...quickRepliesDraft];
+                              updated[index] = { ...reply, label: e.target.value };
+                              setQuickRepliesDraft(updated);
+                            }}
+                            placeholder="Button Label"
+                            className="w-32 px-3 py-2 bg-navy-dark/50 border border-gold/20 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                          />
+                          <textarea
+                            value={reply.text}
+                            onChange={(e) => {
+                              const updated = [...quickRepliesDraft];
+                              updated[index] = { ...reply, text: e.target.value };
+                              setQuickRepliesDraft(updated);
+                            }}
+                            placeholder="Message text..."
+                            rows={2}
+                            className="flex-1 px-3 py-2 bg-navy-dark/50 border border-gold/20 rounded-lg text-cream text-sm resize-none focus:outline-none focus:border-gold/50"
+                          />
+                          <motion.button
+                            onClick={() => {
+                              setQuickRepliesDraft(quickRepliesDraft.filter((_, i) => i !== index));
+                            }}
+                            className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
+                            whileHover={{ scale: 1.05 }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </motion.button>
+                        </>
+                      ) : (
+                        <div className="flex-1 p-3 bg-navy-dark/30 rounded-lg">
+                          <span className="px-2 py-0.5 bg-gold/20 text-gold text-xs rounded mr-2">{reply.label}</span>
+                          <span className="text-cream/70 text-sm">{reply.text}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {editingQuickReplies && (
+                    <motion.button
+                      onClick={() => {
+                        setQuickRepliesDraft([
+                          ...quickRepliesDraft,
+                          { id: Date.now().toString(), label: '', text: '' }
+                        ]);
+                      }}
+                      className="w-full p-3 border-2 border-dashed border-gold/20 rounded-lg text-gold/60 hover:text-gold hover:border-gold/40 transition-colors flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.01 }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Quick Reply
+                    </motion.button>
+                  )}
+
+                  {quickReplies.length === 0 && !editingQuickReplies && (
+                    <div className="text-center py-6">
+                      <p className="text-cream/40 text-sm">No quick replies configured</p>
+                      <p className="text-cream/30 text-xs mt-1">Click Edit to add predefined responses</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -1872,6 +2121,26 @@ Ask clarifying questions if needed, then help them write or refine their message
                   </div>
                 )}
 
+                {/* Quick Reply Buttons */}
+                {selectedChat.status === 'open' && quickReplies.length > 0 && (
+                  <div className="px-4 py-2 border-t border-gold/10 bg-navy-dark/20">
+                    <div className="flex flex-wrap gap-2">
+                      {quickReplies.map((reply) => (
+                        <motion.button
+                          key={reply.id}
+                          type="button"
+                          onClick={() => setNewMessage(reply.text)}
+                          className="px-3 py-1.5 bg-gold/10 hover:bg-gold/20 border border-gold/20 hover:border-gold/40 rounded-lg text-sm text-cream/70 hover:text-cream transition-colors"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {reply.label}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Input */}
                 {selectedChat.status === 'open' && (
                   <form onSubmit={sendAdminMessage} className="p-4 border-t border-gold/10">
@@ -1916,6 +2185,280 @@ Ask clarifying questions if needed, then help them write or refine their message
                     </div>
                   </form>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Referral System Tab */}
+          {activeTab === 'referral' && (
+            <motion.div
+              key="referral"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              {/* Referral Stats Overview */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="glass-card p-4 text-center">
+                  <p className="text-3xl font-bold text-gold">{referralStats.totalReferrals}</p>
+                  <p className="text-cream/50 text-sm">Total Referrals</p>
+                </div>
+                <div className="glass-card p-4 text-center">
+                  <p className="text-3xl font-bold text-green-400">{referralStats.successfulReferrals}</p>
+                  <p className="text-cream/50 text-sm">Successful</p>
+                </div>
+                <div className="glass-card p-4 text-center">
+                  <p className="text-3xl font-bold text-yellow-400">{referralStats.pendingReferrals}</p>
+                  <p className="text-cream/50 text-sm">Pending</p>
+                </div>
+                <div className="glass-card p-4 text-center">
+                  <p className="text-3xl font-bold text-cream">€{referralStats.totalRewardsGiven?.toFixed(2) || '0.00'}</p>
+                  <p className="text-cream/50 text-sm">Rewards Given</p>
+                </div>
+              </div>
+
+              {/* Referral Program Settings */}
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                      <Heart className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif text-cream">Referral Program Settings</h3>
+                      <p className="text-cream/50 text-sm">Configure rewards for referrals</p>
+                    </div>
+                  </div>
+                  {!editingReferral ? (
+                    <motion.button
+                      onClick={() => setEditingReferral(true)}
+                      className="px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit
+                    </motion.button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => setEditingReferral(false)}
+                        className="px-4 py-2 bg-navy-light text-cream/70 rounded-lg text-sm"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={saveReferralSettings}
+                        className="px-4 py-2 bg-gold text-navy rounded-lg text-sm flex items-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Enable/Disable Toggle */}
+                <div className="mb-6 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-cream font-medium">Program Status</h4>
+                      <p className="text-cream/50 text-sm">Enable or disable the referral program</p>
+                    </div>
+                    <button
+                      onClick={() => editingReferral && setReferralSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                      disabled={!editingReferral}
+                      className={`relative w-14 h-7 rounded-full transition-colors ${
+                        referralSettings.enabled ? 'bg-green-500' : 'bg-navy-light'
+                      } ${!editingReferral ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${
+                        referralSettings.enabled ? 'left-8' : 'left-1'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Reward Settings */}
+                  <div className="space-y-4">
+                    <h4 className="text-cream/70 text-sm font-medium border-b border-gold/10 pb-2">Reward Settings</h4>
+
+                    <div>
+                      <label className="text-cream/50 text-sm">Referrer Reward (€)</label>
+                      <p className="text-cream/40 text-xs mb-1">Amount the referrer receives</p>
+                      {editingReferral ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={referralSettings.referrerReward}
+                          onChange={(e) => setReferralSettings(prev => ({
+                            ...prev,
+                            referrerReward: parseFloat(e.target.value) || 0
+                          }))}
+                          className="w-full px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        />
+                      ) : (
+                        <p className="text-cream text-xl font-medium">€{referralSettings.referrerReward?.toFixed(2)}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-cream/50 text-sm">Referee Reward (€)</label>
+                      <p className="text-cream/40 text-xs mb-1">Amount the new user receives</p>
+                      {editingReferral ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={referralSettings.refereeReward}
+                          onChange={(e) => setReferralSettings(prev => ({
+                            ...prev,
+                            refereeReward: parseFloat(e.target.value) || 0
+                          }))}
+                          className="w-full px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        />
+                      ) : (
+                        <p className="text-cream text-xl font-medium">€{referralSettings.refereeReward?.toFixed(2)}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-cream/50 text-sm">Reward Type</label>
+                      {editingReferral ? (
+                        <select
+                          value={referralSettings.rewardType}
+                          onChange={(e) => setReferralSettings(prev => ({
+                            ...prev,
+                            rewardType: e.target.value
+                          }))}
+                          className="w-full mt-1 px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        >
+                          <option value="tokens">Token Credits</option>
+                          <option value="discount">Discount on Subscription</option>
+                        </select>
+                      ) : (
+                        <p className="text-cream text-lg font-medium capitalize">{referralSettings.rewardType === 'tokens' ? 'Token Credits' : 'Discount'}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Conditions */}
+                  <div className="space-y-4">
+                    <h4 className="text-cream/70 text-sm font-medium border-b border-gold/10 pb-2">Conditions</h4>
+
+                    <div>
+                      <label className="text-cream/50 text-sm">Minimum Purchase (€)</label>
+                      <p className="text-cream/40 text-xs mb-1">Referee must spend at least this amount</p>
+                      {editingReferral ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={referralSettings.minPurchaseAmount}
+                          onChange={(e) => setReferralSettings(prev => ({
+                            ...prev,
+                            minPurchaseAmount: parseFloat(e.target.value) || 0
+                          }))}
+                          className="w-full px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        />
+                      ) : (
+                        <p className="text-cream text-xl font-medium">€{referralSettings.minPurchaseAmount?.toFixed(2)}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-cream/50 text-sm">Expiration Days</label>
+                      <p className="text-cream/40 text-xs mb-1">Days until referral link expires</p>
+                      {editingReferral ? (
+                        <input
+                          type="number"
+                          min="1"
+                          value={referralSettings.expirationDays}
+                          onChange={(e) => setReferralSettings(prev => ({
+                            ...prev,
+                            expirationDays: parseInt(e.target.value) || 30
+                          }))}
+                          className="w-full px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        />
+                      ) : (
+                        <p className="text-cream text-xl font-medium">{referralSettings.expirationDays} days</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-cream/50 text-sm">Max Referrals per User</label>
+                      <p className="text-cream/40 text-xs mb-1">0 = unlimited</p>
+                      {editingReferral ? (
+                        <input
+                          type="number"
+                          min="0"
+                          value={referralSettings.maxReferralsPerUser}
+                          onChange={(e) => setReferralSettings(prev => ({
+                            ...prev,
+                            maxReferralsPerUser: parseInt(e.target.value) || 0
+                          }))}
+                          className="w-full px-4 py-2 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50"
+                        />
+                      ) : (
+                        <p className="text-cream text-xl font-medium">
+                          {referralSettings.maxReferralsPerUser === 0 ? 'Unlimited' : referralSettings.maxReferralsPerUser}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="mt-6 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-cream/70 text-sm">
+                        <strong>How it works:</strong> Users share their referral link. When a new user signs up and makes a qualifying purchase
+                        (subscription or €{referralSettings.minPurchaseAmount}+ tokens), both the referrer and referee receive their rewards.
+                      </p>
+                      <p className="text-cream/50 text-xs mt-2">
+                        Rewards are automatically credited as token balance that can be used for platform features.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Example Referral Flow */}
+              <div className="glass-card p-6">
+                <h3 className="text-lg font-serif text-cream mb-4">Referral Flow Preview</h3>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex-1 p-4 bg-navy-dark/30 rounded-xl text-center">
+                    <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center mx-auto mb-2">
+                      <UserIcon className="w-6 h-6 text-gold" />
+                    </div>
+                    <p className="text-cream font-medium">User A</p>
+                    <p className="text-cream/50 text-sm">Shares link</p>
+                  </div>
+                  <div className="text-gold text-2xl">→</div>
+                  <div className="flex-1 p-4 bg-navy-dark/30 rounded-xl text-center">
+                    <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
+                      <UserIcon className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <p className="text-cream font-medium">User B</p>
+                    <p className="text-cream/50 text-sm">Signs up & pays €{referralSettings.minPurchaseAmount}+</p>
+                  </div>
+                  <div className="text-gold text-2xl">→</div>
+                  <div className="flex-1 p-4 bg-green-500/10 rounded-xl text-center border border-green-500/30">
+                    <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-2">
+                      <CheckCircle2 className="w-6 h-6 text-green-400" />
+                    </div>
+                    <p className="text-cream font-medium">Rewards!</p>
+                    <p className="text-green-400 text-sm">
+                      A: €{referralSettings.referrerReward} | B: €{referralSettings.refereeReward}
+                    </p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -2294,6 +2837,133 @@ Ask clarifying questions if needed, then help them write or refine their message
                   <p className="text-cream/50 text-sm">
                     💡 Note: Price changes will apply to new subscriptions. Existing subscriptions keep their current rates until renewal.
                   </p>
+                </div>
+              </div>
+
+              {/* Support Avatar Settings */}
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif text-cream">Support Chat Avatar</h3>
+                      <p className="text-cream/50 text-sm">Name and image shown to users in support chat</p>
+                    </div>
+                  </div>
+                  {!editingSupportAvatar ? (
+                    <motion.button
+                      onClick={() => {
+                        setSupportAvatarDraft({ name: supportAvatar.name, imageUrl: supportAvatar.imageUrl || '' });
+                        setEditingSupportAvatar(true);
+                      }}
+                      className="px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit
+                    </motion.button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => setEditingSupportAvatar(false)}
+                        className="px-4 py-2 bg-navy-light text-cream/70 rounded-lg text-sm"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={saveSupportAvatar}
+                        className="px-4 py-2 bg-gold text-navy rounded-lg text-sm flex items-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Avatar Preview */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-gold/30 bg-navy-dark flex items-center justify-center">
+                      {editingSupportAvatar ? (
+                        supportAvatarDraft.imageUrl ? (
+                          <img src={supportAvatarDraft.imageUrl} alt="Support Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <UserIcon className="w-12 h-12 text-gold/30" />
+                        )
+                      ) : supportAvatar.imageUrl ? (
+                        <img src={supportAvatar.imageUrl} alt="Support Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <UserIcon className="w-12 h-12 text-gold/30" />
+                      )}
+                    </div>
+                    {editingSupportAvatar && (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={supportAvatarInputRef}
+                          onChange={handleSupportAvatarImageUpload}
+                          className="hidden"
+                        />
+                        <motion.button
+                          onClick={() => supportAvatarInputRef.current?.click()}
+                          className="mt-3 px-3 py-1.5 bg-navy-light text-cream/70 rounded-lg text-sm flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          Upload
+                        </motion.button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Name Input */}
+                  <div className="flex-1">
+                    <label className="text-cream/50 text-sm">Display Name</label>
+                    {editingSupportAvatar ? (
+                      <input
+                        type="text"
+                        value={supportAvatarDraft.name}
+                        onChange={(e) => setSupportAvatarDraft(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Support Team, Sarah, Help Desk"
+                        className="w-full mt-1 px-4 py-3 bg-navy-dark/50 border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
+                      />
+                    ) : (
+                      <p className="text-cream text-xl font-medium mt-1">{supportAvatar.name}</p>
+                    )}
+                    <p className="text-cream/40 text-xs mt-2">
+                      This name will be shown to users when they receive support messages
+                    </p>
+                  </div>
+                </div>
+
+                {/* Preview Card */}
+                <div className="mt-6 p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
+                  <p className="text-cream/50 text-sm mb-3">Preview (as seen by users):</p>
+                  <div className="flex items-center gap-3 p-3 bg-navy-dark/50 rounded-lg max-w-sm">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gold/30 bg-navy flex items-center justify-center flex-shrink-0">
+                      {(editingSupportAvatar ? supportAvatarDraft.imageUrl : supportAvatar.imageUrl) ? (
+                        <img
+                          src={editingSupportAvatar ? supportAvatarDraft.imageUrl : supportAvatar.imageUrl}
+                          alt="Support"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="w-5 h-5 text-gold/30" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-cream font-medium text-sm">
+                        {editingSupportAvatar ? (supportAvatarDraft.name || 'Support Team') : supportAvatar.name}
+                      </p>
+                      <p className="text-cream/40 text-xs">EchoTrail Support</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 

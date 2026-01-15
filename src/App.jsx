@@ -10,6 +10,7 @@ import { MemoryAnchorPage } from './pages/MemoryAnchorPage';
 import { WisdomGPTPage } from './pages/WisdomGPTPage';
 import { TimeCapsulePage } from './pages/TimeCapsulePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ReferralPage } from './pages/ReferralPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { LoginPage } from './pages/LoginPage';
 import { SupportChat } from './components/SupportChat';
@@ -17,7 +18,7 @@ import { SupportChat } from './components/SupportChat';
 function AppContent() {
   const { user } = useApp();
   const isAdmin = user?.role === 'ADMIN';
-  const userPages = ['persona', 'echo-sim', 'memory-anchor', 'wisdom-gpt', 'time-capsule', 'settings'];
+  const userPages = ['persona', 'echo-sim', 'memory-anchor', 'wisdom-gpt', 'time-capsule', 'settings', 'referral'];
   const adminPages = ['admin'];
 
   // Set initial page based on user state at mount time
@@ -83,6 +84,8 @@ function AppContent() {
         return <TimeCapsulePage onNavigate={handleNavigate} />;
       case 'settings':
         return <SettingsPage onNavigate={handleNavigate} />;
+      case 'referral':
+        return <ReferralPage onNavigate={handleNavigate} />;
       case 'admin':
         return <AdminDashboard onNavigate={handleNavigate} />;
       default:

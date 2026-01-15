@@ -11,7 +11,8 @@ import {
   LogIn,
   LogOut,
   Menu,
-  X
+  X,
+  Gift
 } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
@@ -24,6 +25,7 @@ const navItems = [
   { id: 'memory-anchor', label: 'Memories', icon: Image, requiresAuth: true, userOnly: true },
   { id: 'wisdom-gpt', label: 'Wisdom GPT', icon: MessageCircle, requiresAuth: true, userOnly: true },
   { id: 'time-capsule', label: 'Time Capsule', icon: Clock, requiresAuth: true, userOnly: true },
+  { id: 'referral', label: 'Referral', icon: Gift, requiresAuth: true, userOnly: true },
   { id: 'settings', label: 'Settings', icon: Settings, requiresAuth: true, userOnly: true },
   { id: 'admin', label: 'Dashboard', icon: Shield, requiresAuth: true, adminOnly: true },
 ];

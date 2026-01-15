@@ -14,6 +14,7 @@ export function SupportChat() {
   const [sending, setSending] = useState(false);
   const [isAdminTyping, setIsAdminTyping] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
+  const [supportAvatar, setSupportAvatar] = useState({ name: 'Support Team', imageUrl: null });
   const messagesEndRef = useRef(null);
   const pollIntervalRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -21,6 +22,27 @@ export function SupportChat() {
   const fileInputRef = useRef(null);
 
   const shouldShow = user && user.role !== 'ADMIN';
+
+  // Fetch support avatar settings
+  const loadSupportAvatar = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/support/avatar`);
+      if (res.ok) {
+        const data = await res.json();
+        setSupportAvatar({
+          name: data.name || 'Support Team',
+          imageUrl: data.imageUrl || null
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load support avatar:', error);
+    }
+  }, []);
+
+  // Load support avatar on mount
+  useEffect(() => {
+    loadSupportAvatar();
+  }, [loadSupportAvatar]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -189,14 +211,22 @@ export function SupportChat() {
             {/* Header */}
             <div className="bg-gradient-to-r from-gold/20 to-gold/10 px-4 py-3 border-b border-gold/20 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
-                  <MessageCircle className="w-5 h-5 text-gold" />
-                </div>
+                {supportAvatar.imageUrl ? (
+                  <img
+                    src={supportAvatar.imageUrl}
+                    alt={supportAvatar.name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-gold/30"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5 text-gold" />
+                  </div>
+                )}
                 <div>
-                  <h3 className="text-cream font-medium text-sm">Live Support</h3>
+                  <h3 className="text-cream font-medium text-sm">{supportAvatar.name}</h3>
                   <p className="text-cream/50 text-xs">
                     {isAdminTyping ? (
-                      <span className="text-gold animate-pulse">Support is typing...</span>
+                      <span className="text-gold animate-pulse">{supportAvatar.name} is typing...</span>
                     ) : (
                       'We typically reply within minutes'
                     )}

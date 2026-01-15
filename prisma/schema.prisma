@@ -31,6 +31,11 @@ model User {
   subscription  SubscriptionPlan @default(FREE)
   subscribedAt  DateTime?
 
+  // Token balance and referral
+  tokenBalance  Float    @default(0)
+  referralCode  String?  @unique // User's personal referral code
+  referredBy    String?  // ID of user who referred this user
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -249,4 +254,26 @@ model BlacklistedTopic {
   updatedAt   DateTime @updatedAt
 
   @@map("blacklisted_topics")
+}
+
+model Referral {
+  id            String   @id @default(cuid())
+
+  referrerId    String   // User who sent the referral
+  refereeId     String?  // User who signed up (null until signup)
+  refereeEmail  String?  // Email of invited person
+
+  code          String   @unique // Unique referral code
+  status        String   @default("pending") // pending, completed, expired, cancelled
+
+  referrerReward Float   @default(0) // Amount rewarded to referrer
+  refereeReward  Float   @default(0) // Amount rewarded to referee
+
+  completedAt   DateTime? // When the referral was completed
+  expiresAt     DateTime  // When the referral link expires
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("referrals")
 }

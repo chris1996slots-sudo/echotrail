@@ -296,9 +296,66 @@ class ApiService {
     return this.request(`/api/support/admin/chats/${chatId}/reopen`, { method: 'POST' });
   }
 
+  // Support Avatar Settings
+  async getSupportAvatar() {
+    return this.request('/api/admin/support-avatar');
+  }
+
+  async updateSupportAvatar(name, imageUrl) {
+    return this.request('/api/admin/support-avatar', {
+      method: 'PUT',
+      body: JSON.stringify({ name, imageUrl }),
+    });
+  }
+
+  // Support Quick Replies
+  async getSupportQuickReplies() {
+    return this.request('/api/admin/support-quick-replies');
+  }
+
+  async updateSupportQuickReplies(replies) {
+    return this.request('/api/admin/support-quick-replies', {
+      method: 'PUT',
+      body: JSON.stringify({ replies }),
+    });
+  }
+
   // Admin - User Details
   async getAdminUserDetails(userId) {
     return this.request(`/api/admin/users/${userId}/details`);
+  }
+
+  // Referral System
+  async getMyReferral() {
+    return this.request('/api/referral/my-referral');
+  }
+
+  async getMyReferrals() {
+    return this.request('/api/referral/my-referrals');
+  }
+
+  async validateReferralCode(code) {
+    return this.request(`/api/referral/validate/${code}`);
+  }
+
+  // Admin - Referral Settings
+  async getAdminReferralSettings() {
+    return this.request('/api/admin/referral/settings');
+  }
+
+  async updateAdminReferralSettings(settings) {
+    return this.request('/api/admin/referral/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getAdminReferralStats() {
+    return this.request('/api/admin/referral/stats');
+  }
+
+  async getAdminReferralList() {
+    return this.request('/api/admin/referral/list');
   }
 }
 

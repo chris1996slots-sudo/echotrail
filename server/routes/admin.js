@@ -890,6 +890,223 @@ router.delete('/blacklist/:id', async (req, res) => {
 });
 
 // =====================
+// SUPPORT AVATAR SETTINGS
+// =====================
+
+// Get support avatar settings
+router.get('/support-avatar', async (req, res) => {
+  try {
+    const setting = await req.prisma.systemSettings.findUnique({
+      where: { key: 'support_avatar' }
+    });
+
+    // Default support avatar
+    const defaultAvatar = {
+      name: 'Support Team',
+      imageUrl: null
+    };
+
+    res.json(setting?.value ? JSON.parse(setting.value) : defaultAvatar);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch support avatar' });
+  }
+});
+
+// Update support avatar settings
+router.put('/support-avatar', async (req, res) => {
+  try {
+    const { name, imageUrl } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const avatarData = {
+      name: name.trim(),
+      imageUrl: imageUrl || null
+    };
+
+    const setting = await req.prisma.systemSettings.upsert({
+      where: { key: 'support_avatar' },
+      update: { value: JSON.stringify(avatarData) },
+      create: {
+        key: 'support_avatar',
+        value: JSON.stringify(avatarData),
+        description: 'Support chat avatar name and image'
+      }
+    });
+
+    res.json(JSON.parse(setting.value));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update support avatar' });
+  }
+});
+
+// =====================
+// SUPPORT QUICK REPLIES
+// =====================
+
+// Get quick reply buttons
+router.get('/support-quick-replies', async (req, res) => {
+  try {
+    const setting = await req.prisma.systemSettings.findUnique({
+      where: { key: 'support_quick_replies' }
+    });
+
+    // Default quick replies
+    const defaultReplies = [
+      { id: '1', label: 'Greeting', text: 'Hello! Thank you for contacting EchoTrail support. How can I help you today?' },
+      { id: '2', label: 'Processing', text: 'Thank you for your patience. I\'m looking into this for you right now.' },
+      { id: '3', label: 'More Info', text: 'Could you please provide more details about the issue you\'re experiencing?' },
+      { id: '4', label: 'Resolved', text: 'I\'m glad I could help! Is there anything else you need assistance with?' },
+    ];
+
+    res.json(setting?.value ? JSON.parse(setting.value) : defaultReplies);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch quick replies' });
+  }
+});
+
+// Update quick reply buttons
+router.put('/support-quick-replies', async (req, res) => {
+  try {
+    const { replies } = req.body;
+
+    if (!Array.isArray(replies)) {
+      return res.status(400).json({ error: 'Replies must be an array' });
+    }
+
+    const setting = await req.prisma.systemSettings.upsert({
+      where: { key: 'support_quick_replies' },
+      update: { value: JSON.stringify(replies) },
+      create: {
+        key: 'support_quick_replies',
+        value: JSON.stringify(replies),
+        description: 'Quick reply buttons for support chat'
+      }
+    });
+
+    res.json(JSON.parse(setting.value));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update quick replies' });
+  }
+});
+
+// =====================
+// REFERRAL SYSTEM
+// =====================
+
+// Default referral settings
+const defaultReferralSettings = {
+  enabled: true,
+  referrerReward: 5.00,
+  refereeReward: 5.00,
+  minPurchaseAmount: 20.00,
+  rewardType: 'tokens',
+  expirationDays: 30,
+  maxReferralsPerUser: 0,
+};
+
+// Get referral settings
+router.get('/referral/settings', async (req, res) => {
+  try {
+    const setting = await req.prisma.systemSettings.findUnique({
+      where: { key: 'referral_settings' }
+    });
+
+    res.json(setting?.value ? JSON.parse(setting.value) : defaultReferralSettings);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch referral settings' });
+  }
+});
+
+// Update referral settings
+router.put('/referral/settings', async (req, res) => {
+  try {
+    const settings = req.body;
+
+    const setting = await req.prisma.systemSettings.upsert({
+      where: { key: 'referral_settings' },
+      update: { value: JSON.stringify(settings) },
+      create: {
+        key: 'referral_settings',
+        value: JSON.stringify(settings),
+        description: 'Referral program configuration'
+      }
+    });
+
+    res.json(JSON.parse(setting.value));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update referral settings' });
+  }
+});
+
+// Get referral statistics
+router.get('/referral/stats', async (req, res) => {
+  try {
+    const [total, successful, pending] = await Promise.all([
+      req.prisma.referral.count(),
+      req.prisma.referral.count({ where: { status: 'completed' } }),
+      req.prisma.referral.count({ where: { status: 'pending' } }),
+    ]);
+
+    // Calculate total rewards given
+    const completedReferrals = await req.prisma.referral.findMany({
+      where: { status: 'completed' },
+      select: { referrerReward: true, refereeReward: true }
+    });
+
+    const totalRewardsGiven = completedReferrals.reduce((sum, r) =>
+      sum + (r.referrerReward || 0) + (r.refereeReward || 0), 0);
+
+    res.json({
+      totalReferrals: total,
+      successfulReferrals: successful,
+      pendingReferrals: pending,
+      totalRewardsGiven
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch referral stats' });
+  }
+});
+
+// Get all referrals (for admin viewing)
+router.get('/referral/list', async (req, res) => {
+  try {
+    const referrals = await req.prisma.referral.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+
+    // Get user names for referrer/referee
+    const userIds = [...new Set([
+      ...referrals.map(r => r.referrerId),
+      ...referrals.filter(r => r.refereeId).map(r => r.refereeId)
+    ])];
+
+    const users = await req.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true, email: true }
+    });
+
+    const userMap = users.reduce((acc, u) => {
+      acc[u.id] = u;
+      return acc;
+    }, {});
+
+    const enrichedReferrals = referrals.map(r => ({
+      ...r,
+      referrer: userMap[r.referrerId] || null,
+      referee: r.refereeId ? userMap[r.refereeId] : null
+    }));
+
+    res.json(enrichedReferrals);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
+});
+
+// =====================
 // SUBSCRIPTION PRICING
 // =====================
 
