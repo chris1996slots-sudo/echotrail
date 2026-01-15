@@ -1336,45 +1336,47 @@ export function PersonaPage({ onNavigate }) {
               </h3>
 
             {/* Step Progress Header */}
-            <div className="flex items-center justify-between mb-2">
-              {avatarSteps.map((step, index) => {
-                const Icon = step.icon;
-                const isActive = index === avatarStep;
-                const isCompleted = index < avatarStep;
-                return (
-                  <div key={step.id} className="flex items-center">
-                    <motion.button
-                      onClick={() => setAvatarStep(index)}
-                      className={`flex flex-col items-center ${isActive || isCompleted ? 'cursor-pointer' : 'cursor-default'}`}
-                      whileHover={isActive || isCompleted ? { scale: 1.05 } : {}}
-                    >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                        isActive
-                          ? 'bg-gold text-navy'
-                          : isCompleted
-                          ? 'bg-gold/30 text-gold'
-                          : 'bg-navy-light/50 text-cream/40'
-                      }`}>
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6" />
-                        ) : (
-                          <Icon className="w-6 h-6" />
-                        )}
-                      </div>
-                      <span className={`mt-2 text-xs font-medium ${
-                        isActive ? 'text-gold' : isCompleted ? 'text-cream/70' : 'text-cream/40'
-                      }`}>
-                        {step.label}
-                      </span>
-                    </motion.button>
-                    {index < avatarSteps.length - 1 && (
-                      <div className={`w-12 md:w-20 h-0.5 mx-2 ${
-                        index < avatarStep ? 'bg-gold/50' : 'bg-navy-light/50'
-                      }`} />
-                    )}
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-center mb-2 overflow-x-auto pb-2">
+              <div className="flex items-center gap-1 min-w-max">
+                {avatarSteps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isActive = index === avatarStep;
+                  const isCompleted = index < avatarStep;
+                  return (
+                    <div key={step.id} className="flex items-center">
+                      <motion.button
+                        onClick={() => setAvatarStep(index)}
+                        className={`flex flex-col items-center ${isActive || isCompleted ? 'cursor-pointer' : 'cursor-default'}`}
+                        whileHover={isActive || isCompleted ? { scale: 1.05 } : {}}
+                      >
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all ${
+                          isActive
+                            ? 'bg-gold text-navy'
+                            : isCompleted
+                            ? 'bg-gold/30 text-gold'
+                            : 'bg-navy-light/50 text-cream/40'
+                        }`}>
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />
+                          ) : (
+                            <Icon className="w-5 h-5 md:w-6 md:h-6" />
+                          )}
+                        </div>
+                        <span className={`mt-1 text-[10px] md:text-xs font-medium whitespace-nowrap ${
+                          isActive ? 'text-gold' : isCompleted ? 'text-cream/70' : 'text-cream/40'
+                        }`}>
+                          {step.label}
+                        </span>
+                      </motion.button>
+                      {index < avatarSteps.length - 1 && (
+                        <div className={`w-4 md:w-8 h-0.5 mx-1 flex-shrink-0 ${
+                          index < avatarStep ? 'bg-gold/50' : 'bg-navy-light/50'
+                        }`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Current Step Title */}
