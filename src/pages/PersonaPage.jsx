@@ -232,7 +232,7 @@ const voicePrompts = [
 
 export function PersonaPage({ onNavigate }) {
   const { persona, setPersona, user, addStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, deleteVoiceSample, isLoading } = useApp();
-  const [activeTab, setActiveTab] = useState('stories');
+  const [activeTab, setActiveTab] = useState('avatar');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentStory, setCurrentStory] = useState('');
   const [selectedChapter, setSelectedChapter] = useState(null);
