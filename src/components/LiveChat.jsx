@@ -187,6 +187,7 @@ export default function LiveChat({ onClose, userName }) {
 
       const startResponse = await api.startLiveAvatarSession(sessionResponse.sessionToken);
       console.log('LiveAvatar start response:', startResponse);
+      console.log('LiveAvatar start debug:', startResponse.debug);
 
       if (startResponse.livekitUrl && startResponse.livekitToken) {
         // We have LiveKit connection details
@@ -194,7 +195,13 @@ export default function LiveChat({ onClose, userName }) {
         addChatMessage('system', 'LiveKit WebRTC connection details received. Full video streaming integration coming soon!');
         setIsConnected(true);
       } else {
-        addChatMessage('system', 'Session started but missing LiveKit details. Check server logs.');
+        // Show debug info in console and UI
+        console.log('LiveAvatar: Missing LiveKit details, full response:', startResponse);
+        if (startResponse.debug) {
+          addChatMessage('system', `Session started. API Response: ${JSON.stringify(startResponse.debug)}`);
+        } else {
+          addChatMessage('system', 'Session started but missing LiveKit details. Check server logs.');
+        }
       }
 
       setIsLoading(false);

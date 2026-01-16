@@ -1758,12 +1758,19 @@ router.post('/liveavatar/start', authenticate, async (req, res) => {
     }
 
     const data = await response.json();
-    console.log('LiveAvatar session started:', { hasLivekitUrl: !!data.livekit_url });
+    console.log('LiveAvatar START - FULL RESPONSE:', JSON.stringify(data, null, 2));
+
+    // Try different possible field names for LiveKit connection details
+    const livekitUrl = data.livekit_url || data.livekitUrl || data.url || data.data?.livekit_url || data.data?.url || data.room_url || data.data?.room_url;
+    const livekitToken = data.livekit_token || data.livekitToken || data.token || data.access_token || data.data?.livekit_token || data.data?.token || data.data?.access_token;
+    const roomName = data.room_name || data.roomName || data.room || data.data?.room_name || data.data?.room;
 
     res.json({
-      livekitUrl: data.livekit_url,
-      livekitToken: data.livekit_token,
-      roomName: data.room_name
+      livekitUrl: livekitUrl,
+      livekitToken: livekitToken,
+      roomName: roomName,
+      // Include full response for debugging
+      debug: data
     });
   } catch (error) {
     console.error('LiveAvatar start error:', error);
