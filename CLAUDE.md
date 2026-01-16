@@ -4,6 +4,59 @@
 
 **EchoTrail** ist eine Digital Legacy Platform, die es Nutzern ermöglicht, ihre Persönlichkeit, Geschichten und Weisheit für zukünftige Generationen zu bewahren. Die App erstellt einen "digitalen Zwilling" der mit Nachkommen interagieren kann.
 
+---
+
+## HERZSTÜCK: Talking Avatar mit Lip-Sync
+
+Das zentrale Feature von EchoTrail ist der **sprechende Avatar mit Lippensynchronisation** und der eigenen geklonten Stimme des Users.
+
+### Der Complete Flow:
+
+1. **User lädt Foto hoch** (My Persona → Avatar Tab)
+   - Foto wird als `AvatarImage` in DB gespeichert
+   - User wählt dieses als aktiven Avatar
+   - **Button: "Create Talking Avatar (Lip Sync)"** → Sendet an HeyGen API
+   - HeyGen erstellt Photo Avatar mit `heygenAvatarId`
+
+2. **User nimmt Stimme auf** (My Persona → Voice Tab)
+   - 5 Voice Samples (~30 Sekunden je)
+   - Gespeichert als `VoiceSample` in DB
+   - **Button: "Create Voice Clone"** → Sendet an ElevenLabs API
+   - ElevenLabs erstellt Voice Clone mit `elevenlabsVoiceId`
+
+3. **User wählt Background** (My Persona → Background Tab)
+   - Beach, Office, Nature, etc.
+   - Gespeichert als `backgroundType` in Persona
+
+4. **User wählt Style** (My Persona → Style Tab)
+   - Realistic, Cartoon, Pixar, Anime, etc.
+   - Gespeichert als `avatarStyle` in Persona
+
+5. **User wählt Vibe** (Echo Vibe Selection)
+   - Compassionate, Wise, Playful, Adventurous, etc.
+   - Beeinflusst wie das LLM antwortet
+   - Gespeichert als `echoVibe` in Persona
+
+### Echo Sim - Der sprechende Avatar
+
+Wenn User zu **Echo Sim** geht:
+
+1. **Event auswählen** (Christmas, Birthday, Graduation, etc.)
+2. **AI generiert Text**:
+   - Groq LLM erstellt personalisierte Nachricht
+   - Verwendet User's Persönlichkeit, Life Stories, und Vibe
+   - Max 3-5 Sätze für TTS
+3. **Voice Synthesis**:
+   - Text → ElevenLabs TTS
+   - Verwendet geklonte Stimme (`elevenlabsVoiceId`)
+   - Audio wird abgespielt
+4. **Avatar Video** (Premium Feature):
+   - Text + Avatar → HeyGen API
+   - HeyGen generiert Video mit Lip-Sync
+   - Verwendet `heygenAvatarId` für User's Photo Avatar
+
+---
+
 ## Deployment & Umgebung
 
 ### WICHTIG: Wir arbeiten auf Render.com - NICHT localhost!
@@ -150,15 +203,73 @@ curl https://echotrail-qt41.onrender.com/api/auth/me
 ### Logs checken
 - Render Dashboard → Service → Logs
 
+## AI API Integration
+
+### LLM - Text Generation
+- **Provider**: Groq (Primary), Claude (Fallback)
+- **Endpoint**: `/api/ai/generate`
+- **Config Key**: `llm` (fallback: `claude`)
+- **Purpose**: Generiert personalisierte Nachrichten basierend auf Persona
+
+### Voice - ElevenLabs
+- **Provider**: ElevenLabs
+- **Endpoints**:
+  - `/api/ai/voice/clone` - Voice Clone erstellen
+  - `/api/ai/voice/tts` - Text-to-Speech mit geklonter Stimme
+  - `/api/ai/voice/clone/status` - Status prüfen
+- **Config Key**: `voice` (fallback: `elevenlabs`)
+
+### Avatar - HeyGen
+- **Provider**: HeyGen
+- **Endpoints**:
+  - `/api/ai/avatar/create-photo-avatar` - Photo Avatar erstellen
+  - `/api/ai/avatar/generate` - Video mit Lip-Sync generieren
+  - `/api/ai/avatar/status/:videoId` - Video Status prüfen
+  - `/api/ai/avatar/photo-status` - Photo Avatar Status
+- **Config Key**: `avatar` (fallback: `heygen`)
+
+## Persona Schema (Wichtige Felder)
+
+```prisma
+model Persona {
+  // Persönlichkeit
+  humor, empathy, tradition, adventure, wisdom, creativity, patience, optimism
+  echoVibe          String   // compassionate, wise, playful, etc.
+
+  // Avatar Einstellungen
+  avatarStyle       String   // realistic, cartoon, pixar, etc.
+  backgroundType    String   // office, beach, nature, etc.
+
+  // Voice Clone (ElevenLabs)
+  elevenlabsVoiceId    String?  // Geklonte Voice ID
+  elevenlabsVoiceName  String?
+
+  // Photo Avatar (HeyGen)
+  heygenAvatarId       String?  // Photo Avatar Group ID
+  heygenAvatarName     String?
+
+  // Relationen
+  avatarImages      AvatarImage[]   // Hochgeladene Fotos
+  voiceSamples      VoiceSample[]   // Aufgenommene Stimmen
+  lifeStories       LifeStory[]     // Stories für LLM Kontext
+}
+```
+
 ## Offene Features / TODOs
 
-- [ ] ElevenLabs Voice Integration
-- [ ] HeyGen Avatar Video Generation
+- [x] ElevenLabs Voice Integration
+- [x] HeyGen Avatar Video Generation (Photo Avatar)
+- [ ] HeyGen Video Playback in Echo Sim
 - [ ] Stripe Payment Integration
 - [ ] Email Verification
 - [ ] Password Reset
 
-## Admin Credentials
+## Admin Dashboard - API Konfiguration
 
-Für Tests - im Admin Dashboard API Keys konfigurieren für LLM Provider.
+API Keys werden in der Datenbank gespeichert via Admin Dashboard → APIs:
+- **AI Brain**: Groq API Key (category: `llm`)
+- **Voice**: ElevenLabs API Key (category: `voice`)
+- **Avatar**: HeyGen API Key (category: `avatar`)
+
+"Test Connection" Buttons verifizieren ob jede API funktioniert.
 
