@@ -1757,8 +1757,12 @@ router.post('/liveavatar/start', authenticate, async (req, res) => {
       });
     }
 
-    const data = await response.json();
-    console.log('LiveAvatar START - FULL RESPONSE:', JSON.stringify(data, null, 2));
+    const responseData = await response.json();
+    console.log('LiveAvatar START - FULL RESPONSE:', JSON.stringify(responseData, null, 2));
+
+    // LiveAvatar API returns: { code: 1000, data: { ... }, message: "..." }
+    // The actual connection details are nested inside the 'data' field
+    const data = responseData.data || responseData;
 
     // LiveAvatar API returns:
     // - livekit_url: the LiveKit server URL
@@ -1768,10 +1772,12 @@ router.post('/liveavatar/start', authenticate, async (req, res) => {
     // - max_session_duration: session time limit
     // - session_id: the session identifier
     const livekitUrl = data.livekit_url;
-    const livekitToken = data.livekit_client_token; // This is the correct field name!
+    const livekitToken = data.livekit_client_token;
     const sessionId = data.session_id;
     const wsUrl = data.ws_url;
     const maxDuration = data.max_session_duration;
+
+    console.log('LiveAvatar extracted:', { livekitUrl, hasToken: !!livekitToken, sessionId, wsUrl });
 
     res.json({
       livekitUrl: livekitUrl,
@@ -1780,7 +1786,7 @@ router.post('/liveavatar/start', authenticate, async (req, res) => {
       wsUrl: wsUrl,
       maxDuration: maxDuration,
       // Include full response for debugging
-      debug: data
+      debug: responseData
     });
   } catch (error) {
     console.error('LiveAvatar start error:', error);
