@@ -241,7 +241,7 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
         setVideoProgress('Video is being rendered...');
 
         let pollCount = 0;
-        const maxPolls = 60;
+        const maxPolls = 40; // ~2 minutes of polling, then inform user about queue
 
         const pollStatus = async () => {
           try {
@@ -264,18 +264,33 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
               setVideoGenerating(false);
               setVideoProgress('');
             } else if (pollCount >= maxPolls) {
-              setError('Video generation timed out. Please try again.');
+              // Video is still in queue - inform user but don't show as error
               setVideoGenerating(false);
               setVideoProgress('');
+              setError(
+                'Your video is queued with HeyGen and may take longer to process. ' +
+                'This is normal during high-traffic periods. The video ID is: ' + result.videoId +
+                '. You can check back later or try again.'
+              );
             } else {
-              const progressMessages = [
-                'Processing your avatar...',
-                'Syncing lip movements...',
-                'Adding voice synthesis...',
-                'Finalizing video...',
-                'Almost ready...'
-              ];
-              setVideoProgress(progressMessages[Math.min(Math.floor(pollCount / 4), progressMessages.length - 1)]);
+              // Show different messages based on status
+              const isPending = status.status === 'pending';
+              const progressMessages = isPending
+                ? [
+                    'Video queued with HeyGen...',
+                    'Waiting in render queue...',
+                    'Still waiting in queue...',
+                    'Queue processing may take a few minutes...',
+                    'HeyGen is processing your request...'
+                  ]
+                : [
+                    'Processing your avatar...',
+                    'Syncing lip movements...',
+                    'Adding voice synthesis...',
+                    'Finalizing video...',
+                    'Almost ready...'
+                  ];
+              setVideoProgress(progressMessages[Math.min(Math.floor(pollCount / 8), progressMessages.length - 1)]);
               setTimeout(pollStatus, 3000);
             }
           } catch (pollErr) {
