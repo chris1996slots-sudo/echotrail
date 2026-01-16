@@ -264,6 +264,14 @@ router.post('/voice/tts', authenticate, async (req, res) => {
     const voiceId = persona?.elevenlabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
     console.log(`TTS using voice: ${voiceId} (cloned: ${!!persona?.elevenlabsVoiceId})`);
 
+    // Use turbo model for cloned voices (better quality and language detection)
+    // Use multilingual for default voice
+    const modelId = persona?.elevenlabsVoiceId
+      ? 'eleven_turbo_v2_5'  // Better for cloned voices
+      : 'eleven_multilingual_v2';  // Default for pre-made voices
+
+    console.log(`TTS model: ${modelId}`);
+
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -274,10 +282,10 @@ router.post('/voice/tts', authenticate, async (req, res) => {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_multilingual_v2',
+          model_id: modelId,
           voice_settings: {
             stability: 0.5,
-            similarity_boost: 0.75,
+            similarity_boost: 0.85,  // Increased for better voice matching
           }
         })
       }
@@ -285,6 +293,7 @@ router.post('/voice/tts', authenticate, async (req, res) => {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error('TTS error:', error);
       return res.status(response.status).json({ error: error.detail?.message || 'TTS failed' });
     }
 
@@ -800,58 +809,73 @@ router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), as
       });
     }
 
-    // Build video request - use photo avatar type for user's custom avatar
+    console.log('Generating video with avatar:', persona.heygenAvatarId);
+    console.log('Text length:', text?.length);
+
+    // Build video request for talking photo
+    // Note: HeyGen uses its own voice system, not ElevenLabs
+    // We use HeyGen's built-in voices for the video
     const videoInput = {
       character: {
         type: 'talking_photo',
         talking_photo_id: persona.heygenAvatarId,
+        talking_photo_style: 'square',
+        talking_style: 'expressive',
+        expression: 'default',
+        super_resolution: true
       },
-      voice: persona.elevenlabsVoiceId ? {
-        // Use user's cloned ElevenLabs voice
-        type: 'audio',
-        audio_url: null, // We'll need to generate audio first
-      } : {
-        // Fallback to HeyGen's built-in voice
+      voice: {
         type: 'text',
         input_text: text,
-        voice_id: 'en-US-JennyNeural',
+        voice_id: '1bd001e7e50f421d891986aad5158bc8', // HeyGen's "Sara" English voice
+        speed: 1.0
+      },
+      background: {
+        type: 'color',
+        value: '#1a1a2e' // Navy dark background
       }
     };
 
-    // If user has cloned voice, we need to use text input with their voice
-    // HeyGen can use ElevenLabs voices directly if configured
-    if (persona.elevenlabsVoiceId) {
-      videoInput.voice = {
-        type: 'text',
-        input_text: text,
-        voice_id: persona.elevenlabsVoiceId, // ElevenLabs voice ID
-      };
-    }
-
     // Start video generation
+    const requestBody = {
+      video_inputs: [videoInput],
+      dimension: {
+        width: 1280,
+        height: 720
+      }
+    };
+
+    console.log('HeyGen request:', JSON.stringify(requestBody, null, 2));
+
     const response = await fetch('https://api.heygen.com/v2/video/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': config.apiKey,
       },
-      body: JSON.stringify({
-        video_inputs: [videoInput],
-        dimension: {
-          width: 1280,
-          height: 720
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      return res.status(response.status).json({ error: error.message || 'Avatar generation failed' });
+    const responseText = await response.text();
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('HeyGen response not JSON:', responseText);
+      return res.status(response.status).json({ error: 'Invalid response from HeyGen' });
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      console.error('HeyGen generate error:', responseData);
+      return res.status(response.status).json({
+        error: responseData.message || responseData.error?.message || 'Avatar generation failed',
+        debug: responseData
+      });
+    }
+
+    console.log('HeyGen generate success:', responseData);
     res.json({
-      videoId: data.data?.video_id,
+      videoId: responseData.data?.video_id,
       status: 'processing',
       message: 'Video is being generated. Use /avatar/status to check progress.'
     });
