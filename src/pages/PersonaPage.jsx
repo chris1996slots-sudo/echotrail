@@ -780,7 +780,7 @@ export function PersonaPage({ onNavigate }) {
     }
   };
 
-  // Handle avatar creation completion (Step 5)
+  // Handle avatar creation completion (Step 6 - Preview)
   const handleAvatarCreation = async () => {
     setIsProcessingAvatar(true);
     setProcessingError(null);
@@ -788,10 +788,12 @@ export function PersonaPage({ onNavigate }) {
 
     const voiceSamples = persona.voiceSamples || [];
     const hasVoiceSamples = voiceSamples.length > 0;
+    const avatarImages = persona.avatarImages || [];
+    const activeImage = avatarImages.find(img => img.isActive || img.id === persona.activeAvatarId);
 
     try {
-      // Step 1: Create voice clone if samples exist
-      if (hasVoiceSamples) {
+      // Step 1: Create voice clone if samples exist and not already created
+      if (hasVoiceSamples && !persona.elevenlabsVoiceId) {
         setProcessingStep('Creating your voice clone...');
         try {
           const voiceResult = await api.createVoiceClone(
@@ -812,7 +814,29 @@ export function PersonaPage({ onNavigate }) {
         }
       }
 
-      // Step 2: Save avatar settings and mark setup as complete
+      // Step 2: Create HeyGen Photo Avatar if image exists and not already created
+      if (activeImage && !persona.heygenAvatarId) {
+        setProcessingStep('Creating talking avatar with lip sync...');
+        try {
+          const avatarResult = await api.createPhotoAvatar(
+            activeImage.imageData,
+            `${user.firstName}'s Avatar`
+          );
+          if (avatarResult.success) {
+            // Update persona with HeyGen avatar info
+            setPersona(prev => ({
+              ...prev,
+              heygenAvatarId: avatarResult.avatarId,
+              heygenAvatarName: avatarResult.avatarName,
+            }));
+          }
+        } catch (avatarError) {
+          console.error('HeyGen avatar error:', avatarError);
+          // Continue even if avatar creation fails - don't block the whole process
+        }
+      }
+
+      // Step 3: Save avatar settings and mark setup as complete
       setProcessingStep('Saving avatar settings...');
       await api.updateAvatarSettings({
         avatarStyle: persona.avatarStyle,
@@ -826,7 +850,7 @@ export function PersonaPage({ onNavigate }) {
         avatarSetupComplete: true,
       }));
 
-      // Step 3: Complete
+      // Step 4: Complete
       setProcessingStep('Finalizing your digital avatar...');
       await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause for UX
 
@@ -1163,30 +1187,18 @@ export function PersonaPage({ onNavigate }) {
                     )}
                   </div>
 
-                  {/* Create Voice Clone Button */}
-                  {hasVoiceSamples && !persona.elevenlabsVoiceId && (
-                    <motion.button
-                      onClick={handleCreateVoiceClone}
-                      disabled={isCreatingVoiceClone}
-                      className="w-full p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl text-white font-medium flex items-center justify-center gap-3 disabled:opacity-50"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {isCreatingVoiceClone ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Creating Voice Clone...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5" />
-                          Create Voice Clone ({voiceSamples.length} samples)
-                        </>
-                      )}
-                    </motion.button>
+                  {/* Voice Samples Info - Voice clone will be created when Create Avatar is clicked */}
+                  {hasVoiceSamples && (
+                    <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center gap-3">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                      <div>
+                        <p className="text-emerald-400 font-medium">{voiceSamples.length} Voice Sample{voiceSamples.length !== 1 ? 's' : ''} Ready</p>
+                        <p className="text-emerald-300/60 text-sm">Voice clone will be created when you finish the avatar setup</p>
+                      </div>
+                    </div>
                   )}
 
-                  {/* Voice Clone Status */}
+                  {/* Voice Clone Status - Show if already created */}
                   {persona.elevenlabsVoiceId && (
                     <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3">
                       <CheckCircle2 className="w-6 h-6 text-green-400" />
@@ -1195,26 +1207,6 @@ export function PersonaPage({ onNavigate }) {
                         <p className="text-green-300/60 text-sm">Your AI will speak in your voice</p>
                       </div>
                     </div>
-                  )}
-
-                  {/* Voice Clone Error */}
-                  {voiceCloneError && (
-                    <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/30 flex items-center gap-3">
-                      <AlertCircle className="w-6 h-6 text-red-400" />
-                      <p className="text-red-300 text-sm">{voiceCloneError}</p>
-                    </div>
-                  )}
-
-                  {/* Voice Clone Success */}
-                  {voiceCloneSuccess && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3"
-                    >
-                      <CheckCircle2 className="w-6 h-6 text-green-400" />
-                      <p className="text-green-300">Voice clone created successfully!</p>
-                    </motion.div>
                   )}
 
                   {/* Tips */}
@@ -1557,29 +1549,21 @@ export function PersonaPage({ onNavigate }) {
                     ))}
                   </div>
 
-                  {/* Create Talking Avatar Button */}
+                  {/* Avatar Status */}
                   <div className="mt-6 space-y-3">
-                    {!persona.heygenAvatarId ? (
-                      <motion.button
-                        onClick={handleCreatePhotoAvatar}
-                        disabled={isCreatingPhotoAvatar || !activeAvatar}
-                        className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white font-medium flex items-center justify-center gap-3 disabled:opacity-50"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {isCreatingPhotoAvatar ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Creating Talking Avatar...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-5 h-5" />
-                            Create Talking Avatar (Lip Sync)
-                          </>
-                        )}
-                      </motion.button>
-                    ) : (
+                    {/* Voice Clone Status */}
+                    {persona.elevenlabsVoiceId && (
+                      <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center gap-3">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                        <div>
+                          <p className="text-emerald-400 font-medium">Voice Clone Active</p>
+                          <p className="text-emerald-300/60 text-sm">Your AI speaks in your voice</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Talking Avatar Status */}
+                    {persona.heygenAvatarId && (
                       <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/30 flex items-center gap-3">
                         <CheckCircle2 className="w-6 h-6 text-purple-400" />
                         <div>
@@ -1587,24 +1571,6 @@ export function PersonaPage({ onNavigate }) {
                           <p className="text-purple-300/60 text-sm">Your avatar can speak with lip sync</p>
                         </div>
                       </div>
-                    )}
-
-                    {photoAvatarError && (
-                      <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/30 flex items-center gap-3">
-                        <AlertCircle className="w-6 h-6 text-red-400" />
-                        <p className="text-red-300 text-sm">{photoAvatarError}</p>
-                      </div>
-                    )}
-
-                    {photoAvatarSuccess && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3"
-                      >
-                        <CheckCircle2 className="w-6 h-6 text-green-400" />
-                        <p className="text-green-300">Talking avatar created! It will be ready in a few minutes.</p>
-                      </motion.div>
                     )}
                   </div>
                 </div>
