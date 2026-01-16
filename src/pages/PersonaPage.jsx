@@ -837,6 +837,10 @@ export function PersonaPage({ onNavigate }) {
           }
         } catch (voiceError) {
           console.error('Voice clone error:', voiceError);
+          // Log debug info if available
+          if (voiceError.debug) {
+            console.error('Voice clone debug info:', voiceError.debug);
+          }
           // Continue even if voice clone fails - don't block the whole process
         }
       }
@@ -859,6 +863,10 @@ export function PersonaPage({ onNavigate }) {
           }
         } catch (avatarError) {
           console.error('HeyGen avatar error:', avatarError);
+          // Log debug info if available
+          if (avatarError.debug) {
+            console.error('HeyGen avatar debug info:', avatarError.debug);
+          }
           // Continue even if avatar creation fails - don't block the whole process
         }
       }
@@ -884,11 +892,11 @@ export function PersonaPage({ onNavigate }) {
       setProcessingComplete(true);
       setProcessingStep('');
 
-      // Auto-close after success
+      // Auto-close after success - stay on My Persona page
       setTimeout(() => {
         setIsProcessingAvatar(false);
         setProcessingComplete(false);
-        onNavigate('echo-sim');
+        setAvatarStep(0); // Reset to first step for creating another avatar
       }, 2000);
 
     } catch (error) {

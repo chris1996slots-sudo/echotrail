@@ -28,10 +28,33 @@ class ApiService {
       credentials: 'include',
     });
 
-    const data = await response.json();
+    // Try to parse JSON, handle non-JSON responses gracefully
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // JSON parsing failed
+        const text = await response.text().catch(() => '');
+        throw new Error(`Invalid JSON response: ${text || response.statusText}`);
+      }
+    } else {
+      // Non-JSON response
+      const text = await response.text().catch(() => '');
+      if (!response.ok) {
+        throw new Error(text || `Request failed with status ${response.status}`);
+      }
+      data = { message: text };
+    }
 
     if (!response.ok) {
-      throw new Error(data.error || 'Request failed');
+      // Include debug info if available
+      const errorMessage = data.error || data.message || 'Request failed';
+      const error = new Error(errorMessage);
+      error.debug = data.debug;
+      error.status = response.status;
+      throw error;
     }
 
     return data;
