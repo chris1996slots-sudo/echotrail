@@ -1025,27 +1025,86 @@ router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), as
     console.log('Generating video with avatar:', persona.heygenAvatarId);
     console.log('Text length:', text?.length);
 
+    // First, verify the talking_photo_id exists
+    const avatarsResponse = await fetch('https://api.heygen.com/v2/avatars', {
+      method: 'GET',
+      headers: { 'x-api-key': config.apiKey }
+    });
+
+    if (avatarsResponse.ok) {
+      const avatarsData = await avatarsResponse.json();
+      const talkingPhotos = avatarsData.data?.talking_photos || [];
+      console.log('Available talking photos:', talkingPhotos.map(tp => ({ id: tp.talking_photo_id, name: tp.talking_photo_name })));
+
+      const matchingPhoto = talkingPhotos.find(tp => tp.talking_photo_id === persona.heygenAvatarId);
+      if (!matchingPhoto) {
+        console.log('WARNING: talking_photo_id not found in HeyGen account!');
+        console.log('Stored ID:', persona.heygenAvatarId);
+        console.log('Available IDs:', talkingPhotos.map(tp => tp.talking_photo_id));
+
+        // If we have any talking photos, use the first one as fallback
+        if (talkingPhotos.length > 0) {
+          const fallbackId = talkingPhotos[0].talking_photo_id;
+          console.log('Using fallback talking_photo_id:', fallbackId);
+          // Update persona with correct ID
+          await req.prisma.persona.update({
+            where: { userId: req.user.id },
+            data: { heygenAvatarId: fallbackId }
+          });
+          persona.heygenAvatarId = fallbackId;
+        } else {
+          return res.status(400).json({
+            error: 'No talking photos found in your HeyGen account. Please create one first.',
+            debug: { storedId: persona.heygenAvatarId, availableIds: [] }
+          });
+        }
+      }
+    }
+
+    // Get available voices from HeyGen
+    let voiceId = null;
+    const voicesResponse = await fetch('https://api.heygen.com/v2/voices', {
+      method: 'GET',
+      headers: { 'x-api-key': config.apiKey }
+    });
+
+    if (voicesResponse.ok) {
+      const voicesData = await voicesResponse.json();
+      const voices = voicesData.data?.voices || [];
+      console.log('Available voices count:', voices.length);
+
+      // Try to find an English male voice, or fall back to any voice
+      const englishMaleVoice = voices.find(v =>
+        v.language?.toLowerCase().includes('english') &&
+        v.gender?.toLowerCase() === 'male'
+      );
+      const anyEnglishVoice = voices.find(v => v.language?.toLowerCase().includes('english'));
+      const anyVoice = voices[0];
+
+      const selectedVoice = englishMaleVoice || anyEnglishVoice || anyVoice;
+      if (selectedVoice) {
+        voiceId = selectedVoice.voice_id;
+        console.log('Selected voice:', { id: voiceId, name: selectedVoice.name, language: selectedVoice.language });
+      }
+    }
+
+    if (!voiceId) {
+      // Fallback to a known HeyGen voice ID
+      voiceId = '1bd001e7e50f421d891986aad5158bc8'; // Common HeyGen voice
+      console.log('Using fallback voice ID:', voiceId);
+    }
+
     // Build video request for talking photo
-    // Note: HeyGen uses its own voice system, not ElevenLabs
-    // We use HeyGen's built-in voices for the video
     const videoInput = {
       character: {
         type: 'talking_photo',
-        talking_photo_id: persona.heygenAvatarId,
-        talking_photo_style: 'square',
-        talking_style: 'expressive',
-        expression: 'default',
-        super_resolution: true
+        talking_photo_id: persona.heygenAvatarId
       },
       voice: {
         type: 'text',
         input_text: text,
-        voice_id: '5700372f7c364088a5affaef8d903474', // HeyGen's "Paul" voice - Male, Serious, supports emotion
+        voice_id: voiceId,
         speed: 1.0
-      },
-      background: {
-        type: 'color',
-        value: '#1a1a2e' // Navy dark background
       }
     };
 
