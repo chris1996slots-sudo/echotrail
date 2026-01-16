@@ -444,8 +444,8 @@ function VideoCallModal({ event, onClose, user, persona }) {
                     <div className={`bg-navy/60 backdrop-blur-lg rounded-xl p-4 sm:p-6 border transition-colors ${
                       isSpeaking ? 'border-gold/50' : 'border-gold/20'
                     }`}>
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-1">
+                      <div className="flex items-start gap-3 max-h-48 sm:max-h-64 overflow-y-auto">
+                        <div className="flex-shrink-0 mt-1 sticky top-0">
                           {isSpeaking ? (
                             <motion.div
                               animate={{ scale: [1, 1.2, 1] }}

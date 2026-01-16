@@ -43,10 +43,10 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
         },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          max_tokens: 2048,
+          max_tokens: 350,
           messages: [
             { role: 'system', content: buildEchoPrompt(persona, req.user, context) },
-            { role: 'user', content: prompt }
+            { role: 'user', content: prompt + '\n\nIMPORTANT: Keep your response concise - about 3-5 sentences maximum. Be warm and personal but brief.' }
           ]
         })
       });
@@ -69,9 +69,9 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
         },
         body: JSON.stringify({
           model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 2048,
+          max_tokens: 350,
           system: buildEchoPrompt(persona, req.user, context),
-          messages: [{ role: 'user', content: prompt }]
+          messages: [{ role: 'user', content: prompt + '\n\nIMPORTANT: Keep your response concise - about 3-5 sentences maximum. Be warm and personal but brief.' }]
         })
       });
 
@@ -200,8 +200,9 @@ router.post('/voice/tts', authenticate, async (req, res) => {
       select: { elevenlabsVoiceId: true }
     });
 
-    // Use cloned voice or default
+    // Use cloned voice or default (Adam voice)
     const voiceId = persona?.elevenlabsVoiceId || 'pNInz6obpgDQGcFmaJgB';
+    console.log(`TTS using voice: ${voiceId} (cloned: ${!!persona?.elevenlabsVoiceId})`);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
