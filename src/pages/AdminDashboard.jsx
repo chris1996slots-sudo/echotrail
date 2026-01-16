@@ -396,12 +396,14 @@ Ask clarifying questions if needed, then help them write or refine their message
       };
 
       if (activeTab === 'overview' || activeTab === 'users') {
-        const [statsRes, countryRes] = await Promise.all([
+        const [statsRes, countryRes, configRes] = await Promise.all([
           fetch(`${API_URL}/api/admin/stats?period=${statsPeriod}`, { headers }),
-          fetch(`${API_URL}/api/admin/stats/countries`, { headers })
+          fetch(`${API_URL}/api/admin/stats/countries`, { headers }),
+          fetch(`${API_URL}/api/admin/api-config`, { headers })
         ]);
         if (statsRes.ok) setStats(await statsRes.json());
         if (countryRes.ok) setCountryStats(await countryRes.json());
+        if (configRes.ok) setApiConfigs(await configRes.json());
       }
 
       if (activeTab === 'apis') {
@@ -1394,8 +1396,9 @@ Ask clarifying questions if needed, then help them write or refine their message
                         const config = apiConfigs.find(c => c.service === service.id);
                         const Icon = service.icon;
                         const isActive = config?.isActive && config?.hasKey;
-                        const providerName = config?.provider ?
-                          serviceCategories[service.category]?.providers.find(p => p.id === config.provider)?.name || config.provider
+                        const provider = config?.settings?.provider || config?.provider;
+                        const providerName = provider ?
+                          serviceCategories[service.category]?.providers.find(p => p.id === provider)?.name || provider
                           : 'Not configured';
                         return (
                           <div key={service.id} className="flex items-center justify-between p-3 bg-navy-dark/30 rounded-lg">
