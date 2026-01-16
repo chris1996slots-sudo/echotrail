@@ -4,18 +4,24 @@ import { authenticate, requireSubscription } from '../middleware/auth.js';
 const router = express.Router();
 
 // =====================
-// CLAUDE API - Text Generation
+// LLM API - Text Generation (Claude/Groq)
 // =====================
 router.post('/generate', authenticate, requireSubscription('STANDARD'), async (req, res) => {
   try {
     const { prompt, context } = req.body;
 
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'claude' }
+    // Try 'llm' category first (new format), fall back to 'claude' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'llm' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'claude' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'Claude API not configured' });
+      return res.status(503).json({ error: 'LLM API not configured. Please add API key in Admin Dashboard → APIs → AI Brain.' });
     }
 
     const persona = await req.prisma.persona.findUnique({
@@ -23,30 +29,64 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
       include: { lifeStories: true }
     });
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': config.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2048,
-        system: buildEchoPrompt(persona, req.user, context),
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
+    // Determine provider from settings (default to claude)
+    const provider = config.settings?.provider || 'claude';
+    let responseText = '';
 
-    const data = await response.json();
+    if (provider === 'groq') {
+      // Groq API (OpenAI-compatible)
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 2048,
+          messages: [
+            { role: 'system', content: buildEchoPrompt(persona, req.user, context) },
+            { role: 'user', content: prompt }
+          ]
+        })
+      });
 
-    if (data.content && data.content[0]) {
-      res.json({ response: data.content[0].text });
+      const data = await response.json();
+      if (data.choices && data.choices[0]?.message?.content) {
+        responseText = data.choices[0].message.content;
+      } else {
+        console.error('Groq response:', data);
+        return res.status(500).json({ error: 'Invalid response from Groq' });
+      }
     } else {
-      res.status(500).json({ error: 'Invalid response from Claude' });
+      // Claude API (default)
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': config.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 2048,
+          system: buildEchoPrompt(persona, req.user, context),
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      if (data.content && data.content[0]) {
+        responseText = data.content[0].text;
+      } else {
+        console.error('Claude response:', data);
+        return res.status(500).json({ error: 'Invalid response from Claude' });
+      }
     }
+
+    res.json({ response: responseText });
   } catch (error) {
-    console.error('Claude generation error:', error);
+    console.error('LLM generation error:', error);
     res.status(500).json({ error: 'Failed to generate response' });
   }
 });
@@ -58,12 +98,18 @@ router.post('/voice/synthesize', authenticate, requireSubscription('PREMIUM'), a
   try {
     const { text, voiceId, useClonedVoice = true } = req.body;
 
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'elevenlabs' }
+    // Try 'voice' category first (new format), fall back to 'elevenlabs' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'ElevenLabs API not configured' });
+      return res.status(503).json({ error: 'ElevenLabs API not configured. Please add API key in Admin Dashboard → APIs → Voice.' });
     }
 
     // Determine which voice to use
@@ -134,12 +180,18 @@ router.post('/voice/tts', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Text is required and must be under 5000 characters' });
     }
 
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'elevenlabs' }
+    // Try 'voice' category first (new format), fall back to 'elevenlabs' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'Voice service not configured' });
+      return res.status(503).json({ error: 'Voice service not configured. Please add API key in Admin Dashboard → APIs → Voice.' });
     }
 
     // Get user's cloned voice if available
@@ -197,12 +249,18 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
   try {
     const { name, description } = req.body;
 
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'elevenlabs' }
+    // Try 'voice' category first (new format), fall back to 'elevenlabs' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'ElevenLabs API not configured' });
+      return res.status(503).json({ error: 'ElevenLabs API not configured. Please add API key in Admin Dashboard → APIs → Voice.' });
     }
 
     // Get user's persona with voice samples
@@ -334,9 +392,15 @@ router.get('/voice/clone/status', authenticate, async (req, res) => {
 // Delete user's cloned voice
 router.delete('/voice/clone', authenticate, async (req, res) => {
   try {
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'elevenlabs' }
+    // Try 'voice' category first (new format), fall back to 'elevenlabs' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
 
     const persona = await req.prisma.persona.findUnique({
       where: { userId: req.user.id }
@@ -376,12 +440,18 @@ router.delete('/voice/clone', authenticate, async (req, res) => {
 // Get available voices
 router.get('/voice/list', authenticate, async (req, res) => {
   try {
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'elevenlabs' }
+    // Try 'voice' category first (new format), fall back to 'elevenlabs' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'ElevenLabs API not configured' });
+      return res.status(503).json({ error: 'ElevenLabs API not configured. Please add API key in Admin Dashboard → APIs → Voice.' });
     }
 
     const response = await fetch('https://api.elevenlabs.io/v1/voices', {
@@ -406,12 +476,18 @@ router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), as
   try {
     const { text, avatarId } = req.body;
 
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'heygen' }
+    // Try 'avatar' category first (new format), fall back to 'heygen' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'HeyGen API not configured' });
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
     }
 
     // Start video generation
@@ -463,9 +539,15 @@ router.get('/avatar/status/:videoId', authenticate, async (req, res) => {
   try {
     const { videoId } = req.params;
 
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'heygen' }
+    // Try 'avatar' category first (new format), fall back to 'heygen' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
 
     if (!config?.apiKey) {
       return res.status(503).json({ error: 'HeyGen API not configured' });
@@ -485,12 +567,18 @@ router.get('/avatar/status/:videoId', authenticate, async (req, res) => {
 // Get available avatars
 router.get('/avatar/list', authenticate, async (req, res) => {
   try {
-    const config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'heygen' }
+    // Try 'avatar' category first (new format), fall back to 'heygen' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'HeyGen API not configured' });
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
     }
 
     const response = await fetch('https://api.heygen.com/v1/avatar.list', {
