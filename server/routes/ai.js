@@ -1698,11 +1698,23 @@ router.post('/liveavatar/session', authenticate, requireSubscription('PREMIUM'),
     }
 
     const data = await response.json();
-    console.log('LiveAvatar session created:', { sessionId: data.session_id });
+    console.log('LiveAvatar session created - FULL RESPONSE:', JSON.stringify(data, null, 2));
+
+    // LiveAvatar API may return data in different formats - check all possibilities
+    const sessionToken = data.session_token || data.sessionToken || data.token || data.data?.session_token || data.data?.token;
+    const sessionId = data.session_id || data.sessionId || data.id || data.data?.session_id || data.data?.id;
+
+    if (!sessionToken) {
+      console.error('LiveAvatar: No session token in response:', data);
+      return res.status(500).json({
+        error: 'LiveAvatar API did not return a session token',
+        debug: { receivedData: data }
+      });
+    }
 
     res.json({
-      sessionId: data.session_id,
-      sessionToken: data.session_token,
+      sessionId: sessionId,
+      sessionToken: sessionToken,
       hasCustomAvatar: !!persona?.liveavatarId && persona?.liveavatarStatus === 'ready',
       message: 'LiveAvatar session created successfully'
     });
