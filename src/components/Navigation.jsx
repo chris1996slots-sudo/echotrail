@@ -54,13 +54,12 @@ export function Navigation({ currentPage, onNavigate }) {
     }
     // Close mobile menu immediately
     setIsOpen(false);
-    // Navigate first, then reset state with separate timeouts to avoid React render conflict
+    // Reset state first, then navigate to avoid GuestRoute redirect conflicts
+    resetAll();
+    // Small delay to ensure state is cleared before navigation
     setTimeout(() => {
       onNavigate('landing');
-    }, 0);
-    setTimeout(() => {
-      resetAll();
-    }, 10);
+    }, 50);
   };
 
   return (
