@@ -835,16 +835,30 @@ router.get('/avatar/photo-status', authenticate, async (req, res) => {
       where: { userId: req.user.id },
       select: {
         heygenAvatarId: true,
-        heygenAvatarName: true
+        heygenAvatarName: true,
+        elevenlabsVoiceId: true,
+        elevenlabsVoiceName: true
       }
+    });
+
+    console.log('Photo status for user', req.user.id, ':', {
+      heygenAvatarId: persona?.heygenAvatarId,
+      heygenAvatarName: persona?.heygenAvatarName,
+      elevenlabsVoiceId: persona?.elevenlabsVoiceId
     });
 
     res.json({
       hasPhotoAvatar: !!persona?.heygenAvatarId,
       avatarId: persona?.heygenAvatarId,
-      avatarName: persona?.heygenAvatarName
+      avatarName: persona?.heygenAvatarName,
+      hasVoiceClone: !!persona?.elevenlabsVoiceId,
+      debug: {
+        userId: req.user.id,
+        personaFound: !!persona
+      }
     });
   } catch (error) {
+    console.error('Photo status error:', error);
     res.status(500).json({ error: 'Failed to get photo avatar status' });
   }
 });

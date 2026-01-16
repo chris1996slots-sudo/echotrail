@@ -54,6 +54,11 @@ const defaultPersona = {
   backgroundType: 'office',
   echoVibe: 'compassionate',
   legacyScore: 0,
+  // Voice and Avatar IDs (from external APIs)
+  elevenlabsVoiceId: null,
+  elevenlabsVoiceName: null,
+  heygenAvatarId: null,
+  heygenAvatarName: null,
 };
 
 export function useEchoTrailStorage() {
