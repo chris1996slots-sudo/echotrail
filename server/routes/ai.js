@@ -327,14 +327,14 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
 
     if (!response.ok) {
       let errorMessage = 'Voice cloning failed';
+      const responseText = await response.text();
       try {
-        const error = await response.json();
+        const error = JSON.parse(responseText);
         console.error('ElevenLabs clone error:', error);
-        errorMessage = error.detail?.message || error.detail || error.message || JSON.stringify(error);
+        errorMessage = error.detail?.message || error.detail || error.message || responseText;
       } catch (parseError) {
-        const textError = await response.text();
-        console.error('ElevenLabs clone error (text):', textError);
-        errorMessage = textError || `HTTP ${response.status}`;
+        console.error('ElevenLabs clone error (text):', responseText);
+        errorMessage = responseText || `HTTP ${response.status}`;
       }
       return res.status(response.status).json({ error: errorMessage });
     }
@@ -524,14 +524,14 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
 
     if (!uploadResponse.ok) {
       let errorMessage = 'Failed to upload image to HeyGen';
+      const responseText = await uploadResponse.text();
       try {
-        const error = await uploadResponse.json();
+        const error = JSON.parse(responseText);
         console.error('HeyGen upload error:', error);
-        errorMessage = error.message || error.error?.message || JSON.stringify(error);
+        errorMessage = error.message || error.error?.message || responseText;
       } catch (parseError) {
-        const textError = await uploadResponse.text();
-        console.error('HeyGen upload error (text):', textError);
-        errorMessage = textError || `HTTP ${uploadResponse.status}`;
+        console.error('HeyGen upload error (text):', responseText);
+        errorMessage = responseText || `HTTP ${uploadResponse.status}`;
       }
       return res.status(uploadResponse.status).json({ error: errorMessage });
     }
@@ -561,14 +561,14 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
 
     if (!createResponse.ok) {
       let errorMessage = 'Failed to create photo avatar';
+      const responseText = await createResponse.text();
       try {
-        const error = await createResponse.json();
+        const error = JSON.parse(responseText);
         console.error('HeyGen create avatar error:', error);
-        errorMessage = error.message || error.error?.message || JSON.stringify(error);
+        errorMessage = error.message || error.error?.message || responseText;
       } catch (parseError) {
-        const textError = await createResponse.text();
-        console.error('HeyGen create avatar error (text):', textError);
-        errorMessage = textError || `HTTP ${createResponse.status}`;
+        console.error('HeyGen create avatar error (text):', responseText);
+        errorMessage = responseText || `HTTP ${createResponse.status}`;
       }
       return res.status(createResponse.status).json({ error: errorMessage });
     }
