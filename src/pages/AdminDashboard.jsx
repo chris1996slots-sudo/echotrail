@@ -1825,8 +1825,17 @@ Ask clarifying questions if needed, then help them write or refine their message
                       <div>
                         <h2 className="text-2xl font-serif text-cream">{userDetails.firstName} {userDetails.lastName}</h2>
                         <p className="text-cream/50">{userDetails.email}</p>
-                        {userDetails.purpose && (
-                          <p className="text-cream/40 text-sm mt-1">Purpose: {userDetails.purpose}</p>
+                        {userDetails.purposes && userDetails.purposes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {userDetails.purposes.map((purpose, idx) => (
+                              <span key={idx} className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">
+                                {purpose === 'family' ? 'For My Family' :
+                                 purpose === 'children' ? 'For My Children' :
+                                 purpose === 'grandchildren' ? 'For Future Grandchildren' :
+                                 purpose === 'self' ? 'For Myself' : purpose}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <div className="flex flex-col items-start md:items-end gap-2">

@@ -25,7 +25,7 @@ model User {
   firstName     String
   lastName      String
   role          Role     @default(USER)
-  purpose       String?
+  purposes      String[] @default([])
   avatarUrl     String?
 
   subscription  SubscriptionPlan @default(FREE)

@@ -140,7 +140,7 @@ router.post('/register', validateRegistration, async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, firstName, lastName, purpose } = req.body;
+    const { email, password, firstName, lastName, purposes } = req.body;
 
     // Check if user exists
     const existingUser = await req.prisma.user.findUnique({
@@ -161,7 +161,7 @@ router.post('/register', validateRegistration, async (req, res) => {
         password: hashedPassword,
         firstName,
         lastName,
-        purpose,
+        purposes: purposes || [],
         subscription: 'PREMIUM', // Start with premium for demo
         subscribedAt: new Date(),
         persona: {

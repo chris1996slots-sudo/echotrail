@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  Home
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -106,6 +107,7 @@ export function OnboardingPage({ onNavigate }) {
           lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
+          purposes: formData.purposes,
         });
 
         // Set user from API response
@@ -333,6 +335,18 @@ export function OnboardingPage({ onNavigate }) {
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.5 }}
         />
+      </div>
+
+      {/* Back to Home Button */}
+      <div className="fixed top-4 left-4 z-50">
+        <motion.button
+          onClick={() => onNavigate('landing')}
+          className="flex items-center text-cream/60 hover:text-gold transition-colors bg-navy-light/50 backdrop-blur-sm px-3 py-2 rounded-lg"
+          whileHover={{ x: -3 }}
+        >
+          <Home className="w-4 h-4 mr-2" />
+          Home
+        </motion.button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-4 pt-8">

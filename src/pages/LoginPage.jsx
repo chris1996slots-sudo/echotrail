@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, AlertCircle, ArrowLeft } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
@@ -38,6 +38,16 @@ export function LoginPage({ onNavigate }) {
     <PageTransition className="min-h-screen bg-gradient-to-b from-navy via-navy to-navy-dark flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <FadeIn>
+          {/* Back to Home Button */}
+          <motion.button
+            onClick={() => onNavigate('landing')}
+            className="flex items-center text-cream/60 hover:text-gold mb-6 transition-colors"
+            whileHover={{ x: -5 }}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </motion.button>
+
           <div className="text-center mb-8">
             <motion.div
               className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center"
