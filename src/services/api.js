@@ -491,6 +491,13 @@ class ApiService {
       body: JSON.stringify({ videoUrl, name }),
     });
   }
+
+  async stopLiveAvatarSession(sessionToken, sessionId) {
+    return this.request('/api/ai/liveavatar/stop', {
+      method: 'POST',
+      body: JSON.stringify({ sessionToken, sessionId }),
+    });
+  }
 }
 
 export const api = new ApiService();

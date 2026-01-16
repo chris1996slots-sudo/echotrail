@@ -1794,6 +1794,61 @@ router.post('/liveavatar/start', authenticate, async (req, res) => {
   }
 });
 
+// Stop LiveAvatar session (free up concurrency)
+router.post('/liveavatar/stop', authenticate, async (req, res) => {
+  try {
+    const { sessionToken, sessionId } = req.body;
+
+    if (!sessionToken) {
+      return res.status(400).json({ error: 'Session token is required' });
+    }
+
+    console.log('LiveAvatar: Stopping session', sessionId || '(unknown)');
+
+    // Stop the session with LiveAvatar API
+    const response = await fetch('https://api.liveavatar.com/v1/sessions/stop', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      console.error('LiveAvatar stop error:', errorData);
+      // Even if stop fails, we return success as the session may have already ended
+      return res.json({
+        stopped: false,
+        message: errorData.message || 'Session may have already ended',
+        debug: errorData
+      });
+    }
+
+    const data = await response.json();
+    console.log('LiveAvatar session stopped:', data);
+
+    res.json({
+      stopped: true,
+      message: 'LiveAvatar session stopped successfully',
+      debug: data
+    });
+  } catch (error) {
+    console.error('LiveAvatar stop error:', error);
+    // Return success anyway - session might have timed out
+    res.json({
+      stopped: false,
+      message: 'Error stopping session, it may have already ended'
+    });
+  }
+});
+
 // List available public avatars from LiveAvatar
 router.get('/liveavatar/avatars', authenticate, async (req, res) => {
   try {

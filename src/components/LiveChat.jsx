@@ -25,6 +25,8 @@ export default function LiveChat({ onClose, userName }) {
   // LiveAvatar specific state
   const [liveAvatarStatus, setLiveAvatarStatus] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [sessionToken, setSessionToken] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
   const videoRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -182,6 +184,12 @@ export default function LiveChat({ onClose, userName }) {
         throw new Error('No session token received from server');
       }
 
+      // Save the token for stopping later
+      setSessionToken(sessionResponse.sessionToken);
+      if (sessionResponse.sessionId) {
+        setSessionId(sessionResponse.sessionId);
+      }
+
       addChatMessage('system', 'Session token received, starting LiveKit connection...');
       console.log('LiveAvatar: Starting session with token...');
 
@@ -191,6 +199,9 @@ export default function LiveChat({ onClose, userName }) {
 
       if (startResponse.livekitUrl && startResponse.livekitToken) {
         // We have LiveKit connection details!
+        if (startResponse.sessionId) {
+          setSessionId(startResponse.sessionId);
+        }
         addChatMessage('system', `LiveAvatar connected! Session: ${startResponse.sessionId || 'active'}`);
         addChatMessage('system', `LiveKit URL: ${startResponse.livekitUrl}`);
         if (startResponse.wsUrl) {
@@ -226,6 +237,41 @@ export default function LiveChat({ onClose, userName }) {
     }
   };
 
+  const stopLiveAvatarSession = async () => {
+    if (!sessionToken) {
+      addChatMessage('system', 'No active session to stop.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      addChatMessage('system', 'Stopping LiveAvatar session...');
+
+      const stopResponse = await api.stopLiveAvatarSession(sessionToken, sessionId);
+      console.log('LiveAvatar stop response:', stopResponse);
+
+      if (stopResponse.stopped) {
+        addChatMessage('system', 'Session stopped successfully. You can start a new session.');
+      } else {
+        addChatMessage('system', stopResponse.message || 'Session ended (may have already timed out).');
+      }
+
+      // Reset state
+      setSessionToken(null);
+      setSessionId(null);
+      setIsConnected(false);
+      setIsLoading(false);
+    } catch (err) {
+      console.error('LiveAvatar stop error:', err);
+      addChatMessage('system', `Error stopping session: ${err.message}`);
+      // Reset anyway
+      setSessionToken(null);
+      setSessionId(null);
+      setIsConnected(false);
+      setIsLoading(false);
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -235,9 +281,18 @@ export default function LiveChat({ onClose, userName }) {
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
+    }
+    // Stop LiveAvatar session if active
+    if (sessionToken) {
+      try {
+        await api.stopLiveAvatarSession(sessionToken, sessionId);
+        console.log('LiveAvatar session stopped on close');
+      } catch (err) {
+        console.error('Error stopping session on close:', err);
+      }
     }
     onClose();
   };
@@ -557,7 +612,7 @@ export default function LiveChat({ onClose, userName }) {
             </p>
 
             <div className="space-y-3">
-              {!isConnected ? (
+              {!isConnected && !sessionToken ? (
                 <button
                   onClick={startLiveAvatarSession}
                   disabled={isLoading}
@@ -568,12 +623,39 @@ export default function LiveChat({ onClose, userName }) {
                   ) : (
                     <Video className="w-5 h-5" />
                   )}
-                  Test Connection
+                  Start Session
                 </button>
-              ) : (
-                <div className="px-4 py-3 bg-green-500/20 text-green-400 rounded-xl">
-                  Connected! LiveKit integration in progress...
+              ) : isConnected ? (
+                <div className="space-y-3">
+                  <div className="px-4 py-3 bg-green-500/20 text-green-400 rounded-xl">
+                    Connected! LiveKit integration in progress...
+                  </div>
+                  <button
+                    onClick={stopLiveAvatarSession}
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2 mx-auto disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <VideoOff className="w-5 h-5" />
+                    )}
+                    Stop Session
+                  </button>
                 </div>
+              ) : (
+                <button
+                  onClick={stopLiveAvatarSession}
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2 mx-auto disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-5 h-5" />
+                  )}
+                  Reset Session (Hit Limit)
+                </button>
               )}
 
               <button
