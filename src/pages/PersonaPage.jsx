@@ -41,7 +41,8 @@ import {
   Loader2,
   AlertCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Video
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -846,6 +847,7 @@ export function PersonaPage({ onNavigate }) {
       }
 
       // Step 2: Create HeyGen Photo Avatar if image exists and not already created
+      let avatarCreationWarning = null;
       if (activeImage && !persona.heygenAvatarId) {
         setProcessingStep('Creating talking avatar with lip sync...');
         try {
@@ -860,14 +862,15 @@ export function PersonaPage({ onNavigate }) {
               heygenAvatarId: avatarResult.avatarId,
               heygenAvatarName: avatarResult.avatarName,
             }));
+          } else {
+            avatarCreationWarning = avatarResult.error || 'Failed to create talking avatar';
           }
         } catch (avatarError) {
           console.error('HeyGen avatar error:', avatarError);
-          // Log debug info if available
           if (avatarError.debug) {
             console.error('HeyGen avatar debug info:', avatarError.debug);
           }
-          // Continue even if avatar creation fails - don't block the whole process
+          avatarCreationWarning = avatarError.message || 'Failed to create talking avatar. You can try again later on My Persona page.';
         }
       }
 
@@ -892,12 +895,18 @@ export function PersonaPage({ onNavigate }) {
       setProcessingComplete(true);
       setProcessingStep('');
 
+      // Show warning if avatar creation failed but rest succeeded
+      if (avatarCreationWarning) {
+        setProcessingError(`Note: ${avatarCreationWarning}`);
+      }
+
       // Auto-close after success - stay on My Persona page
       setTimeout(() => {
         setIsProcessingAvatar(false);
         setProcessingComplete(false);
+        setProcessingError(null);
         setAvatarStep(0); // Reset to first step for creating another avatar
-      }, 2000);
+      }, avatarCreationWarning ? 5000 : 2000); // Longer delay if there's a warning
 
     } catch (error) {
       console.error('Avatar creation error:', error);
@@ -1468,13 +1477,37 @@ export function PersonaPage({ onNavigate }) {
                         Voice Clone Active
                       </span>
                     )}
-                    {persona.heygenAvatarId && (
+                    {persona.heygenAvatarId ? (
                       <span className="px-3 py-1.5 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Talking Avatar Active
                       </span>
+                    ) : (
+                      <button
+                        onClick={handleCreatePhotoAvatar}
+                        disabled={isCreatingPhotoAvatar}
+                        className="px-3 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold text-xs font-medium rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                      >
+                        {isCreatingPhotoAvatar ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Video className="w-3.5 h-3.5" />
+                            Create Talking Avatar
+                          </>
+                        )}
+                      </button>
                     )}
                   </div>
+                  {/* Photo Avatar Error */}
+                  {photoAvatarError && (
+                    <div className="mb-4 px-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-xs">
+                      {photoAvatarError}
+                    </div>
+                  )}
 
                   {/* Edit/Delete Actions for Active Avatar */}
                   <div className="flex gap-2 mb-4">
