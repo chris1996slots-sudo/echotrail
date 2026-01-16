@@ -33,6 +33,7 @@ import {
   ChevronRight,
   Edit3
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
@@ -232,12 +233,22 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
     setVideoProgress('Starting video generation...');
     setError(null);
 
+    const videoTitle = template?.name || 'Custom Message';
+
     try {
       // Use Avatar IV API (photo + voice clone)
-      const result = await api.generateAvatarIV(generatedMessage, template?.name || 'Custom Message');
+      const result = await api.generateAvatarIV(generatedMessage, videoTitle);
       console.log('Avatar IV generate result:', result);
 
       if (result.videoId) {
+        // Save to video archive immediately
+        try {
+          await api.createVideoEntry(videoTitle, generatedMessage, result.videoId, 'heygen');
+          console.log('Video saved to archive');
+        } catch (archiveErr) {
+          console.warn('Failed to save to archive:', archiveErr);
+        }
+
         setVideoProgress('Video is being rendered...');
 
         let pollCount = 0;
@@ -250,6 +261,15 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
             console.log('Video status:', status);
 
             if (status.status === 'completed' && status.videoUrl) {
+              // Update archive with completed status
+              try {
+                await api.updateVideoStatus(result.videoId, {
+                  status: 'completed',
+                  videoUrl: status.videoUrl
+                });
+              } catch (updateErr) {
+                console.warn('Failed to update archive:', updateErr);
+              }
               setVideoUrl(status.videoUrl);
               setVideoGenerating(false);
               setVideoProgress('');
@@ -260,19 +280,37 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
                     ? status.error.message || status.error.detail || JSON.stringify(status.error)
                     : status.error)
                 : 'Unknown error';
+              // Update archive with failed status
+              try {
+                await api.updateVideoStatus(result.videoId, {
+                  status: 'failed',
+                  error: errorMsg
+                });
+              } catch (updateErr) {
+                console.warn('Failed to update archive:', updateErr);
+              }
               setError('Video generation failed: ' + errorMsg);
               setVideoGenerating(false);
               setVideoProgress('');
             } else if (pollCount >= maxPolls) {
               // Video is still in queue - inform user but don't show as error
+              // Keep the archive entry as pending for later checking
               setVideoGenerating(false);
               setVideoProgress('');
               setError(
                 'Your video is queued with HeyGen and may take longer to process. ' +
-                'This is normal during high-traffic periods. The video ID is: ' + result.videoId +
-                '. You can check back later or try again.'
+                'This is normal during high-traffic periods. ' +
+                'Check your Video Archive to track its progress.'
               );
             } else {
+              // Update archive with processing status if changed
+              if (status.status === 'processing' && pollCount === 1) {
+                try {
+                  await api.updateVideoStatus(result.videoId, { status: 'processing' });
+                } catch (updateErr) {
+                  console.warn('Failed to update archive:', updateErr);
+                }
+              }
               // Show different messages based on status
               const isPending = status.status === 'pending';
               const progressMessages = isPending
@@ -807,6 +845,13 @@ export function EchoSimPage({ onNavigate }) {
                     }`}>
                       {hasVoiceClone ? '✓' : '○'} Voice Clone
                     </span>
+                    <Link
+                      to="/video-archive"
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-2 py-0.5 rounded-full text-xs bg-gold/20 text-gold hover:bg-gold/30 transition-colors"
+                    >
+                      → Video Archive
+                    </Link>
                   </div>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-cream/50 transition-transform ${

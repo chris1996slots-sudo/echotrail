@@ -11,7 +11,8 @@ import {
   LogIn,
   LogOut,
   Menu,
-  X
+  X,
+  Film
 } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';

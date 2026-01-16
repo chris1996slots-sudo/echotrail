@@ -459,6 +459,9 @@ router.post('/api-config/:service/test', async (req, res) => {
       case 'avatar':
         testResult = await testAvatarProvider(provider || 'heygen', config?.apiKey);
         break;
+      case 'liveavatar':
+        testResult = await testLiveAvatarProvider(config?.apiKey);
+        break;
       // Legacy service names
       case 'claude':
         testResult = await testClaudeApi(config.apiKey);
@@ -670,6 +673,37 @@ async function testGoogleTTSApi(apiKey) {
 }
 
 // =====================
+// LIVEAVATAR PROVIDER TEST
+// =====================
+async function testLiveAvatarProvider(apiKey) {
+  if (!apiKey) {
+    return { success: false, message: 'No API key configured' };
+  }
+
+  try {
+    const response = await fetch('https://api.liveavatar.com/v1/avatars/public', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const avatarCount = data.avatars?.length || 0;
+      return {
+        success: true,
+        message: `LiveAvatar connected. ${avatarCount} public avatars available`
+      };
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    return { success: false, message: errorData.message || `API error: ${response.status}` };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
 // AVATAR PROVIDER TESTS
 // =====================
 async function testAvatarProvider(provider, apiKey) {

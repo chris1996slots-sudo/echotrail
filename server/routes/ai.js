@@ -2209,4 +2209,181 @@ ${stories || 'No specific stories recorded.'}
 Respond as ${user.firstName} would, drawing from their personality and stories. Be authentic, warm, and helpful.`;
 }
 
+// =====================
+// VIDEO ARCHIVE API
+// =====================
+
+// Get all videos for current user
+router.get('/videos', authenticate, async (req, res) => {
+  try {
+    const videos = await req.prisma.generatedVideo.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(videos);
+  } catch (error) {
+    console.error('Get videos error:', error);
+    res.status(500).json({ error: 'Failed to fetch videos' });
+  }
+});
+
+// Create a new video entry (when generation starts)
+router.post('/videos', authenticate, async (req, res) => {
+  try {
+    const { title, text, videoId, provider = 'heygen' } = req.body;
+
+    if (!title || !text || !videoId) {
+      return res.status(400).json({ error: 'title, text, and videoId are required' });
+    }
+
+    const video = await req.prisma.generatedVideo.create({
+      data: {
+        userId: req.user.id,
+        title,
+        text,
+        videoId,
+        provider,
+        status: 'pending',
+      },
+    });
+
+    res.json(video);
+  } catch (error) {
+    console.error('Create video error:', error);
+    res.status(500).json({ error: 'Failed to create video entry' });
+  }
+});
+
+// Update video status (called when polling finds completion)
+router.put('/videos/:videoId', authenticate, async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const { status, videoUrl, thumbnailUrl, duration, error } = req.body;
+
+    const video = await req.prisma.generatedVideo.update({
+      where: { videoId },
+      data: {
+        ...(status && { status }),
+        ...(videoUrl && { videoUrl }),
+        ...(thumbnailUrl && { thumbnailUrl }),
+        ...(duration && { duration }),
+        ...(error && { error }),
+      },
+    });
+
+    res.json(video);
+  } catch (error) {
+    console.error('Update video error:', error);
+    res.status(500).json({ error: 'Failed to update video' });
+  }
+});
+
+// Delete a video from archive
+router.delete('/videos/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Make sure video belongs to user
+    const video = await req.prisma.generatedVideo.findUnique({
+      where: { id },
+    });
+
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    if (video.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    await req.prisma.generatedVideo.delete({
+      where: { id },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete video error:', error);
+    res.status(500).json({ error: 'Failed to delete video' });
+  }
+});
+
+// Refresh status for pending videos
+router.post('/videos/:id/refresh', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const video = await req.prisma.generatedVideo.findUnique({
+      where: { id },
+    });
+
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    if (video.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Only refresh if still pending or processing
+    if (video.status === 'completed' || video.status === 'failed') {
+      return res.json(video);
+    }
+
+    // Get HeyGen API key
+    const config = await req.prisma.apiConfig.findFirst({
+      where: {
+        OR: [{ service: 'avatar' }, { service: 'heygen' }]
+      }
+    });
+
+    if (!config?.apiKey) {
+      return res.status(500).json({ error: 'Avatar API not configured' });
+    }
+
+    // Check status with HeyGen
+    const statusResponse = await fetch(`https://api.heygen.com/v2/video_status.get?video_id=${video.videoId}`, {
+      headers: {
+        'X-Api-Key': config.apiKey,
+      },
+    });
+
+    if (!statusResponse.ok) {
+      throw new Error('Failed to fetch video status from HeyGen');
+    }
+
+    const statusData = await statusResponse.json();
+    const heygenStatus = statusData.data?.status;
+
+    // Map HeyGen status to our status
+    let newStatus = video.status;
+    let newVideoUrl = video.videoUrl;
+    let newError = video.error;
+
+    if (heygenStatus === 'completed') {
+      newStatus = 'completed';
+      newVideoUrl = statusData.data?.video_url;
+    } else if (heygenStatus === 'failed') {
+      newStatus = 'failed';
+      newError = statusData.data?.error?.message || 'Video generation failed';
+    } else if (heygenStatus === 'processing') {
+      newStatus = 'processing';
+    }
+
+    // Update in database
+    const updatedVideo = await req.prisma.generatedVideo.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        ...(newVideoUrl && { videoUrl: newVideoUrl }),
+        ...(newError && { error: newError }),
+      },
+    });
+
+    res.json(updatedVideo);
+  } catch (error) {
+    console.error('Refresh video status error:', error);
+    res.status(500).json({ error: 'Failed to refresh video status' });
+  }
+});
+
 export default router;

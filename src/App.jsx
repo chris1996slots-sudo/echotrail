@@ -13,6 +13,7 @@ import { TimeCapsulePage } from './pages/TimeCapsulePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { LoginPage } from './pages/LoginPage';
+import { VideoArchivePage } from './pages/VideoArchivePage';
 import { SupportChat } from './components/SupportChat';
 
 // Protected route wrapper for user pages
@@ -72,6 +73,7 @@ function AppContent() {
       'onboarding': '/register',
       'persona': '/persona',
       'echo-sim': '/echo-sim',
+      'video-archive': '/video-archive',
       'memory-anchor': '/memories',
       'wisdom-gpt': '/wisdom',
       'time-capsule': '/time-capsule',
@@ -92,6 +94,7 @@ function AppContent() {
       '/register': 'onboarding',
       '/persona': 'persona',
       '/echo-sim': 'echo-sim',
+      '/video-archive': 'video-archive',
       '/memories': 'memory-anchor',
       '/wisdom': 'wisdom-gpt',
       '/time-capsule': 'time-capsule',
@@ -143,6 +146,11 @@ function AppContent() {
           <Route path="/echo-sim" element={
             <UserRoute>
               <EchoSimPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/video-archive" element={
+            <UserRoute>
+              <VideoArchivePage />
             </UserRoute>
           } />
           <Route path="/memories" element={

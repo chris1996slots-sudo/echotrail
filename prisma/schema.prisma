@@ -51,12 +51,13 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  persona       Persona?
-  memories      Memory[]
-  timeCapsules  TimeCapsule[]
-  wisdomChats   WisdomChat[]
-  sessions      UserSession[]
-  purchases     Purchase[]
+  persona         Persona?
+  memories        Memory[]
+  timeCapsules    TimeCapsule[]
+  wisdomChats     WisdomChat[]
+  sessions        UserSession[]
+  purchases       Purchase[]
+  generatedVideos GeneratedVideo[]
 
   @@map("users")
 }
@@ -380,4 +381,33 @@ model AvatarBackground {
   createdAt DateTime @default(now())
 
   @@map("avatar_backgrounds")
+}
+
+// Generated Videos Archive - stores all avatar videos for users
+model GeneratedVideo {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Video metadata
+  title       String              // Video title/template name
+  text        String   @db.Text   // The text/message that was spoken
+  videoId     String   @unique    // HeyGen video ID for status polling
+  videoUrl    String?  @db.Text   // Final video URL when completed
+  thumbnailUrl String? @db.Text   // Optional thumbnail
+
+  // Status tracking
+  status      String   @default("pending") // pending, processing, completed, failed
+  error       String?  @db.Text   // Error message if failed
+  duration    Int?     // Video duration in seconds (when completed)
+
+  // Provider info
+  provider    String   @default("heygen") // heygen, liveavatar, etc.
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("generated_videos")
 }

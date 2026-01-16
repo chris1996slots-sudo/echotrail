@@ -509,6 +509,36 @@ class ApiService {
       body: JSON.stringify({ sessionToken, sessionId }),
     });
   }
+
+  // =====================
+  // Video Archive API
+  // =====================
+
+  async getVideos() {
+    return this.request('/api/ai/videos');
+  }
+
+  async createVideoEntry(title, text, videoId, provider = 'heygen') {
+    return this.request('/api/ai/videos', {
+      method: 'POST',
+      body: JSON.stringify({ title, text, videoId, provider }),
+    });
+  }
+
+  async updateVideoStatus(videoId, data) {
+    return this.request(`/api/ai/videos/${videoId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVideo(id) {
+    return this.request(`/api/ai/videos/${id}`, { method: 'DELETE' });
+  }
+
+  async refreshVideoStatus(id) {
+    return this.request(`/api/ai/videos/${id}/refresh`, { method: 'POST' });
+  }
 }
 
 export const api = new ApiService();

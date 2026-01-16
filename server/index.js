@@ -171,8 +171,31 @@ async function initializeServer() {
     }
 
     // Initialize default API configs if not exist
-    const apiServices = ['claude', 'elevenlabs', 'heygen'];
-    for (const service of apiServices) {
+    // New category-based services
+    const apiServicesNew = [
+      { service: 'llm', envKey: 'CLAUDE_API_KEY', defaultProvider: 'claude' },
+      { service: 'voice', envKey: 'ELEVENLABS_API_KEY', defaultProvider: 'elevenlabs' },
+      { service: 'avatar', envKey: 'HEYGEN_API_KEY', defaultProvider: 'heygen' },
+      { service: 'liveavatar', envKey: 'LIVEAVATAR_API_KEY', defaultProvider: 'liveavatar' },
+    ];
+    for (const { service, envKey, defaultProvider } of apiServicesNew) {
+      const existing = await prisma.apiConfig.findUnique({
+        where: { service }
+      });
+      if (!existing) {
+        await prisma.apiConfig.create({
+          data: {
+            service,
+            apiKey: process.env[envKey] || '',
+            isActive: false,
+            settings: { provider: defaultProvider },
+          }
+        });
+      }
+    }
+    // Legacy service names for backward compatibility
+    const apiServicesLegacy = ['claude', 'elevenlabs', 'heygen'];
+    for (const service of apiServicesLegacy) {
       const existing = await prisma.apiConfig.findUnique({
         where: { service }
       });
