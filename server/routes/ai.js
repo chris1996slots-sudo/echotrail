@@ -1624,10 +1624,43 @@ router.post('/liveavatar/session', authenticate, requireSubscription('PREMIUM'),
     });
 
     // Determine which avatar to use
-    // If user has a custom LiveAvatar, use it; otherwise use a public avatar
-    const avatarId = persona?.liveavatarId && persona?.liveavatarStatus === 'ready'
-      ? persona.liveavatarId
-      : 'default'; // Will be replaced with actual public avatar ID
+    let avatarId = null;
+
+    // If user has a custom LiveAvatar that's ready, use it
+    if (persona?.liveavatarId && persona?.liveavatarStatus === 'ready') {
+      avatarId = persona.liveavatarId;
+    } else {
+      // Otherwise, fetch public avatars and use the first one
+      console.log('LiveAvatar: Fetching public avatars...');
+      const avatarsResponse = await fetch('https://api.liveavatar.com/v1/avatars/public', {
+        method: 'GET',
+        headers: {
+          'X-API-KEY': config.apiKey,
+        }
+      });
+
+      if (avatarsResponse.ok) {
+        const avatarsData = await avatarsResponse.json();
+        const avatars = avatarsData.avatars || avatarsData.data?.avatars || avatarsData || [];
+        console.log('LiveAvatar: Found', Array.isArray(avatars) ? avatars.length : 'unknown', 'public avatars');
+
+        if (Array.isArray(avatars) && avatars.length > 0) {
+          // Use the first public avatar
+          avatarId = avatars[0].avatar_id || avatars[0].id;
+          console.log('LiveAvatar: Using public avatar:', avatarId);
+        }
+      } else {
+        const avatarsError = await avatarsResponse.text();
+        console.error('LiveAvatar: Failed to fetch public avatars:', avatarsError);
+      }
+    }
+
+    if (!avatarId) {
+      return res.status(400).json({
+        error: 'No avatars available. Please create a custom avatar or check your LiveAvatar subscription.',
+        debug: 'Could not find any public avatars and no custom avatar is configured'
+      });
+    }
 
     // Create session token from LiveAvatar API
     const response = await fetch('https://api.liveavatar.com/v1/sessions/token', {
