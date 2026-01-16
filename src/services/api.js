@@ -259,6 +259,17 @@ class ApiService {
     });
   }
 
+  // HeyGen Streaming Avatar
+  async getStreamingToken() {
+    return this.request('/api/ai/avatar/streaming/token', {
+      method: 'POST',
+    });
+  }
+
+  async getStreamingConfig() {
+    return this.request('/api/ai/avatar/streaming/config');
+  }
+
   // Avatar Images
   async uploadAvatar(imageData, label, setActive = false, echoVibe = 'compassionate') {
     return this.request('/api/persona/avatar', {

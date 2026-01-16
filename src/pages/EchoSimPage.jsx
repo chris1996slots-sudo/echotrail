@@ -24,11 +24,14 @@ import {
   AlertCircle,
   Send,
   ChevronDown,
-  Image
+  Image,
+  Sparkles,
+  Radio
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
+import LiveChat from '../components/LiveChat';
 
 const eventSimulations = [
   {
@@ -822,18 +825,24 @@ export function EchoSimPage({ onNavigate }) {
   const { user, persona } = useApp();
   const [activeEvent, setActiveEvent] = useState(null);
   const [hasVoiceClone, setHasVoiceClone] = useState(false);
+  const [showLiveChat, setShowLiveChat] = useState(false);
+  const [hasPhotoAvatar, setHasPhotoAvatar] = useState(false);
 
-  // Check if user has a voice clone
+  // Check if user has a voice clone and photo avatar
   useEffect(() => {
-    const checkVoiceClone = async () => {
+    const checkStatus = async () => {
       try {
-        const status = await api.getVoiceCloneStatus();
-        setHasVoiceClone(status.hasClonedVoice);
+        const [voiceStatus, photoStatus] = await Promise.all([
+          api.getVoiceCloneStatus(),
+          api.getPhotoAvatarStatus()
+        ]);
+        setHasVoiceClone(voiceStatus.hasClonedVoice);
+        setHasPhotoAvatar(photoStatus.hasPhotoAvatar);
       } catch (err) {
-        console.error('Failed to check voice clone status:', err);
+        console.error('Failed to check status:', err);
       }
     };
-    checkVoiceClone();
+    checkStatus();
   }, []);
 
   return (
@@ -893,6 +902,64 @@ export function EchoSimPage({ onNavigate }) {
               </div>
             </div>
           </div>
+        </FadeIn>
+
+        {/* Live Chat Card - Premium Feature */}
+        <FadeIn delay={0.15}>
+          <motion.div
+            className="glass-card p-5 sm:p-6 mb-6 sm:mb-8 border border-purple-500/30 bg-gradient-to-r from-purple-900/20 to-navy-dark"
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                  <Radio className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg sm:text-xl font-serif text-cream">Live Conversation</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-medium">
+                      NEW
+                    </span>
+                  </div>
+                  <p className="text-cream/60 text-sm mb-2">
+                    Have a real-time video conversation with your Echo. Type messages and watch your avatar respond with lip-synced video using your cloned voice.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      hasPhotoAvatar ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                      {hasPhotoAvatar ? '✓ Photo Avatar' : '✗ Needs Photo Avatar'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      hasVoiceClone ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                      {hasVoiceClone ? '✓ Voice Clone' : '○ Voice Clone (optional)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <motion.button
+                onClick={() => setShowLiveChat(true)}
+                disabled={!hasPhotoAvatar}
+                className={`px-5 py-3 rounded-xl font-medium flex items-center gap-2 transition-all ${
+                  hasPhotoAvatar
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-500/25'
+                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                }`}
+                whileHover={hasPhotoAvatar ? { scale: 1.05 } : {}}
+                whileTap={hasPhotoAvatar ? { scale: 0.95 } : {}}
+              >
+                <Sparkles className="w-5 h-5" />
+                Start Live Chat
+              </motion.button>
+            </div>
+            {!hasPhotoAvatar && (
+              <p className="mt-3 text-cream/40 text-xs text-center sm:text-left">
+                Create a Photo Avatar on the My Persona page to enable Live Conversation.
+              </p>
+            )}
+          </motion.div>
         </FadeIn>
 
         {/* Event cards */}
@@ -959,6 +1026,10 @@ export function EchoSimPage({ onNavigate }) {
                 <Video className="w-4 h-4 text-gold" />
                 HeyGen Video Avatar
               </div>
+              <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs sm:text-sm flex items-center gap-2">
+                <Radio className="w-4 h-4 text-purple-400" />
+                Live Streaming Avatar
+              </div>
               <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gold/10 border border-gold/20 text-cream/70 text-xs sm:text-sm flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-gold" />
                 AI Personalization
@@ -979,6 +1050,14 @@ export function EchoSimPage({ onNavigate }) {
           />
         )}
       </AnimatePresence>
+
+      {/* Live Chat modal */}
+      {showLiveChat && (
+        <LiveChat
+          onClose={() => setShowLiveChat(false)}
+          userName={user?.firstName}
+        />
+      )}
     </PageTransition>
   );
 }

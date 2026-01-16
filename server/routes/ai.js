@@ -1216,6 +1216,114 @@ router.get('/avatar/list', authenticate, async (req, res) => {
 });
 
 // =====================
+// HEYGEN STREAMING AVATAR API
+// =====================
+
+// Get streaming session token for HeyGen Interactive Avatar
+router.post('/avatar/streaming/token', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    // Try 'avatar' category first (new format), fall back to 'heygen' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
+    }
+
+    // Create streaming session token from HeyGen
+    const response = await fetch('https://api.heygen.com/v1/streaming.create_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config.apiKey,
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      console.error('HeyGen streaming token error:', errorData);
+      return res.status(response.status).json({
+        error: errorData.message || 'Failed to create streaming token',
+        debug: errorData
+      });
+    }
+
+    const data = await response.json();
+    console.log('HeyGen streaming token created:', { hasToken: !!data.data?.token });
+
+    res.json({
+      token: data.data?.token,
+      message: 'Streaming session token created successfully'
+    });
+  } catch (error) {
+    console.error('Streaming token error:', error);
+    res.status(500).json({ error: 'Failed to create streaming session token' });
+  }
+});
+
+// Get streaming avatar configuration for user
+router.get('/avatar/streaming/config', authenticate, async (req, res) => {
+  try {
+    // Get user's persona with avatar and voice info
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        heygenAvatarId: true,
+        heygenAvatarName: true,
+        elevenlabsVoiceId: true,
+        elevenlabsVoiceName: true
+      }
+    });
+
+    // Get ElevenLabs API key for voice integration
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    if (!persona?.heygenAvatarId) {
+      return res.status(400).json({
+        error: 'No photo avatar found. Please create a photo avatar first on the Persona page.',
+        hasAvatar: false
+      });
+    }
+
+    // Return config for streaming SDK
+    res.json({
+      hasAvatar: true,
+      avatarId: persona.heygenAvatarId,
+      avatarName: persona.heygenAvatarName,
+      hasVoiceClone: !!persona.elevenlabsVoiceId,
+      voiceClone: persona.elevenlabsVoiceId ? {
+        voiceId: persona.elevenlabsVoiceId,
+        voiceName: persona.elevenlabsVoiceName,
+        // Include ElevenLabs API key for SDK voice integration
+        apiKey: voiceConfig?.apiKey || null
+      } : null
+    });
+  } catch (error) {
+    console.error('Streaming config error:', error);
+    res.status(500).json({ error: 'Failed to get streaming configuration' });
+  }
+});
+
+// =====================
 // Helper Functions
 // =====================
 function buildEchoPrompt(persona, user, context) {
