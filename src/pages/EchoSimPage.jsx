@@ -232,6 +232,30 @@ function VideoCallModal({ event, onClose, user, persona }) {
     setSpeechEnabled(!speechEnabled);
   };
 
+  // Refresh the talking_photo_id for the avatar
+  const refreshAvatarId = async () => {
+    try {
+      setError(null);
+      setVideoProgress('Refreshing avatar...');
+      const result = await api.refreshPhotoAvatar();
+      console.log('Refresh result:', result);
+
+      if (result.updated) {
+        setVideoProgress('Avatar updated! Try generating video again.');
+        setTimeout(() => setVideoProgress(''), 3000);
+      } else if (result.success) {
+        setVideoProgress('Avatar is ready.');
+        setTimeout(() => setVideoProgress(''), 2000);
+      } else {
+        setError('Could not find a valid avatar. Please re-create your Photo Avatar on the Persona page.');
+        console.log('Available avatars:', result.availableAvatars);
+      }
+    } catch (err) {
+      console.error('Refresh error:', err);
+      setError('Failed to refresh avatar: ' + (err.message || 'Unknown error'));
+    }
+  };
+
   // Generate HeyGen video avatar (Premium feature)
   const generateVideoAvatar = async () => {
     if (!generatedMessage) return;
@@ -300,7 +324,16 @@ function VideoCallModal({ event, onClose, user, persona }) {
       }
     } catch (err) {
       console.error('HeyGen error:', err);
-      setError(err.message || 'Failed to generate video avatar. This feature requires Premium subscription.');
+      // Check if it's a server error that suggests avatar ID issue
+      const errorMsg = err.message || 'Failed to generate video avatar';
+      if (errorMsg.includes('wrong') || errorMsg.includes('contact') || errorMsg.includes('500')) {
+        setError(errorMsg + ' - The avatar ID may be incorrect. Try clicking "Refresh Avatar ID" below.');
+      } else {
+        setError(errorMsg);
+      }
+      if (err.debug) {
+        console.log('HeyGen debug info:', err.debug);
+      }
       setVideoGenerating(false);
       setVideoProgress('');
     }
@@ -642,10 +675,24 @@ function VideoCallModal({ event, onClose, user, persona }) {
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="mt-4 px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-sm flex items-start gap-3"
+                          className="mt-4 px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-sm"
                         >
-                          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                          <span>{error}</span>
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                            <span>{error}</span>
+                          </div>
+                          {/* Show refresh button if it's an avatar error */}
+                          {(error.includes('wrong') || error.includes('Refresh') || error.includes('avatar')) && persona?.heygenAvatarId && (
+                            <motion.button
+                              onClick={refreshAvatarId}
+                              className="mt-3 ml-8 px-3 py-1.5 rounded-lg bg-gold/20 text-gold text-xs flex items-center gap-2 hover:bg-gold/30"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Refresh Avatar ID
+                            </motion.button>
+                          )}
                         </motion.div>
                       )}
 

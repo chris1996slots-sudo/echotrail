@@ -727,24 +727,91 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
     }
 
     const avatarData = await createResponse.json();
-    console.log('Photo avatar created:', avatarData);
+    console.log('Photo avatar group created:', avatarData);
 
     const groupId = avatarData.data?.group_id || avatarData.data?.avatar_group_id;
+
+    // Step 3: Get the talking_photo_id from the group
+    // The avatar group contains multiple "looks", we need the talking_photo_id for video generation
+    console.log('Fetching talking_photo_id from avatar group:', groupId);
+
+    let talkingPhotoId = null;
+
+    // Wait a moment for the avatar to be processed
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Try to get the avatar details from the group
+    const listResponse = await fetch(`https://api.heygen.com/v2/photo_avatar/${groupId}`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': config.apiKey,
+      }
+    });
+
+    if (listResponse.ok) {
+      const listData = await listResponse.json();
+      console.log('Avatar group details:', JSON.stringify(listData, null, 2));
+
+      // The response should contain looks with talking_photo_id
+      const looks = listData.data?.looks || listData.data?.avatar_looks || [];
+      if (looks.length > 0) {
+        // Use the first look's talking_photo_id
+        talkingPhotoId = looks[0].talking_photo_id || looks[0].id;
+        console.log('Found talking_photo_id:', talkingPhotoId);
+      }
+    } else {
+      const listError = await listResponse.text();
+      console.log('Could not fetch avatar group details:', listError);
+    }
+
+    // If we couldn't get talking_photo_id directly, try the list all avatars endpoint
+    if (!talkingPhotoId) {
+      const allAvatarsResponse = await fetch('https://api.heygen.com/v2/photo_avatars', {
+        method: 'GET',
+        headers: {
+          'x-api-key': config.apiKey,
+        }
+      });
+
+      if (allAvatarsResponse.ok) {
+        const allData = await allAvatarsResponse.json();
+        console.log('All photo avatars:', JSON.stringify(allData, null, 2));
+
+        // Find our avatar group and get its talking_photo_id
+        const avatars = allData.data?.photo_avatars || allData.data || [];
+        const ourAvatar = avatars.find(a => a.group_id === groupId || a.avatar_group_id === groupId);
+        if (ourAvatar) {
+          const looks = ourAvatar.looks || ourAvatar.avatar_looks || [];
+          if (looks.length > 0) {
+            talkingPhotoId = looks[0].talking_photo_id || looks[0].id;
+            console.log('Found talking_photo_id from list:', talkingPhotoId);
+          }
+        }
+      }
+    }
+
+    // Store either the talking_photo_id (preferred) or fall back to group_id
+    const avatarIdToStore = talkingPhotoId || groupId;
+    console.log('Storing avatar ID:', avatarIdToStore, '(is talking_photo_id:', !!talkingPhotoId, ')');
 
     // Save the HeyGen avatar ID to persona
     await req.prisma.persona.update({
       where: { id: persona.id },
       data: {
-        heygenAvatarId: groupId,
+        heygenAvatarId: avatarIdToStore,
         heygenAvatarName: avatarName
       }
     });
 
     res.json({
       success: true,
-      avatarId: groupId,
+      avatarId: avatarIdToStore,
+      groupId: groupId,
+      talkingPhotoId: talkingPhotoId,
       avatarName,
-      message: 'Photo avatar created successfully! It may take a few minutes to be ready for video generation.'
+      message: talkingPhotoId
+        ? 'Photo avatar created successfully and ready for video generation!'
+        : 'Photo avatar group created! The avatar is being processed. Please wait a few minutes and try generating a video.'
     });
   } catch (error) {
     console.error('Photo avatar creation error:', error);
@@ -770,6 +837,119 @@ router.get('/avatar/photo-status', authenticate, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get photo avatar status' });
+  }
+});
+
+// Refresh/update the talking_photo_id for an existing avatar group
+router.post('/avatar/refresh-talking-photo', authenticate, async (req, res) => {
+  try {
+    // Get API config
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured' });
+    }
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        id: true,
+        heygenAvatarId: true,
+        heygenAvatarName: true
+      }
+    });
+
+    if (!persona?.heygenAvatarId) {
+      return res.status(404).json({ error: 'No photo avatar found' });
+    }
+
+    // Try to get all photo avatars and find the talking_photo_id
+    const allAvatarsResponse = await fetch('https://api.heygen.com/v2/photo_avatars', {
+      method: 'GET',
+      headers: {
+        'x-api-key': config.apiKey,
+      }
+    });
+
+    if (!allAvatarsResponse.ok) {
+      const errorText = await allAvatarsResponse.text();
+      return res.status(allAvatarsResponse.status).json({
+        error: 'Failed to fetch photo avatars from HeyGen',
+        debug: errorText
+      });
+    }
+
+    const allData = await allAvatarsResponse.json();
+    console.log('All photo avatars for refresh:', JSON.stringify(allData, null, 2));
+
+    const avatars = allData.data?.photo_avatars || allData.data || [];
+    let talkingPhotoId = null;
+    let foundAvatar = null;
+
+    // Search through all avatars for one that matches
+    for (const avatar of avatars) {
+      const groupId = avatar.group_id || avatar.avatar_group_id;
+      const looks = avatar.looks || avatar.avatar_looks || [];
+
+      // Check if this is our avatar (by group_id or by name)
+      if (groupId === persona.heygenAvatarId ||
+          avatar.name === persona.heygenAvatarName ||
+          looks.some(l => l.talking_photo_id === persona.heygenAvatarId)) {
+        foundAvatar = avatar;
+        if (looks.length > 0) {
+          talkingPhotoId = looks[0].talking_photo_id || looks[0].id;
+        }
+        break;
+      }
+    }
+
+    if (talkingPhotoId && talkingPhotoId !== persona.heygenAvatarId) {
+      // Update the persona with the correct talking_photo_id
+      await req.prisma.persona.update({
+        where: { id: persona.id },
+        data: {
+          heygenAvatarId: talkingPhotoId
+        }
+      });
+
+      res.json({
+        success: true,
+        updated: true,
+        oldAvatarId: persona.heygenAvatarId,
+        newAvatarId: talkingPhotoId,
+        message: 'Updated to use correct talking_photo_id'
+      });
+    } else if (talkingPhotoId) {
+      res.json({
+        success: true,
+        updated: false,
+        avatarId: talkingPhotoId,
+        message: 'Avatar ID is already correct'
+      });
+    } else {
+      res.json({
+        success: false,
+        availableAvatars: avatars.map(a => ({
+          groupId: a.group_id || a.avatar_group_id,
+          name: a.name,
+          looks: (a.looks || a.avatar_looks || []).map(l => ({
+            id: l.id,
+            talkingPhotoId: l.talking_photo_id
+          }))
+        })),
+        message: 'Could not find a talking_photo_id for your avatar. You may need to re-create the avatar.'
+      });
+    }
+  } catch (error) {
+    console.error('Refresh talking photo error:', error);
+    res.status(500).json({ error: error.message || 'Failed to refresh avatar' });
   }
 });
 

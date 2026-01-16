@@ -253,6 +253,12 @@ class ApiService {
     return this.request('/api/ai/avatar/photo-status');
   }
 
+  async refreshPhotoAvatar() {
+    return this.request('/api/ai/avatar/refresh-talking-photo', {
+      method: 'POST',
+    });
+  }
+
   // Avatar Images
   async uploadAvatar(imageData, label, setActive = false, echoVibe = 'compassionate') {
     return this.request('/api/persona/avatar', {
