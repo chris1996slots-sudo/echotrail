@@ -1586,6 +1586,9 @@ router.get('/avatar/iv/status/:videoId', authenticate, async (req, res) => {
 
     const data = await response.json();
 
+    // Log the raw response for debugging
+    console.log('Avatar IV status raw response:', JSON.stringify(data, null, 2));
+
     // Return full status with video URL when ready
     res.json({
       videoId,
