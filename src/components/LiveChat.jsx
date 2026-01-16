@@ -174,21 +174,40 @@ export default function LiveChat({ onClose, userName }) {
       setIsLoading(true);
       addChatMessage('system', 'Starting LiveAvatar session...');
 
+      console.log('LiveAvatar: Getting session token...');
       const sessionResponse = await api.getLiveAvatarSession();
+      console.log('LiveAvatar session response:', sessionResponse);
 
-      if (sessionResponse.sessionToken) {
-        const startResponse = await api.startLiveAvatarSession(sessionResponse.sessionToken);
+      if (!sessionResponse.sessionToken) {
+        throw new Error('No session token received from server');
+      }
 
-        // Here we would connect to LiveKit using the provided URL and token
-        // This requires the LiveKit SDK which we'll add if needed
-        addChatMessage('system', 'LiveAvatar connected! (LiveKit integration coming soon)');
+      addChatMessage('system', 'Session token received, starting LiveKit connection...');
+      console.log('LiveAvatar: Starting session with token...');
+
+      const startResponse = await api.startLiveAvatarSession(sessionResponse.sessionToken);
+      console.log('LiveAvatar start response:', startResponse);
+
+      if (startResponse.livekitUrl && startResponse.livekitToken) {
+        // We have LiveKit connection details
+        addChatMessage('system', `LiveAvatar ready! Room: ${startResponse.roomName || 'connected'}`);
+        addChatMessage('system', 'LiveKit WebRTC connection details received. Full video streaming integration coming soon!');
         setIsConnected(true);
+      } else {
+        addChatMessage('system', 'Session started but missing LiveKit details. Check server logs.');
       }
 
       setIsLoading(false);
     } catch (err) {
       console.error('LiveAvatar session error:', err);
-      addChatMessage('system', `Error: ${err.message || 'Failed to start session'}`);
+      const errorMessage = err.message || 'Failed to start session';
+      addChatMessage('system', `Error: ${errorMessage}`);
+
+      // Add debug info if available
+      if (err.debug) {
+        console.error('LiveAvatar debug info:', err.debug);
+      }
+
       setIsLoading(false);
     }
   };
