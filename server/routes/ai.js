@@ -1,9 +1,14 @@
 import express from 'express';
 import { authenticate, requireSubscription } from '../middleware/auth.js';
 import { spawn } from 'child_process';
-import { writeFile, readFile, unlink, mkdtemp } from 'fs/promises';
+import { writeFile, readFile, unlink, mkdtemp, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const router = express.Router();
 
@@ -1918,6 +1923,56 @@ router.get('/liveavatar/status', authenticate, async (req, res) => {
   } catch (error) {
     console.error('LiveAvatar status error:', error);
     res.status(500).json({ error: 'Failed to get LiveAvatar status' });
+  }
+});
+
+// Upload training video for LiveAvatar (base64 encoded)
+router.post('/liveavatar/upload-video', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    const { videoData, filename } = req.body;
+
+    if (!videoData) {
+      return res.status(400).json({ error: 'Video data is required' });
+    }
+
+    // Parse base64 video
+    const base64Match = videoData.match(/^data:video\/(\w+);base64,/);
+    const videoFormat = base64Match ? base64Match[1] : 'mp4';
+    const base64Video = videoData.replace(/^data:video\/\w+;base64,/, '');
+    const videoBuffer = Buffer.from(base64Video, 'base64');
+
+    // Check file size (max 200MB)
+    const maxSize = 200 * 1024 * 1024;
+    if (videoBuffer.length > maxSize) {
+      return res.status(400).json({ error: 'Video file too large. Maximum size is 200MB.' });
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = join(__dirname, '..', '..', 'uploads', 'liveavatar');
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const uniqueFilename = `${req.user.id}_${Date.now()}.${videoFormat}`;
+    const filePath = join(uploadsDir, uniqueFilename);
+
+    // Write file
+    await writeFile(filePath, videoBuffer);
+
+    // Generate public URL
+    const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+    const publicUrl = `${baseUrl}/uploads/liveavatar/${uniqueFilename}`;
+
+    res.json({
+      success: true,
+      videoUrl: publicUrl,
+      filename: uniqueFilename,
+      size: videoBuffer.length
+    });
+  } catch (error) {
+    console.error('Video upload error:', error);
+    res.status(500).json({ error: 'Failed to upload video' });
   }
 });
 

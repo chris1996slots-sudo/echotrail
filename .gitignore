@@ -36,3 +36,7 @@ build/
 
 # OS files
 Thumbs.db
+
+# Uploaded files (LiveAvatar training videos)
+uploads/*
+!uploads/.gitkeep

@@ -485,6 +485,13 @@ class ApiService {
     return this.request('/api/ai/liveavatar/status');
   }
 
+  async uploadLiveAvatarVideo(videoData, filename) {
+    return this.request('/api/ai/liveavatar/upload-video', {
+      method: 'POST',
+      body: JSON.stringify({ videoData, filename }),
+    });
+  }
+
   async createLiveAvatar(videoUrl, name) {
     return this.request('/api/ai/liveavatar/create-avatar', {
       method: 'POST',

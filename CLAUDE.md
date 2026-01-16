@@ -226,7 +226,22 @@ curl https://echotrail-qt41.onrender.com/api/auth/me
   - `/api/ai/avatar/generate` - Video mit Lip-Sync generieren
   - `/api/ai/avatar/status/:videoId` - Video Status prüfen
   - `/api/ai/avatar/photo-status` - Photo Avatar Status
+  - `/api/ai/avatar/iv/generate` - Avatar IV Video (Photo → Video mit Voice Clone)
+  - `/api/ai/avatar/iv/status/:videoId` - Avatar IV Status
 - **Config Key**: `avatar` (fallback: `heygen`)
+
+### LiveAvatar - Real-Time Interactive Avatar
+- **Provider**: LiveAvatar (via LiveKit WebRTC)
+- **Endpoints**:
+  - `/api/ai/liveavatar/session` - Session Token erstellen
+  - `/api/ai/liveavatar/start` - Session starten (gibt LiveKit Room Details)
+  - `/api/ai/liveavatar/stop` - Session beenden
+  - `/api/ai/liveavatar/avatars` - Öffentliche Avatare auflisten
+  - `/api/ai/liveavatar/status` - Aktuellen Avatar Status prüfen
+  - `/api/ai/liveavatar/upload-video` - Training Video hochladen
+  - `/api/ai/liveavatar/create-avatar` - Custom Avatar Training starten
+- **Config Key**: `liveavatar`
+- **Training**: 2-minütiges Video (15s zuhören, 90s reden, 15s idle) → Training dauert 2-5 Tage
 
 ## Persona Schema (Wichtige Felder)
 
@@ -248,6 +263,11 @@ model Persona {
   heygenAvatarId       String?  // Photo Avatar Group ID
   heygenAvatarName     String?
 
+  // LiveAvatar (Real-Time Interactive)
+  liveavatarId         String?  // Custom Avatar ID
+  liveavatarName       String?
+  liveavatarStatus     String?  // pending, training, ready, failed
+
   // Relationen
   avatarImages      AvatarImage[]   // Hochgeladene Fotos
   voiceSamples      VoiceSample[]   // Aufgenommene Stimmen
@@ -259,7 +279,9 @@ model Persona {
 
 - [x] ElevenLabs Voice Integration
 - [x] HeyGen Avatar Video Generation (Photo Avatar)
-- [ ] HeyGen Video Playback in Echo Sim
+- [x] HeyGen Video Playback in Echo Sim
+- [x] LiveAvatar Real-Time Streaming (LiveKit WebRTC)
+- [x] LiveAvatar Custom Avatar Training (Video Upload)
 - [ ] Stripe Payment Integration
 - [ ] Email Verification
 - [ ] Password Reset

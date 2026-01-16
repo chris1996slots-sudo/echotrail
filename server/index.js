@@ -80,6 +80,18 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/referral', referralRoutes);
 
+// Serve uploaded files (videos for LiveAvatar training)
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+    } else if (filePath.endsWith('.webm')) {
+      res.setHeader('Content-Type', 'video/webm');
+    }
+  }
+}));
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
