@@ -305,13 +305,32 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
     // Convert base64 voice samples to files
     for (let i = 0; i < persona.voiceSamples.length; i++) {
       const sample = persona.voiceSamples[i];
+
+      // Detect the audio format from the data URL
+      const formatMatch = sample.audioData.match(/^data:audio\/(\w+);base64,/);
+      const audioFormat = formatMatch ? formatMatch[1] : 'webm';
+
+      // Map format to content type and extension
+      const formatMap = {
+        'webm': { contentType: 'audio/webm', extension: 'webm' },
+        'mp3': { contentType: 'audio/mpeg', extension: 'mp3' },
+        'mpeg': { contentType: 'audio/mpeg', extension: 'mp3' },
+        'wav': { contentType: 'audio/wav', extension: 'wav' },
+        'ogg': { contentType: 'audio/ogg', extension: 'ogg' },
+        'mp4': { contentType: 'audio/mp4', extension: 'm4a' }
+      };
+
+      const format = formatMap[audioFormat] || { contentType: 'audio/webm', extension: 'webm' };
+
       // Remove data URL prefix if present
       const base64Data = sample.audioData.replace(/^data:audio\/\w+;base64,/, '');
       const audioBuffer = Buffer.from(base64Data, 'base64');
 
+      console.log(`Voice sample ${i + 1}: format=${audioFormat}, size=${audioBuffer.length} bytes`);
+
       formData.append('files', audioBuffer, {
-        filename: `sample_${i + 1}.mp3`,
-        contentType: 'audio/mpeg'
+        filename: `sample_${i + 1}.${format.extension}`,
+        contentType: format.contentType
       });
     }
 
@@ -500,26 +519,24 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
     }
 
     // Step 1: Upload the image to HeyGen
-    // Convert base64 to buffer
+    // Convert base64 to buffer and determine content type
+    const base64Match = imageData.match(/^data:image\/(\w+);base64,/);
+    const imageFormat = base64Match ? base64Match[1] : 'jpeg';
+    const contentType = imageFormat === 'png' ? 'image/png' : 'image/jpeg';
+
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
-    // Create form data for upload
-    const FormData = (await import('form-data')).default;
-    const formData = new FormData();
-    formData.append('file', imageBuffer, {
-      filename: 'avatar.jpg',
-      contentType: 'image/jpeg'
-    });
-
-    console.log('Uploading image to HeyGen...');
-    const uploadResponse = await fetch('https://api.heygen.com/v1/asset', {
+    // HeyGen Upload Asset API requires raw binary data (not multipart form)
+    // Endpoint: https://upload.heygen.com/v1/asset
+    console.log('Uploading image to HeyGen (raw binary)...');
+    const uploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
       method: 'POST',
       headers: {
-        'x-api-key': config.apiKey,
-        ...formData.getHeaders()
+        'X-API-KEY': config.apiKey,
+        'Content-Type': contentType
       },
-      body: formData
+      body: imageBuffer
     });
 
     if (!uploadResponse.ok) {
@@ -537,8 +554,9 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
     }
 
     const uploadData = await uploadResponse.json();
-    const imageKey = uploadData.data?.url || uploadData.data?.image_key;
-    console.log('Image uploaded, key:', imageKey);
+    // HeyGen returns image_key for photo avatars
+    const imageKey = uploadData.data?.image_key || uploadData.data?.id;
+    console.log('Image uploaded successfully:', { imageKey, fullResponse: uploadData });
 
     // Step 2: Create Photo Avatar Group
     const persona = await req.prisma.persona.findUnique({
