@@ -765,8 +765,9 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
     }
 
     // If we couldn't get talking_photo_id directly, try the list all avatars endpoint
+    // HeyGen returns talking_photos separately from avatar groups
     if (!talkingPhotoId) {
-      const allAvatarsResponse = await fetch('https://api.heygen.com/v2/photo_avatars', {
+      const allAvatarsResponse = await fetch('https://api.heygen.com/v2/avatars', {
         method: 'GET',
         headers: {
           'x-api-key': config.apiKey,
@@ -775,17 +776,25 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
 
       if (allAvatarsResponse.ok) {
         const allData = await allAvatarsResponse.json();
-        console.log('All photo avatars:', JSON.stringify(allData, null, 2));
+        console.log('All avatars response:', JSON.stringify(allData, null, 2));
 
-        // Find our avatar group and get its talking_photo_id
-        const avatars = allData.data?.photo_avatars || allData.data || [];
-        const ourAvatar = avatars.find(a => a.group_id === groupId || a.avatar_group_id === groupId);
-        if (ourAvatar) {
-          const looks = ourAvatar.looks || ourAvatar.avatar_looks || [];
-          if (looks.length > 0) {
-            talkingPhotoId = looks[0].talking_photo_id || looks[0].id;
-            console.log('Found talking_photo_id from list:', talkingPhotoId);
-          }
+        // talking_photos is a separate array in the response
+        const talkingPhotos = allData.data?.talking_photos || [];
+        console.log('Found talking_photos:', talkingPhotos.length);
+
+        // Find our talking photo by name (since we just created it)
+        const ourPhoto = talkingPhotos.find(tp =>
+          tp.talking_photo_name === avatarName ||
+          tp.talking_photo_name?.includes(req.user.firstName)
+        );
+
+        if (ourPhoto) {
+          talkingPhotoId = ourPhoto.talking_photo_id;
+          console.log('Found talking_photo_id from list:', talkingPhotoId);
+        } else if (talkingPhotos.length > 0) {
+          // Use the most recent one (last in array) as fallback
+          talkingPhotoId = talkingPhotos[talkingPhotos.length - 1].talking_photo_id;
+          console.log('Using most recent talking_photo_id:', talkingPhotoId);
         }
       }
     }
@@ -870,8 +879,9 @@ router.post('/avatar/refresh-talking-photo', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'No photo avatar found' });
     }
 
-    // Try to get all photo avatars and find the talking_photo_id
-    const allAvatarsResponse = await fetch('https://api.heygen.com/v2/photo_avatars', {
+    // Try to get all avatars including talking_photos
+    // HeyGen returns talking_photos as a separate array in /v2/avatars response
+    const allAvatarsResponse = await fetch('https://api.heygen.com/v2/avatars', {
       method: 'GET',
       headers: {
         'x-api-key': config.apiKey,
@@ -881,33 +891,41 @@ router.post('/avatar/refresh-talking-photo', authenticate, async (req, res) => {
     if (!allAvatarsResponse.ok) {
       const errorText = await allAvatarsResponse.text();
       return res.status(allAvatarsResponse.status).json({
-        error: 'Failed to fetch photo avatars from HeyGen',
+        error: 'Failed to fetch avatars from HeyGen',
         debug: errorText
       });
     }
 
     const allData = await allAvatarsResponse.json();
-    console.log('All photo avatars for refresh:', JSON.stringify(allData, null, 2));
+    console.log('All avatars for refresh:', JSON.stringify(allData, null, 2));
 
-    const avatars = allData.data?.photo_avatars || allData.data || [];
+    // talking_photos is a separate array in the response
+    const talkingPhotos = allData.data?.talking_photos || [];
     let talkingPhotoId = null;
-    let foundAvatar = null;
 
-    // Search through all avatars for one that matches
-    for (const avatar of avatars) {
-      const groupId = avatar.group_id || avatar.avatar_group_id;
-      const looks = avatar.looks || avatar.avatar_looks || [];
+    // Check if current heygenAvatarId is already a valid talking_photo_id
+    const existingPhoto = talkingPhotos.find(tp => tp.talking_photo_id === persona.heygenAvatarId);
+    if (existingPhoto) {
+      // Already have correct talking_photo_id
+      return res.json({
+        success: true,
+        updated: false,
+        avatarId: persona.heygenAvatarId,
+        message: 'Avatar ID is already a valid talking_photo_id'
+      });
+    }
 
-      // Check if this is our avatar (by group_id or by name)
-      if (groupId === persona.heygenAvatarId ||
-          avatar.name === persona.heygenAvatarName ||
-          looks.some(l => l.talking_photo_id === persona.heygenAvatarId)) {
-        foundAvatar = avatar;
-        if (looks.length > 0) {
-          talkingPhotoId = looks[0].talking_photo_id || looks[0].id;
-        }
-        break;
-      }
+    // Search for a matching talking photo by name
+    const matchingPhoto = talkingPhotos.find(tp =>
+      tp.talking_photo_name === persona.heygenAvatarName ||
+      tp.talking_photo_name?.toLowerCase().includes(persona.heygenAvatarName?.toLowerCase() || '')
+    );
+
+    if (matchingPhoto) {
+      talkingPhotoId = matchingPhoto.talking_photo_id;
+    } else if (talkingPhotos.length > 0) {
+      // If no name match, offer the most recent talking photo
+      talkingPhotoId = talkingPhotos[talkingPhotos.length - 1].talking_photo_id;
     }
 
     if (talkingPhotoId && talkingPhotoId !== persona.heygenAvatarId) {
@@ -936,15 +954,16 @@ router.post('/avatar/refresh-talking-photo', authenticate, async (req, res) => {
     } else {
       res.json({
         success: false,
-        availableAvatars: avatars.map(a => ({
-          groupId: a.group_id || a.avatar_group_id,
-          name: a.name,
-          looks: (a.looks || a.avatar_looks || []).map(l => ({
-            id: l.id,
-            talkingPhotoId: l.talking_photo_id
-          }))
+        availableTalkingPhotos: talkingPhotos.map(tp => ({
+          talkingPhotoId: tp.talking_photo_id,
+          name: tp.talking_photo_name,
+          previewUrl: tp.preview_image_url
         })),
-        message: 'Could not find a talking_photo_id for your avatar. You may need to re-create the avatar.'
+        currentAvatarId: persona.heygenAvatarId,
+        currentAvatarName: persona.heygenAvatarName,
+        message: talkingPhotos.length === 0
+          ? 'No talking photos found in your HeyGen account. Please create a talking photo first.'
+          : 'Could not match your avatar. Available talking photos are listed below.'
       });
     }
   } catch (error) {
@@ -1007,7 +1026,7 @@ router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), as
       voice: {
         type: 'text',
         input_text: text,
-        voice_id: '1bd001e7e50f421d891986aad5158bc8', // HeyGen's "Sara" English voice
+        voice_id: '5700372f7c364088a5affaef8d903474', // HeyGen's "Paul" voice - Male, Serious, supports emotion
         speed: 1.0
       },
       background: {
