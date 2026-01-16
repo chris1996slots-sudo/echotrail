@@ -345,17 +345,33 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
     });
 
     if (!response.ok) {
-      let errorMessage = 'Voice cloning failed';
       const responseText = await response.text();
+      let errorData = null;
+      let errorMessage = 'Voice cloning failed';
+
       try {
-        const error = JSON.parse(responseText);
-        console.error('ElevenLabs clone error:', error);
-        errorMessage = error.detail?.message || error.detail || error.message || responseText;
+        errorData = JSON.parse(responseText);
+        console.error('ElevenLabs clone error:', errorData);
+        errorMessage = errorData.detail?.message || errorData.detail || errorData.message || responseText;
       } catch (parseError) {
         console.error('ElevenLabs clone error (text):', responseText);
         errorMessage = responseText || `HTTP ${response.status}`;
       }
-      return res.status(response.status).json({ error: errorMessage });
+
+      // Return full debug info to frontend
+      return res.status(response.status).json({
+        error: errorMessage,
+        debug: {
+          status: response.status,
+          statusText: response.statusText,
+          apiResponse: errorData || responseText,
+          samplesCount: persona.voiceSamples.length,
+          sampleFormats: persona.voiceSamples.map((s, i) => {
+            const match = s.audioData.match(/^data:audio\/(\w+);base64,/);
+            return { sample: i + 1, format: match ? match[1] : 'unknown' };
+          })
+        }
+      });
     }
 
     const data = await response.json();
@@ -540,17 +556,32 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
     });
 
     if (!uploadResponse.ok) {
-      let errorMessage = 'Failed to upload image to HeyGen';
       const responseText = await uploadResponse.text();
+      let errorData = null;
+      let errorMessage = 'Failed to upload image to HeyGen';
+
       try {
-        const error = JSON.parse(responseText);
-        console.error('HeyGen upload error:', error);
-        errorMessage = error.message || error.error?.message || responseText;
+        errorData = JSON.parse(responseText);
+        console.error('HeyGen upload error:', errorData);
+        errorMessage = errorData.message || errorData.error?.message || responseText;
       } catch (parseError) {
         console.error('HeyGen upload error (text):', responseText);
         errorMessage = responseText || `HTTP ${uploadResponse.status}`;
       }
-      return res.status(uploadResponse.status).json({ error: errorMessage });
+
+      // Return full debug info to frontend
+      return res.status(uploadResponse.status).json({
+        error: errorMessage,
+        debug: {
+          step: 'upload',
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          apiResponse: errorData || responseText,
+          imageFormat,
+          contentType,
+          imageSizeBytes: imageBuffer.length
+        }
+      });
     }
 
     const uploadData = await uploadResponse.json();
@@ -578,17 +609,32 @@ router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('ST
     });
 
     if (!createResponse.ok) {
-      let errorMessage = 'Failed to create photo avatar';
       const responseText = await createResponse.text();
+      let errorData = null;
+      let errorMessage = 'Failed to create photo avatar';
+
       try {
-        const error = JSON.parse(responseText);
-        console.error('HeyGen create avatar error:', error);
-        errorMessage = error.message || error.error?.message || responseText;
+        errorData = JSON.parse(responseText);
+        console.error('HeyGen create avatar error:', errorData);
+        errorMessage = errorData.message || errorData.error?.message || responseText;
       } catch (parseError) {
         console.error('HeyGen create avatar error (text):', responseText);
         errorMessage = responseText || `HTTP ${createResponse.status}`;
       }
-      return res.status(createResponse.status).json({ error: errorMessage });
+
+      // Return full debug info to frontend
+      return res.status(createResponse.status).json({
+        error: errorMessage,
+        debug: {
+          step: 'create_avatar_group',
+          status: createResponse.status,
+          statusText: createResponse.statusText,
+          apiResponse: errorData || responseText,
+          imageKey,
+          avatarName,
+          uploadResponse: uploadData
+        }
+      });
     }
 
     const avatarData = await createResponse.json();
