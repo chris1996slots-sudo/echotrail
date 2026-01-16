@@ -104,7 +104,9 @@ function VideoCallModal({ event, onClose, user, persona }) {
   const [showAvatarSelect, setShowAvatarSelect] = useState(false);
   const [videoUrl, setVideoUrl] = useState(null);
   const [videoGenerating, setVideoGenerating] = useState(false);
+  const [videoProgress, setVideoProgress] = useState('');
   const [inputMessage, setInputMessage] = useState('');
+  const [showFullText, setShowFullText] = useState(false);
 
   const audioRef = useRef(null);
   const videoRef = useRef(null);
@@ -235,39 +237,72 @@ function VideoCallModal({ event, onClose, user, persona }) {
     if (!generatedMessage) return;
 
     setVideoGenerating(true);
+    setVideoProgress('Starting video generation...');
     setError(null);
 
     try {
       const result = await api.generateAvatar(generatedMessage);
+      console.log('HeyGen generate result:', result);
 
       if (result.videoId) {
+        setVideoProgress('Video is being rendered...');
+
         // Poll for video status
+        let pollCount = 0;
+        const maxPolls = 60; // Max 3 minutes (60 * 3s)
+
         const pollStatus = async () => {
           try {
+            pollCount++;
             const status = await api.getAvatarStatus(result.videoId);
+            console.log('Video status:', status);
 
             if (status.status === 'completed' && status.video_url) {
+              console.log('Video ready:', status.video_url);
               setVideoUrl(status.video_url);
               setVideoGenerating(false);
+              setVideoProgress('');
             } else if (status.status === 'failed') {
-              setError('Video generation failed. Please try again.');
+              setError('Video generation failed: ' + (status.error || 'Unknown error'));
               setVideoGenerating(false);
+              setVideoProgress('');
+            } else if (pollCount >= maxPolls) {
+              setError('Video generation timed out. Please try again.');
+              setVideoGenerating(false);
+              setVideoProgress('');
             } else {
+              // Update progress message
+              const progressMessages = [
+                'Processing your avatar...',
+                'Syncing lip movements...',
+                'Adding voice synthesis...',
+                'Finalizing video...',
+                'Almost ready...'
+              ];
+              setVideoProgress(progressMessages[Math.min(Math.floor(pollCount / 4), progressMessages.length - 1)]);
+
               // Keep polling
               setTimeout(pollStatus, 3000);
             }
           } catch (pollErr) {
-            setError('Failed to check video status.');
+            console.error('Poll error:', pollErr);
+            setError('Failed to check video status: ' + pollErr.message);
             setVideoGenerating(false);
+            setVideoProgress('');
           }
         };
 
         setTimeout(pollStatus, 5000);
+      } else {
+        setError('Failed to start video generation. No video ID returned.');
+        setVideoGenerating(false);
+        setVideoProgress('');
       }
     } catch (err) {
       console.error('HeyGen error:', err);
       setError(err.message || 'Failed to generate video avatar. This feature requires Premium subscription.');
       setVideoGenerating(false);
+      setVideoProgress('');
     }
   };
 
@@ -308,7 +343,7 @@ function VideoCallModal({ event, onClose, user, persona }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-2 sm:p-4 overflow-y-auto"
     >
       <audio ref={audioRef} className="hidden" />
 
@@ -316,251 +351,352 @@ function VideoCallModal({ event, onClose, user, persona }) {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="relative w-full max-w-4xl aspect-[4/3] sm:aspect-video bg-navy-dark rounded-2xl overflow-hidden"
+        className="relative w-full max-w-5xl min-h-[80vh] max-h-[95vh] bg-navy-dark rounded-2xl overflow-hidden flex flex-col"
       >
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-navy-light to-navy-dark" />
+        <div className="absolute inset-0 bg-gradient-to-br from-navy-light via-navy-dark to-black" />
 
-        {/* Top bar */}
-        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-12 sm:right-16 flex items-center gap-2 sm:gap-3 z-20 flex-wrap">
-          <div className="px-2 sm:px-3 py-1 rounded-full bg-navy/80 backdrop-blur text-cream/70 text-xs sm:text-sm flex items-center">
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              callState === 'connecting' || callState === 'generating'
-                ? 'bg-yellow-500 animate-pulse'
-                : callState === 'speaking'
-                ? 'bg-green-500 animate-pulse'
-                : 'bg-green-500'
-            }`} />
-            {callState === 'connecting' && 'Connecting...'}
-            {callState === 'generating' && 'Generating response...'}
-            {callState === 'ready' && 'Connected'}
-            {callState === 'speaking' && 'Speaking...'}
+        {/* Top bar - fixed */}
+        <div className="relative z-20 flex items-center justify-between p-3 sm:p-4 border-b border-gold/10">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="px-2 sm:px-3 py-1 rounded-full bg-navy/80 backdrop-blur text-cream/70 text-xs sm:text-sm flex items-center">
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                callState === 'connecting' || callState === 'generating'
+                  ? 'bg-yellow-500 animate-pulse'
+                  : callState === 'speaking'
+                  ? 'bg-green-500 animate-pulse'
+                  : 'bg-green-500'
+              }`} />
+              {callState === 'connecting' && 'Connecting...'}
+              {callState === 'generating' && 'Generating response...'}
+              {callState === 'ready' && 'Connected'}
+              {callState === 'speaking' && 'Speaking...'}
+            </div>
+            <div className="px-2 sm:px-3 py-1 rounded-full bg-navy/80 backdrop-blur text-cream/50 text-xs hidden sm:block">
+              {vibeStyles[selectedAvatarImage?.echoVibe || persona?.echoVibe || 'compassionate']} Mode
+            </div>
           </div>
-          <div className="px-2 sm:px-3 py-1 rounded-full bg-navy/80 backdrop-blur text-cream/50 text-xs hidden sm:block">
-            {vibeStyles[selectedAvatarImage?.echoVibe || persona?.echoVibe || 'compassionate']} Mode
-          </div>
+
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full bg-navy/80 backdrop-blur text-cream/70 hover:text-cream hover:bg-red-500/20 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-2 sm:top-4 right-2 sm:right-4 z-20 p-2 rounded-full bg-navy/80 backdrop-blur text-cream/70 hover:text-cream transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Main content - scrollable */}
+        <div className="relative flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="flex flex-col items-center">
+            {/* Video display - when HeyGen video is ready */}
+            {videoUrl ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full max-w-2xl mx-auto"
+              >
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-2 ring-gold/30">
+                  <video
+                    ref={videoRef}
+                    src={videoUrl}
+                    controls
+                    autoPlay
+                    className="w-full aspect-video bg-black"
+                    onEnded={() => {
+                      // Don't auto-hide, let user watch again
+                    }}
+                  />
+                </div>
 
-        {/* Main content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8">
-          {/* Video or Avatar */}
-          {videoUrl ? (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              autoPlay
-              className="w-full max-w-lg rounded-xl shadow-2xl"
-              onEnded={() => setVideoUrl(null)}
-            />
-          ) : (
-            <div className="text-center">
-              {/* Avatar selector */}
-              <div className="relative mb-4 sm:mb-6">
-                <motion.div
-                  className={`w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full overflow-hidden ${
-                    isSpeaking ? 'pulse-glow ring-4 ring-gold/50' : ''
-                  } ${callState === 'connecting' || callState === 'generating' ? 'animate-pulse' : ''}`}
-                  onClick={() => persona?.avatarImages?.length > 1 && setShowAvatarSelect(!showAvatarSelect)}
-                  style={{ cursor: persona?.avatarImages?.length > 1 ? 'pointer' : 'default' }}
-                >
-                  {selectedAvatarImage?.imageData ? (
-                    <img
-                      src={selectedAvatarImage.imageData}
-                      alt="Echo Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center">
-                      <User className="w-12 h-12 sm:w-16 sm:h-16 text-navy" />
-                    </div>
-                  )}
-                </motion.div>
-
-                {persona?.avatarImages?.length > 1 && (
-                  <button
-                    onClick={() => setShowAvatarSelect(!showAvatarSelect)}
-                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-navy/80 text-cream/70 text-xs flex items-center gap-1"
+                {/* Video controls */}
+                <div className="mt-4 flex flex-wrap gap-3 justify-center">
+                  <motion.button
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = 0;
+                        videoRef.current.play();
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-gold/20 text-gold text-sm flex items-center gap-2 hover:bg-gold/30"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    <Image className="w-3 h-3" />
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                )}
+                    <RefreshCw className="w-4 h-4" />
+                    Replay Video
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setVideoUrl(null)}
+                    className="px-4 py-2 rounded-lg bg-navy/60 text-cream/70 text-sm flex items-center gap-2 hover:bg-navy/80"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <X className="w-4 h-4" />
+                    Close Video
+                  </motion.button>
+                </div>
 
-                {/* Avatar dropdown */}
-                <AnimatePresence>
-                  {showAvatarSelect && (
+                {/* Show message below video */}
+                {generatedMessage && (
+                  <div className="mt-6 bg-navy/40 backdrop-blur rounded-xl p-4 border border-gold/20">
+                    <p className="text-cream/80 text-sm leading-relaxed">{generatedMessage}</p>
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              /* Normal view - Avatar + Message */
+              <div className="w-full max-w-2xl mx-auto text-center">
+                {/* Avatar section */}
+                <div className="relative mb-6">
+                  <motion.div
+                    className={`w-28 h-28 sm:w-36 sm:h-36 mx-auto rounded-full overflow-hidden border-4 ${
+                      isSpeaking ? 'border-gold shadow-lg shadow-gold/30' : 'border-gold/30'
+                    } ${callState === 'connecting' || callState === 'generating' ? 'animate-pulse' : ''}`}
+                    onClick={() => persona?.avatarImages?.length > 1 && setShowAvatarSelect(!showAvatarSelect)}
+                    style={{ cursor: persona?.avatarImages?.length > 1 ? 'pointer' : 'default' }}
+                  >
+                    {selectedAvatarImage?.imageData ? (
+                      <img
+                        src={selectedAvatarImage.imageData}
+                        alt="Echo Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center">
+                        <User className="w-14 h-14 sm:w-18 sm:h-18 text-navy" />
+                      </div>
+                    )}
+                  </motion.div>
+
+                  {/* Speaking indicator */}
+                  {isSpeaking && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10 }}
+                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1 rounded-full bg-gold/20"
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-navy-light/95 backdrop-blur rounded-xl p-2 shadow-xl z-30 flex gap-2"
                     >
-                      {persona.avatarImages.map((avatar) => (
-                        <button
-                          key={avatar.id}
-                          onClick={() => {
-                            setSelectedAvatarImage(avatar);
-                            setShowAvatarSelect(false);
-                          }}
-                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 transition-all ${
-                            selectedAvatarImage?.id === avatar.id
-                              ? 'border-gold scale-110'
-                              : 'border-transparent hover:border-gold/50'
-                          }`}
-                        >
-                          <img
-                            src={avatar.imageData}
-                            alt={avatar.label || 'Avatar'}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="w-1 bg-gold rounded-full"
+                          animate={{ height: ['4px', '12px', '4px'] }}
+                          transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.08 }}
+                        />
                       ))}
+                    </motion.div>
+                  )}
+
+                  {/* Avatar selector dropdown */}
+                  {persona?.avatarImages?.length > 1 && (
+                    <button
+                      onClick={() => setShowAvatarSelect(!showAvatarSelect)}
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-navy/80 text-cream/70 text-xs flex items-center gap-1 hover:bg-navy"
+                    >
+                      <Image className="w-3 h-3" />
+                      <ChevronDown className={`w-3 h-3 transition-transform ${showAvatarSelect ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
+
+                  <AnimatePresence>
+                    {showAvatarSelect && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full mt-4 left-1/2 -translate-x-1/2 bg-navy-light/95 backdrop-blur rounded-xl p-3 shadow-xl z-30 flex gap-2"
+                      >
+                        {persona.avatarImages.map((avatar) => (
+                          <button
+                            key={avatar.id}
+                            onClick={() => {
+                              setSelectedAvatarImage(avatar);
+                              setShowAvatarSelect(false);
+                            }}
+                            className={`w-14 h-14 rounded-full overflow-hidden border-2 transition-all ${
+                              selectedAvatarImage?.id === avatar.id
+                                ? 'border-gold scale-110'
+                                : 'border-transparent hover:border-gold/50'
+                            }`}
+                          >
+                            <img
+                              src={avatar.imageData}
+                              alt={avatar.label || 'Avatar'}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl sm:text-3xl font-serif text-cream mb-1">
+                  {user?.firstName}'s Echo
+                </h3>
+                <p className="text-cream/50 text-sm mb-6">{event.name}</p>
+
+                {/* Message display */}
+                <AnimatePresence mode="wait">
+                  {generatedMessage ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-full"
+                    >
+                      {/* Message box */}
+                      <div className={`bg-navy/50 backdrop-blur-lg rounded-2xl p-5 sm:p-6 border-2 transition-colors ${
+                        isSpeaking ? 'border-gold/60' : 'border-gold/20'
+                      }`}>
+                        {/* Message content - full text, no truncation */}
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0 mt-1">
+                            {isSpeaking ? (
+                              <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 0.8, repeat: Infinity }}
+                              >
+                                <Volume2 className="w-6 h-6 text-gold" />
+                              </motion.div>
+                            ) : (
+                              <Volume2 className="w-6 h-6 text-gold/50" />
+                            )}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="text-cream text-base sm:text-lg leading-relaxed whitespace-pre-wrap">
+                              {generatedMessage}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="mt-6 pt-4 border-t border-gold/10 flex flex-wrap gap-3 justify-center">
+                          <motion.button
+                            onClick={() => speakMessage(generatedMessage)}
+                            disabled={isSpeaking}
+                            className="px-4 py-2 rounded-xl bg-gold/20 text-gold text-sm font-medium flex items-center gap-2 hover:bg-gold/30 disabled:opacity-50 transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {isSpeaking ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Speaking...
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="w-4 h-4" />
+                                Play Audio
+                              </>
+                            )}
+                          </motion.button>
+
+                          <motion.button
+                            onClick={() => speakMessage(generatedMessage)}
+                            disabled={isSpeaking}
+                            className="px-4 py-2 rounded-xl bg-navy/60 text-cream/70 text-sm font-medium flex items-center gap-2 hover:bg-navy/80 disabled:opacity-50 transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            Repeat
+                          </motion.button>
+
+                          {/* HeyGen video generation (Premium) */}
+                          <motion.button
+                            onClick={generateVideoAvatar}
+                            disabled={videoGenerating || !persona?.heygenAvatarId}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                              persona?.heygenAvatarId
+                                ? 'bg-gradient-to-r from-gold to-gold-light text-navy hover:opacity-90'
+                                : 'bg-navy/40 text-cream/40 cursor-not-allowed'
+                            }`}
+                            whileHover={persona?.heygenAvatarId ? { scale: 1.02 } : {}}
+                            whileTap={persona?.heygenAvatarId ? { scale: 0.98 } : {}}
+                            title={!persona?.heygenAvatarId ? 'Create a Photo Avatar first on My Persona page' : ''}
+                          >
+                            {videoGenerating ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                {videoProgress || 'Generating...'}
+                              </>
+                            ) : (
+                              <>
+                                <Video className="w-4 h-4" />
+                                Generate Talking Video
+                              </>
+                            )}
+                          </motion.button>
+                        </div>
+
+                        {/* Missing avatar hint */}
+                        {!persona?.heygenAvatarId && (
+                          <p className="mt-3 text-cream/40 text-xs text-center">
+                            To generate talking videos, create a Photo Avatar on the My Persona page first.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Error display */}
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-4 px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-sm flex items-start gap-3"
+                        >
+                          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                          <span>{error}</span>
+                        </motion.div>
+                      )}
+
+                      {/* Video generation progress */}
+                      {videoGenerating && videoProgress && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-4 px-4 py-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-sm flex items-center justify-center gap-3"
+                        >
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>{videoProgress}</span>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  ) : (
+                    /* Loading state */
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col items-center gap-4 py-8"
+                    >
+                      <Loader2 className="w-10 h-10 text-gold animate-spin" />
+                      <p className="text-cream/60 text-base">
+                        {callState === 'connecting' ? 'Connecting to your Echo...' : 'Creating personalized message...'}
+                      </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-
-              <h3 className="text-xl sm:text-2xl font-serif text-cream mb-1 sm:mb-2">
-                {user?.firstName}'s Echo
-              </h3>
-              <p className="text-cream/50 text-sm mb-4 sm:mb-6">{event.name}</p>
-
-              {/* Message display */}
-              <AnimatePresence mode="wait">
-                {generatedMessage && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="max-w-lg mx-auto"
-                  >
-                    <div className={`bg-navy/60 backdrop-blur-lg rounded-xl p-4 sm:p-6 border transition-colors ${
-                      isSpeaking ? 'border-gold/50' : 'border-gold/20'
-                    }`}>
-                      <div className="flex items-start gap-3 max-h-48 sm:max-h-64 overflow-y-auto">
-                        <div className="flex-shrink-0 mt-1 sticky top-0">
-                          {isSpeaking ? (
-                            <motion.div
-                              animate={{ scale: [1, 1.2, 1] }}
-                              transition={{ duration: 0.8, repeat: Infinity }}
-                            >
-                              <Volume2 className="w-5 h-5 text-gold" />
-                            </motion.div>
-                          ) : (
-                            <Volume2 className="w-5 h-5 text-gold/50" />
-                          )}
-                        </div>
-                        <p className="text-cream/90 text-left leading-relaxed text-sm sm:text-base">
-                          {generatedMessage}
-                        </p>
-                      </div>
-
-                      {/* Audio visualization when speaking */}
-                      {isSpeaking && (
-                        <div className="mt-3 flex items-center justify-center gap-1">
-                          {[0, 1, 2, 3, 4].map((i) => (
-                            <motion.div
-                              key={i}
-                              className="w-1 bg-gold rounded-full"
-                              animate={{ height: ['8px', '20px', '8px'] }}
-                              transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Action buttons */}
-                      <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                        <motion.button
-                          onClick={() => speakMessage(generatedMessage)}
-                          disabled={isSpeaking}
-                          className="px-3 py-1.5 rounded-lg bg-gold/20 text-gold text-sm flex items-center gap-2 hover:bg-gold/30 disabled:opacity-50"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                          Repeat
-                        </motion.button>
-
-                        {/* HeyGen video generation (Premium) */}
-                        <motion.button
-                          onClick={generateVideoAvatar}
-                          disabled={videoGenerating}
-                          className="px-3 py-1.5 rounded-lg bg-gold/20 text-gold text-sm flex items-center gap-2 hover:bg-gold/30 disabled:opacity-50"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {videoGenerating ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Generating Video...
-                            </>
-                          ) : (
-                            <>
-                              <Video className="w-4 h-4" />
-                              Generate Video
-                            </>
-                          )}
-                        </motion.button>
-                      </div>
-                    </div>
-
-                    {/* Error display */}
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-3 px-4 py-2 rounded-lg bg-red-500/20 text-red-300 text-sm flex items-center gap-2"
-                      >
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        {error}
-                      </motion.div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Loading state */}
-                {(callState === 'connecting' || callState === 'generating') && !generatedMessage && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center gap-3"
-                  >
-                    <Loader2 className="w-8 h-8 text-gold animate-spin" />
-                    <p className="text-cream/50 text-sm">
-                      {callState === 'connecting' ? 'Connecting to your Echo...' : 'Creating personalized message...'}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Custom message input */}
-        <div className="absolute bottom-20 left-4 right-4 sm:left-8 sm:right-8">
-          <div className="flex gap-2 max-w-lg mx-auto">
+        <div className="relative z-20 p-4 border-t border-gold/10 bg-navy-dark/80">
+          <div className="flex gap-3 max-w-xl mx-auto">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Type a custom message..."
-              className="flex-1 px-4 py-2 rounded-full bg-navy/80 border border-gold/20 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50"
+              placeholder="Type a custom message for your Echo to speak..."
+              className="flex-1 px-4 py-3 rounded-xl bg-navy/80 border border-gold/20 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50 transition-colors"
             />
             <motion.button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isSpeaking}
-              className="p-2 rounded-full bg-gold text-navy disabled:opacity-50"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="px-4 py-3 rounded-xl bg-gold text-navy font-medium disabled:opacity-50 flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               <Send className="w-5 h-5" />
             </motion.button>
@@ -568,81 +704,67 @@ function VideoCallModal({ event, onClose, user, persona }) {
         </div>
 
         {/* Control bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent">
-          <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
+        <div className="relative z-20 p-4 bg-gradient-to-t from-black/60 to-transparent">
+          <div className="flex items-center justify-center gap-3 sm:gap-4">
             <motion.button
               onClick={() => setIsMuted(!isMuted)}
-              className={`p-3 sm:p-4 rounded-full ${
-                isMuted ? 'bg-red-500/20 text-red-400' : 'bg-navy-light/80 text-cream/70 hover:text-cream'
+              className={`p-3 rounded-full transition-colors ${
+                isMuted ? 'bg-red-500/30 text-red-400' : 'bg-navy-light/80 text-cream/70 hover:text-cream hover:bg-navy-light'
               }`}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              title={isMuted ? 'Unmute' : 'Mute'}
             >
-              {isMuted ? <MicOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Mic className="w-5 h-5 sm:w-6 sm:h-6" />}
-            </motion.button>
-
-            <motion.button
-              onClick={() => setIsVideoOn(!isVideoOn)}
-              className={`p-3 sm:p-4 rounded-full ${
-                !isVideoOn ? 'bg-red-500/20 text-red-400' : 'bg-navy-light/80 text-cream/70 hover:text-cream'
-              }`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              {isVideoOn ? <Video className="w-5 h-5 sm:w-6 sm:h-6" /> : <VideoOff className="w-5 h-5 sm:w-6 sm:h-6" />}
-            </motion.button>
-
-            <motion.button
-              onClick={onClose}
-              className="p-3 sm:p-4 rounded-full bg-red-500 text-white"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
-            </motion.button>
-
-            <motion.button
-              className="p-3 sm:p-4 rounded-full bg-navy-light/80 text-cream/70 hover:text-cream"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </motion.button>
 
             <motion.button
               onClick={toggleSpeech}
-              className={`p-3 sm:p-4 rounded-full ${
-                !speechEnabled ? 'bg-red-500/20 text-red-400' : 'bg-navy-light/80 text-cream/70 hover:text-cream'
+              className={`p-3 rounded-full transition-colors ${
+                !speechEnabled ? 'bg-red-500/30 text-red-400' : 'bg-navy-light/80 text-cream/70 hover:text-cream hover:bg-navy-light'
               }`}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              title={speechEnabled ? 'Mute speech' : 'Enable speech'}
+              title={speechEnabled ? 'Disable speech' : 'Enable speech'}
             >
               {speechEnabled ? (
-                <Volume2 className={`w-5 h-5 sm:w-6 sm:h-6 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-gold' : ''}`} />
               ) : (
-                <VolumeX className="w-5 h-5 sm:w-6 sm:h-6" />
+                <VolumeX className="w-5 h-5" />
               )}
             </motion.button>
-          </div>
-        </div>
 
-        {/* Self view */}
-        <div className="absolute bottom-20 sm:bottom-24 right-4 sm:right-6 hidden sm:block">
-          <motion.div
-            className="w-24 h-18 sm:w-32 sm:h-24 rounded-lg bg-navy-dark/80 border border-gold/20 flex items-center justify-center overflow-hidden"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            {isVideoOn ? (
-              <div className="w-full h-full bg-gradient-to-br from-navy to-navy-light flex items-center justify-center">
-                <User className="w-6 h-6 sm:w-8 sm:h-8 text-cream/30" />
-              </div>
-            ) : (
-              <VideoOff className="w-6 h-6 sm:w-8 sm:h-8 text-cream/30" />
-            )}
-          </motion.div>
+            <motion.button
+              onClick={onClose}
+              className="p-4 rounded-full bg-red-500 text-white shadow-lg"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="End call"
+            >
+              <PhoneOff className="w-6 h-6" />
+            </motion.button>
+
+            <motion.button
+              onClick={() => setIsVideoOn(!isVideoOn)}
+              className={`p-3 rounded-full transition-colors ${
+                !isVideoOn ? 'bg-red-500/30 text-red-400' : 'bg-navy-light/80 text-cream/70 hover:text-cream hover:bg-navy-light'
+              }`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title={isVideoOn ? 'Turn off video' : 'Turn on video'}
+            >
+              {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+            </motion.button>
+
+            <motion.button
+              className="p-3 rounded-full bg-navy-light/80 text-cream/70 hover:text-cream hover:bg-navy-light transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="Chat"
+            >
+              <MessageCircle className="w-5 h-5" />
+            </motion.button>
+          </div>
         </div>
       </motion.div>
     </motion.div>
