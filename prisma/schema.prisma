@@ -91,6 +91,10 @@ model Persona {
   elevenlabsVoiceId   String?  // The cloned voice ID from ElevenLabs
   elevenlabsVoiceName String?  // Name of the cloned voice
 
+  // HeyGen Photo Avatar
+  heygenAvatarId      String?  // The photo avatar group ID from HeyGen
+  heygenAvatarName    String?  // Name of the photo avatar
+
   lifeStories    LifeStory[]
   avatarImages   AvatarImage[]
   voiceSamples   VoiceSample[]

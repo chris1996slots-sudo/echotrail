@@ -203,10 +203,10 @@ class ApiService {
     return this.request('/api/ai/voice/list');
   }
 
-  async generateAvatar(text, avatarId) {
+  async generateAvatar(text) {
     return this.request('/api/ai/avatar/generate', {
       method: 'POST',
-      body: JSON.stringify({ text, avatarId }),
+      body: JSON.stringify({ text }),
     });
   }
 
@@ -216,6 +216,18 @@ class ApiService {
 
   async getAvatars() {
     return this.request('/api/ai/avatar/list');
+  }
+
+  // HeyGen Photo Avatar
+  async createPhotoAvatar(imageData, name) {
+    return this.request('/api/ai/avatar/create-photo-avatar', {
+      method: 'POST',
+      body: JSON.stringify({ imageData, name }),
+    });
+  }
+
+  async getPhotoAvatarStatus() {
+    return this.request('/api/ai/avatar/photo-status');
   }
 
   // Avatar Images

@@ -471,11 +471,13 @@ router.get('/voice/list', authenticate, async (req, res) => {
 });
 
 // =====================
-// HEYGEN API - Avatar Video
+// HEYGEN API - Photo Avatar Creation
 // =====================
-router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+
+// Upload image to HeyGen and create a Photo Avatar
+router.post('/avatar/create-photo-avatar', authenticate, requireSubscription('STANDARD'), async (req, res) => {
   try {
-    const { text, avatarId } = req.body;
+    const { imageData, name } = req.body;
 
     // Try 'avatar' category first (new format), fall back to 'heygen' (legacy)
     let config = await req.prisma.apiConfig.findUnique({
@@ -491,6 +493,175 @@ router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), as
       return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
     }
 
+    // Step 1: Upload the image to HeyGen
+    // Convert base64 to buffer
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    // Create form data for upload
+    const FormData = (await import('form-data')).default;
+    const formData = new FormData();
+    formData.append('file', imageBuffer, {
+      filename: 'avatar.jpg',
+      contentType: 'image/jpeg'
+    });
+
+    console.log('Uploading image to HeyGen...');
+    const uploadResponse = await fetch('https://api.heygen.com/v1/asset', {
+      method: 'POST',
+      headers: {
+        'x-api-key': config.apiKey,
+        ...formData.getHeaders()
+      },
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      const error = await uploadResponse.json();
+      console.error('HeyGen upload error:', error);
+      return res.status(uploadResponse.status).json({ error: error.message || 'Failed to upload image to HeyGen' });
+    }
+
+    const uploadData = await uploadResponse.json();
+    const imageKey = uploadData.data?.url || uploadData.data?.image_key;
+    console.log('Image uploaded, key:', imageKey);
+
+    // Step 2: Create Photo Avatar Group
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    const avatarName = name || `${req.user.firstName}'s Avatar`;
+
+    const createResponse = await fetch('https://api.heygen.com/v2/photo_avatar/avatar_group/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config.apiKey,
+      },
+      body: JSON.stringify({
+        name: avatarName,
+        image_key: imageKey
+      })
+    });
+
+    if (!createResponse.ok) {
+      const error = await createResponse.json();
+      console.error('HeyGen create avatar error:', error);
+      return res.status(createResponse.status).json({ error: error.message || 'Failed to create photo avatar' });
+    }
+
+    const avatarData = await createResponse.json();
+    console.log('Photo avatar created:', avatarData);
+
+    const groupId = avatarData.data?.group_id || avatarData.data?.avatar_group_id;
+
+    // Save the HeyGen avatar ID to persona
+    await req.prisma.persona.update({
+      where: { id: persona.id },
+      data: {
+        heygenAvatarId: groupId,
+        heygenAvatarName: avatarName
+      }
+    });
+
+    res.json({
+      success: true,
+      avatarId: groupId,
+      avatarName,
+      message: 'Photo avatar created successfully! It may take a few minutes to be ready for video generation.'
+    });
+  } catch (error) {
+    console.error('Photo avatar creation error:', error);
+    res.status(500).json({ error: 'Failed to create photo avatar' });
+  }
+});
+
+// Check if user has a HeyGen photo avatar
+router.get('/avatar/photo-status', authenticate, async (req, res) => {
+  try {
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        heygenAvatarId: true,
+        heygenAvatarName: true
+      }
+    });
+
+    res.json({
+      hasPhotoAvatar: !!persona?.heygenAvatarId,
+      avatarId: persona?.heygenAvatarId,
+      avatarName: persona?.heygenAvatarName
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get photo avatar status' });
+  }
+});
+
+// =====================
+// HEYGEN API - Avatar Video
+// =====================
+router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    // Try 'avatar' category first (new format), fall back to 'heygen' (legacy)
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
+    }
+
+    // Get user's persona to find their photo avatar and voice clone
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        heygenAvatarId: true,
+        elevenlabsVoiceId: true
+      }
+    });
+
+    if (!persona?.heygenAvatarId) {
+      return res.status(400).json({
+        error: 'No photo avatar found. Please create a photo avatar first on the Persona page.'
+      });
+    }
+
+    // Build video request - use photo avatar type for user's custom avatar
+    const videoInput = {
+      character: {
+        type: 'talking_photo',
+        talking_photo_id: persona.heygenAvatarId,
+      },
+      voice: persona.elevenlabsVoiceId ? {
+        // Use user's cloned ElevenLabs voice
+        type: 'audio',
+        audio_url: null, // We'll need to generate audio first
+      } : {
+        // Fallback to HeyGen's built-in voice
+        type: 'text',
+        input_text: text,
+        voice_id: 'en-US-JennyNeural',
+      }
+    };
+
+    // If user has cloned voice, we need to use text input with their voice
+    // HeyGen can use ElevenLabs voices directly if configured
+    if (persona.elevenlabsVoiceId) {
+      videoInput.voice = {
+        type: 'text',
+        input_text: text,
+        voice_id: persona.elevenlabsVoiceId, // ElevenLabs voice ID
+      };
+    }
+
     // Start video generation
     const response = await fetch('https://api.heygen.com/v2/video/generate', {
       method: 'POST',
@@ -499,18 +670,7 @@ router.post('/avatar/generate', authenticate, requireSubscription('PREMIUM'), as
         'x-api-key': config.apiKey,
       },
       body: JSON.stringify({
-        video_inputs: [{
-          character: {
-            type: 'avatar',
-            avatar_id: avatarId || 'default',
-            avatar_style: 'normal',
-          },
-          voice: {
-            type: 'text',
-            input_text: text,
-            voice_id: 'en-US-JennyNeural',
-          }
-        }],
+        video_inputs: [videoInput],
         dimension: {
           width: 1280,
           height: 720

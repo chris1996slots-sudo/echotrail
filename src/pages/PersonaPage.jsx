@@ -288,6 +288,11 @@ export function PersonaPage({ onNavigate }) {
   const [voiceCloneSuccess, setVoiceCloneSuccess] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
 
+  // Photo Avatar state
+  const [isCreatingPhotoAvatar, setIsCreatingPhotoAvatar] = useState(false);
+  const [photoAvatarError, setPhotoAvatarError] = useState(null);
+  const [photoAvatarSuccess, setPhotoAvatarSuccess] = useState(false);
+
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -735,6 +740,43 @@ export function PersonaPage({ onNavigate }) {
       setVoiceCloneError(error.message || 'Failed to create voice clone');
     } finally {
       setIsCreatingVoiceClone(false);
+    }
+  };
+
+  // Create HeyGen Photo Avatar from active image
+  const handleCreatePhotoAvatar = async () => {
+    const activeImage = persona.avatarImages?.find(img => img.isActive || img.id === persona.activeAvatarId);
+    if (!activeImage) {
+      setPhotoAvatarError('Please select an active avatar image first');
+      return;
+    }
+
+    setIsCreatingPhotoAvatar(true);
+    setPhotoAvatarError(null);
+    setPhotoAvatarSuccess(false);
+
+    try {
+      const result = await api.createPhotoAvatar(
+        activeImage.imageData,
+        `${user.firstName}'s Avatar`
+      );
+
+      if (result.success) {
+        setPersona(prev => ({
+          ...prev,
+          heygenAvatarId: result.avatarId,
+          heygenAvatarName: result.avatarName,
+        }));
+        setPhotoAvatarSuccess(true);
+        setTimeout(() => setPhotoAvatarSuccess(false), 5000);
+      } else {
+        setPhotoAvatarError(result.error || 'Failed to create photo avatar');
+      }
+    } catch (error) {
+      console.error('Photo avatar error:', error);
+      setPhotoAvatarError(error.message || 'Failed to create photo avatar');
+    } finally {
+      setIsCreatingPhotoAvatar(false);
     }
   };
 
@@ -1506,6 +1548,57 @@ export function PersonaPage({ onNavigate }) {
                         )}
                       </motion.button>
                     ))}
+                  </div>
+
+                  {/* Create Talking Avatar Button */}
+                  <div className="mt-6 space-y-3">
+                    {!persona.heygenAvatarId ? (
+                      <motion.button
+                        onClick={handleCreatePhotoAvatar}
+                        disabled={isCreatingPhotoAvatar || !activeAvatar}
+                        className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white font-medium flex items-center justify-center gap-3 disabled:opacity-50"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isCreatingPhotoAvatar ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Creating Talking Avatar...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5" />
+                            Create Talking Avatar (Lip Sync)
+                          </>
+                        )}
+                      </motion.button>
+                    ) : (
+                      <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/30 flex items-center gap-3">
+                        <CheckCircle2 className="w-6 h-6 text-purple-400" />
+                        <div>
+                          <p className="text-purple-400 font-medium">Talking Avatar Active</p>
+                          <p className="text-purple-300/60 text-sm">Your avatar can speak with lip sync</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {photoAvatarError && (
+                      <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/30 flex items-center gap-3">
+                        <AlertCircle className="w-6 h-6 text-red-400" />
+                        <p className="text-red-300 text-sm">{photoAvatarError}</p>
+                      </div>
+                    )}
+
+                    {photoAvatarSuccess && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3"
+                      >
+                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                        <p className="text-green-300">Talking avatar created! It will be ready in a few minutes.</p>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
               </FadeIn>
