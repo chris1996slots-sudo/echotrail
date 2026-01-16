@@ -1485,6 +1485,56 @@ router.delete('/avatar-backgrounds/:id', async (req, res) => {
 });
 
 // =====================
+// AVATAR STYLES
+// =====================
+
+// Get avatar styles settings
+router.get('/avatar-styles', async (req, res) => {
+  try {
+    const setting = await req.prisma.systemSettings.findUnique({
+      where: { key: 'avatar_styles' }
+    });
+
+    // Default all styles active
+    const defaultStyles = {
+      realistic: true,
+      enhanced: true,
+      cartoon: true,
+      artistic: true,
+      anime: true,
+      pixar: true
+    };
+
+    res.json(setting?.value ? JSON.parse(setting.value) : defaultStyles);
+  } catch (error) {
+    console.error('Avatar styles error:', error);
+    res.status(500).json({ error: 'Failed to fetch avatar styles' });
+  }
+});
+
+// Update avatar styles settings
+router.put('/avatar-styles', async (req, res) => {
+  try {
+    const styles = req.body;
+
+    const setting = await req.prisma.systemSettings.upsert({
+      where: { key: 'avatar_styles' },
+      update: { value: JSON.stringify(styles) },
+      create: {
+        key: 'avatar_styles',
+        value: JSON.stringify(styles),
+        description: 'Avatar style active/inactive settings'
+      }
+    });
+
+    res.json(JSON.parse(setting.value));
+  } catch (error) {
+    console.error('Update avatar styles error:', error);
+    res.status(500).json({ error: 'Failed to update avatar styles' });
+  }
+});
+
+// =====================
 // COUNTRY STATS
 // =====================
 

@@ -238,6 +238,8 @@ export function PersonaPage({ onNavigate }) {
   const [activeTab, setActiveTab] = useState('avatar');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentStory, setCurrentStory] = useState('');
+  const [customStoryTitle, setCustomStoryTitle] = useState('');
+  const [showCustomStory, setShowCustomStory] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [interviewAnswers, setInterviewAnswers] = useState({});
@@ -744,19 +746,33 @@ export function PersonaPage({ onNavigate }) {
   };
 
   const handleSaveStory = async () => {
-    if (!currentStory.trim() || !selectedCategory) return;
+    if (!currentStory.trim()) return;
+
+    // For custom stories, require a title
+    if (showCustomStory && !customStoryTitle.trim()) return;
+
+    // For category stories, require a selected category
+    if (!showCustomStory && !selectedCategory) return;
 
     setSaving(true);
-    const storyData = {
-      category: selectedCategory,
-      content: currentStory,
-    };
+    const storyData = showCustomStory
+      ? {
+          category: 'custom',
+          question: customStoryTitle.trim(),
+          content: currentStory,
+        }
+      : {
+          category: selectedCategory,
+          content: currentStory,
+        };
 
     const saved = await addStory(storyData);
 
     if (saved) {
       setCurrentStory('');
       setSelectedCategory(null);
+      setCustomStoryTitle('');
+      setShowCustomStory(false);
       setShowSaveConfirm(true);
       setTimeout(() => setShowSaveConfirm(false), 2000);
     }
@@ -1628,9 +1644,12 @@ export function PersonaPage({ onNavigate }) {
                 return (
                   <motion.button
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
+                    onClick={() => {
+                      setSelectedCategory(cat.id);
+                      setShowCustomStory(false);
+                    }}
                     className={`p-3 rounded-xl border-2 text-left transition-all ${
-                      selectedCategory === cat.id
+                      selectedCategory === cat.id && !showCustomStory
                         ? 'border-gold bg-gold/10'
                         : storiesInCategory > 0
                         ? 'border-gold/40 bg-gold/5'
@@ -1640,7 +1659,7 @@ export function PersonaPage({ onNavigate }) {
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Icon className={`w-5 h-5 ${selectedCategory === cat.id ? 'text-gold' : storiesInCategory > 0 ? 'text-gold/70' : 'text-gold/50'}`} />
+                      <Icon className={`w-5 h-5 ${selectedCategory === cat.id && !showCustomStory ? 'text-gold' : storiesInCategory > 0 ? 'text-gold/70' : 'text-gold/50'}`} />
                       {storiesInCategory > 0 && (
                         <span className="text-xs text-gold bg-gold/20 px-1.5 py-0.5 rounded-full">{storiesInCategory}</span>
                       )}
@@ -1649,10 +1668,34 @@ export function PersonaPage({ onNavigate }) {
                   </motion.button>
                 );
               })}
+              {/* Custom Story Button */}
+              <motion.button
+                onClick={() => {
+                  setShowCustomStory(true);
+                  setSelectedCategory(null);
+                }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  showCustomStory
+                    ? 'border-purple-500 bg-purple-500/10'
+                    : 'border-purple-500/30 hover:border-purple-500/50 bg-purple-500/5'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Edit3 className={`w-5 h-5 ${showCustomStory ? 'text-purple-400' : 'text-purple-400/60'}`} />
+                  {(persona.lifeStories?.filter(s => s.category === 'custom').length || 0) > 0 && (
+                    <span className="text-xs text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded-full">
+                      {persona.lifeStories?.filter(s => s.category === 'custom').length}
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-cream font-medium text-xs leading-tight">Write Your Own</h4>
+              </motion.button>
             </div>
 
             <AnimatePresence>
-              {selectedCategory && (
+              {selectedCategory && !showCustomStory && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -1693,6 +1736,72 @@ export function PersonaPage({ onNavigate }) {
                   </div>
                 </motion.div>
               )}
+
+              {/* Custom Story Form */}
+              {showCustomStory && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Edit3 className="w-5 h-5 text-purple-400" />
+                      <h4 className="text-purple-300 font-medium">Write Your Own Story</h4>
+                    </div>
+                    <p className="text-cream/60 text-sm">
+                      Share any story, memory, or reflection that's meaningful to you. Give it a title so you can easily find it later.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-cream/70 text-sm mb-1 block">Story Title / Question</label>
+                    <input
+                      type="text"
+                      value={customStoryTitle}
+                      onChange={(e) => setCustomStoryTitle(e.target.value)}
+                      placeholder="e.g., My first trip abroad, How I met my best friend..."
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-cream/70 text-sm mb-1 block">Your Story</label>
+                    <textarea
+                      value={currentStory}
+                      onChange={(e) => setCurrentStory(e.target.value)}
+                      placeholder="Begin writing your story..."
+                      className="input-field min-h-[200px] resize-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-4">
+                    <motion.button
+                      onClick={() => {
+                        setShowCustomStory(false);
+                        setCurrentStory('');
+                        setCustomStoryTitle('');
+                      }}
+                      className="btn-secondary"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      onClick={handleSaveStory}
+                      disabled={!currentStory.trim() || !customStoryTitle.trim()}
+                      className="btn-primary flex items-center disabled:opacity-50"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Story
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {persona.lifeStories?.length > 0 && (
@@ -1700,22 +1809,25 @@ export function PersonaPage({ onNavigate }) {
                 <h3 className="text-xl font-serif text-cream">Your Stories</h3>
                 <div className="space-y-3">
                   {Object.entries(groupedStories).map(([categoryId, stories]) => {
-                    const category = storyCategories.find(c => c.id === categoryId) ||
-                      interviewChapters.find(c => c.id === categoryId) ||
-                      { label: 'Interview', icon: BookOpen };
+                    const category = categoryId === 'custom'
+                      ? { label: 'Custom Stories', icon: Edit3 }
+                      : storyCategories.find(c => c.id === categoryId) ||
+                        interviewChapters.find(c => c.id === categoryId) ||
+                        { label: 'Interview', icon: BookOpen };
                     const Icon = category?.icon || BookOpen;
                     const isExpanded = expandedCategories[categoryId] !== false;
+                    const isCustom = categoryId === 'custom';
 
                     return (
                       <div key={categoryId} className="glass-card overflow-hidden">
                         {/* Category Header - Accordion */}
                         <motion.button
                           onClick={() => toggleCategory(categoryId)}
-                          className="w-full flex items-center justify-between p-4 hover:bg-gold/5 transition-colors"
+                          className={`w-full flex items-center justify-between p-4 hover:bg-gold/5 transition-colors ${isCustom ? 'bg-purple-500/5' : ''}`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">
-                              <Icon className="w-5 h-5 text-gold" />
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isCustom ? 'bg-purple-500/20' : 'bg-gold/10'}`}>
+                              <Icon className={`w-5 h-5 ${isCustom ? 'text-purple-400' : 'text-gold'}`} />
                             </div>
                             <div className="text-left">
                               <p className="text-cream font-medium">{category?.label || category?.title || 'Interview'}</p>

@@ -323,6 +323,14 @@ class ApiService {
     return this.request(`/api/support/admin/chats/${chatId}/reopen`, { method: 'POST' });
   }
 
+  async archiveAdminSupportChat(chatId) {
+    return this.request(`/api/support/admin/chats/${chatId}/archive`, { method: 'POST' });
+  }
+
+  async deleteAdminSupportChat(chatId) {
+    return this.request(`/api/support/admin/chats/${chatId}`, { method: 'DELETE' });
+  }
+
   // Support Avatar Settings
   async getSupportAvatar() {
     return this.request('/api/admin/support-avatar');

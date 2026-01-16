@@ -57,7 +57,8 @@ import {
   Package,
   Flag,
   BarChart3,
-  Archive
+  Archive,
+  RefreshCcw
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -138,6 +139,7 @@ export function AdminDashboard({ onNavigate }) {
 
   // Support chat state
   const [supportChats, setSupportChats] = useState([]);
+  const [supportFilter, setSupportFilter] = useState('open'); // 'open', 'closed', 'archived'
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -229,6 +231,16 @@ export function AdminDashboard({ onNavigate }) {
   const [avatarBackgrounds, setAvatarBackgrounds] = useState([]);
   const [editingBackground, setEditingBackground] = useState(null);
   const [backgroundDraft, setBackgroundDraft] = useState({ name: '', imageUrl: '', isActive: true });
+
+  // Avatar Styles state
+  const [avatarStyles, setAvatarStyles] = useState({
+    realistic: true,
+    enhanced: true,
+    cartoon: true,
+    artistic: true,
+    anime: true,
+    pixar: true
+  });
 
   // Country stats state
   const [countryStats, setCountryStats] = useState({ countries: [], total: 0 });
@@ -356,6 +368,12 @@ Ask clarifying questions if needed, then help them write or refine their message
     }
   ];
 
+  // Toast helper
+  const showToast = (message, type = 'success') => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // Check if user is admin
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -468,10 +486,16 @@ Ask clarifying questions if needed, then help them write or refine their message
       }
 
       if (activeTab === 'settings') {
-        // Also fetch avatar backgrounds
-        const bgRes = await fetch(`${API_URL}/api/admin/avatar-backgrounds`, { headers });
+        // Fetch avatar backgrounds and styles
+        const [bgRes, stylesRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/avatar-backgrounds`, { headers }),
+          fetch(`${API_URL}/api/admin/avatar-styles`, { headers })
+        ]);
         if (bgRes.ok) {
           setAvatarBackgrounds(await bgRes.json());
+        }
+        if (stylesRes.ok) {
+          setAvatarStyles(await stylesRes.json());
         }
       }
     } catch (error) {
@@ -676,6 +700,59 @@ Ask clarifying questions if needed, then help them write or refine their message
       }
     } catch (error) {
       console.error('Failed to toggle chat:', error);
+    }
+  };
+
+  // Archive chat
+  const handleArchiveChat = async (chatId) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/support/admin/chats/${chatId}/archive`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSupportChats(prev => prev.map(c =>
+        c.id === chatId ? { ...c, status: 'archived' } : c
+      ));
+      setToast({ type: 'success', message: 'Chat archived successfully' });
+    } catch (error) {
+      console.error('Failed to archive chat:', error);
+      setToast({ type: 'error', message: 'Failed to archive chat' });
+    }
+  };
+
+  // Reopen archived chat
+  const handleReopenChat = async (chatId) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/support/admin/chats/${chatId}/reopen`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSupportChats(prev => prev.map(c =>
+        c.id === chatId ? { ...c, status: 'open' } : c
+      ));
+      setToast({ type: 'success', message: 'Chat reopened' });
+    } catch (error) {
+      console.error('Failed to reopen chat:', error);
+      setToast({ type: 'error', message: 'Failed to reopen chat' });
+    }
+  };
+
+  // Delete chat permanently
+  const handleDeleteChat = async (chatId) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      await fetch(`${API_URL}/api/support/admin/chats/${chatId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSupportChats(prev => prev.filter(c => c.id !== chatId));
+      setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+      setToast({ type: 'success', message: 'Chat deleted permanently' });
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+      setToast({ type: 'error', message: 'Failed to delete chat' });
     }
   };
 
@@ -1069,6 +1146,31 @@ Ask clarifying questions if needed, then help them write or refine their message
       showToast('Background deleted', 'success');
     } catch (error) {
       console.error('Failed to delete background:', error);
+    }
+  };
+
+  // Toggle avatar style
+  const toggleAvatarStyle = async (styleId) => {
+    try {
+      const token = localStorage.getItem('echotrail_token');
+      const newStyles = { ...avatarStyles, [styleId]: !avatarStyles[styleId] };
+
+      const res = await fetch(`${API_URL}/api/admin/avatar-styles`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(newStyles),
+      });
+
+      if (res.ok) {
+        setAvatarStyles(newStyles);
+        showToast(`Style ${newStyles[styleId] ? 'activated' : 'deactivated'}`, 'success');
+      }
+    } catch (error) {
+      console.error('Failed to toggle style:', error);
+      showToast('Failed to update style', 'error');
     }
   };
 
@@ -2214,53 +2316,132 @@ Ask clarifying questions if needed, then help them write or refine their message
               <div className="glass-card overflow-hidden">
                 <div className="p-4 border-b border-gold/10 flex items-center justify-between">
                   <h3 className="text-lg font-serif text-cream">Support Conversations</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-cream/50 text-sm">{supportChats.filter(c => c.status === 'open').length} open</span>
+                  <div className="flex items-center gap-4">
+                    {/* Filter Tabs */}
+                    <div className="flex bg-navy-dark/50 rounded-lg p-1 gap-1">
+                      {[
+                        { id: 'open', label: 'Open', count: supportChats.filter(c => c.status === 'open').length },
+                        { id: 'closed', label: 'Closed', count: supportChats.filter(c => c.status === 'closed').length },
+                        { id: 'archived', label: 'Archived', count: supportChats.filter(c => c.status === 'archived').length },
+                      ].map(filter => (
+                        <button
+                          key={filter.id}
+                          onClick={() => setSupportFilter(filter.id)}
+                          className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-2 ${
+                            supportFilter === filter.id
+                              ? 'bg-gold text-navy font-medium'
+                              : 'text-cream/60 hover:text-cream hover:bg-navy-light/30'
+                          }`}
+                        >
+                          {filter.label}
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            supportFilter === filter.id ? 'bg-navy/20' : 'bg-navy-light/50'
+                          }`}>{filter.count}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                {supportChats.length === 0 ? (
+                {supportChats.filter(c => c.status === supportFilter).length === 0 ? (
                   <div className="p-8 text-center">
                     <MessageCircle className="w-12 h-12 text-gold/30 mx-auto mb-3" />
-                    <p className="text-cream/50">No support conversations yet</p>
+                    <p className="text-cream/50">
+                      {supportFilter === 'open' ? 'No open conversations' :
+                       supportFilter === 'closed' ? 'No closed conversations' :
+                       'No archived conversations'}
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-gold/5">
-                    {supportChats.map(chat => (
+                    {supportChats.filter(c => c.status === supportFilter).map(chat => (
                       <div
                         key={chat.id}
-                        className="p-4 hover:bg-navy-light/30 cursor-pointer flex items-center gap-4"
-                        onClick={() => loadChat(chat.id)}
+                        className="p-4 hover:bg-navy-light/30 flex items-center gap-4 group"
                       >
-                        <div className="relative">
-                          <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-                            <UserIcon className="w-5 h-5 text-gold/60" />
-                          </div>
-                          {chat.unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
-                              {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-cream font-medium truncate">{chat.userName || 'Unknown User'}</p>
-                            <span className={`px-2 py-0.5 text-xs rounded ${
-                              chat.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-cream/10 text-cream/50'
-                            }`}>{chat.status}</span>
-                            {chat.isUserTyping && (
-                              <span className="text-gold text-xs animate-pulse">typing...</span>
+                        <div
+                          className="flex items-center gap-4 flex-1 cursor-pointer"
+                          onClick={() => loadChat(chat.id)}
+                        >
+                          <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
+                              <UserIcon className="w-5 h-5 text-gold/60" />
+                            </div>
+                            {chat.unreadCount > 0 && (
+                              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                                {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                              </span>
                             )}
                           </div>
-                          <p className="text-cream/50 text-sm truncate">{chat.userEmail}</p>
-                          {chat.messages?.[0] && (
-                            <p className="text-cream/40 text-xs truncate mt-1">
-                              {chat.messages[0].imageUrl ? '📷 Image' : ''} {chat.messages[0].content}
-                            </p>
-                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-cream font-medium truncate">{chat.userName || 'Unknown User'}</p>
+                              <span className={`px-2 py-0.5 text-xs rounded ${
+                                chat.status === 'open' ? 'bg-green-500/20 text-green-400' :
+                                chat.status === 'archived' ? 'bg-purple-500/20 text-purple-400' :
+                                'bg-cream/10 text-cream/50'
+                              }`}>{chat.status}</span>
+                              {chat.isUserTyping && (
+                                <span className="text-gold text-xs animate-pulse">typing...</span>
+                              )}
+                            </div>
+                            <p className="text-cream/50 text-sm truncate">{chat.userEmail}</p>
+                            {chat.messages?.[0] && (
+                              <p className="text-cream/40 text-xs truncate mt-1">
+                                {chat.messages[0].imageUrl ? '📷 Image' : ''} {chat.messages[0].content}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-cream/40 text-xs">{new Date(chat.updatedAt).toLocaleDateString()}</p>
+                            <p className="text-cream/30 text-xs">{new Date(chat.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-cream/40 text-xs">{new Date(chat.updatedAt).toLocaleDateString()}</p>
-                          <p className="text-cream/30 text-xs">{new Date(chat.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {chat.status === 'closed' && (
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleArchiveChat(chat.id);
+                              }}
+                              className="p-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+                              whileHover={{ scale: 1.05 }}
+                              title="Archive"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </motion.button>
+                          )}
+                          {chat.status === 'archived' && (
+                            <>
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReopenChat(chat.id);
+                                }}
+                                className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+                                whileHover={{ scale: 1.05 }}
+                                title="Reopen"
+                              >
+                                <RefreshCcw className="w-4 h-4" />
+                              </motion.button>
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDialog({
+                                    isOpen: true,
+                                    title: 'Delete Chat Permanently',
+                                    message: `Are you sure you want to permanently delete the conversation with ${chat.userName}? This cannot be undone.`,
+                                    onConfirm: () => handleDeleteChat(chat.id)
+                                  });
+                                }}
+                                className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                whileHover={{ scale: 1.05 }}
+                                title="Delete permanently"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </motion.button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -3325,19 +3506,109 @@ Ask clarifying questions if needed, then help them write or refine their message
             >
               {/* Avatar Background Management */}
               <div className="glass-card p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-                    <Image className="w-5 h-5 text-white" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                      <Image className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif text-cream">Avatar Backgrounds</h3>
+                      <p className="text-cream/50 text-sm">Manage available background images</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-serif text-cream">Avatar Backgrounds</h3>
-                    <p className="text-cream/50 text-sm">Manage available background images</p>
-                  </div>
+                  <motion.button
+                    onClick={() => {
+                      setEditingBackground('new');
+                      setBackgroundDraft({ name: '', imageUrl: '', isActive: true });
+                    }}
+                    className="px-4 py-2 bg-gold text-navy rounded-lg font-medium flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Background
+                  </motion.button>
                 </div>
+
+                {/* Add/Edit Background Modal */}
+                {editingBackground && (
+                  <div className="mb-6 p-4 bg-navy-dark/50 rounded-xl border border-gold/20">
+                    <h4 className="text-cream font-medium mb-4">
+                      {editingBackground === 'new' ? 'Add New Background' : 'Edit Background'}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-cream/70 text-sm block mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={backgroundDraft.name}
+                          onChange={(e) => setBackgroundDraft(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="e.g., Mountain View"
+                          className="w-full px-4 py-2 bg-navy-dark border border-gold/20 rounded-lg text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-cream/70 text-sm block mb-1">Image URL</label>
+                        <input
+                          type="text"
+                          value={backgroundDraft.imageUrl}
+                          onChange={(e) => setBackgroundDraft(prev => ({ ...prev, imageUrl: e.target.value }))}
+                          placeholder="https://images.unsplash.com/..."
+                          className="w-full px-4 py-2 bg-navy-dark border border-gold/20 rounded-lg text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50"
+                        />
+                      </div>
+                    </div>
+                    {backgroundDraft.imageUrl && (
+                      <div className="mt-4">
+                        <label className="text-cream/70 text-sm block mb-1">Preview</label>
+                        <div className="aspect-video w-48 rounded-lg overflow-hidden border border-gold/20">
+                          <img
+                            src={backgroundDraft.imageUrl}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/400x300?text=Invalid+URL'; }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 mt-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={backgroundDraft.isActive}
+                          onChange={(e) => setBackgroundDraft(prev => ({ ...prev, isActive: e.target.checked }))}
+                          className="w-4 h-4 rounded border-gold/30 bg-navy-dark text-gold focus:ring-gold/50"
+                        />
+                        <span className="text-cream/70 text-sm">Active</span>
+                      </label>
+                      <div className="flex-1" />
+                      <motion.button
+                        onClick={() => {
+                          setEditingBackground(null);
+                          setBackgroundDraft({ name: '', imageUrl: '', isActive: true });
+                        }}
+                        className="px-4 py-2 text-cream/60 hover:text-cream"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={saveBackground}
+                        disabled={!backgroundDraft.name || !backgroundDraft.imageUrl}
+                        className="px-4 py-2 bg-gold text-navy rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Default Backgrounds */}
                 <div className="mb-6">
-                  <h4 className="text-cream/70 text-sm mb-3">Default Backgrounds</h4>
+                  <h4 className="text-cream/70 text-sm mb-3">Default Backgrounds (Built-in)</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                       { id: 'beach', label: 'Beach', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop' },
@@ -3358,16 +3629,68 @@ Ask clarifying questions if needed, then help them write or refine their message
                   </div>
                 </div>
 
-                {/* Info about custom backgrounds */}
+                {/* Custom Backgrounds */}
+                {avatarBackgrounds.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-cream/70 text-sm mb-3">Custom Backgrounds</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {avatarBackgrounds.map(bg => (
+                        <div key={bg.id} className="relative group">
+                          <div className={`aspect-video rounded-xl overflow-hidden border-2 ${bg.isActive ? 'border-gold/40' : 'border-cream/10 opacity-60'}`}>
+                            <img src={bg.imageUrl} alt={bg.name} className="w-full h-full object-cover" />
+                          </div>
+                          <p className="text-cream/70 text-sm mt-2 text-center">{bg.name}</p>
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            <span className={`px-2 py-0.5 rounded-full text-white text-xs ${bg.isActive ? 'bg-green-500/80' : 'bg-cream/30'}`}>
+                              {bg.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          {/* Hover actions */}
+                          <div className="absolute inset-0 bg-navy/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
+                            <motion.button
+                              onClick={() => {
+                                setEditingBackground(bg.id);
+                                setBackgroundDraft({ name: bg.name, imageUrl: bg.imageUrl, isActive: bg.isActive });
+                              }}
+                              className="p-2 bg-gold/20 text-gold rounded-lg hover:bg-gold/30"
+                              whileHover={{ scale: 1.1 }}
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </motion.button>
+                            <motion.button
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Delete Background',
+                                  message: `Are you sure you want to delete "${bg.name}"?`,
+                                  onConfirm: () => {
+                                    deleteBackground(bg.id);
+                                    setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                                  }
+                                });
+                              }}
+                              className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
+                              whileHover={{ scale: 1.1 }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Info */}
                 <div className="p-4 bg-navy-dark/30 rounded-xl border border-gold/10">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-gold/60 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-cream/70 text-sm">
-                        Background images are provided via Unsplash. Users can also upload their own images.
+                        Use Unsplash URLs for best quality. Recommended format: <code className="bg-navy-dark px-1 rounded text-gold/80">?w=400&h=300&fit=crop</code>
                       </p>
                       <p className="text-cream/50 text-xs mt-2">
-                        To add custom default backgrounds, edit the <code className="bg-navy-dark px-1 rounded">backgrounds</code> array in <code className="bg-navy-dark px-1 rounded">PersonaPage.jsx</code>
+                        Custom backgrounds will appear in the user's avatar settings alongside the default options.
                       </p>
                     </div>
                   </div>
@@ -3382,29 +3705,48 @@ Ask clarifying questions if needed, then help them write or refine their message
                   </div>
                   <div>
                     <h3 className="text-lg font-serif text-cream">Avatar Styles</h3>
-                    <p className="text-cream/50 text-sm">Available rendering styles for avatars</p>
+                    <p className="text-cream/50 text-sm">Toggle rendering styles available to users</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {[
-                    { id: 'realistic', label: 'Realistic', icon: '🎭', active: true },
-                    { id: 'enhanced', label: 'Enhanced', icon: '✨', active: true },
-                    { id: 'cartoon', label: 'Cartoon', icon: '🎨', active: true },
-                    { id: 'artistic', label: 'Artistic', icon: '🖼️', active: true },
-                    { id: 'anime', label: 'Anime', icon: '🌸', active: true },
-                    { id: 'pixar', label: '3D Pixar', icon: '🎬', active: true },
-                  ].map(style => (
-                    <div key={style.id} className="p-4 bg-navy-dark/30 rounded-xl border border-gold/20 text-center">
-                      <span className="text-3xl block mb-2">{style.icon}</span>
-                      <p className="text-cream font-medium text-sm">{style.label}</p>
-                      <span className={`text-xs mt-2 inline-block px-2 py-0.5 rounded-full ${
-                        style.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {style.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  ))}
+                    { id: 'realistic', label: 'Realistic', icon: '🎭' },
+                    { id: 'enhanced', label: 'Enhanced', icon: '✨' },
+                    { id: 'cartoon', label: 'Cartoon', icon: '🎨' },
+                    { id: 'artistic', label: 'Artistic', icon: '🖼️' },
+                    { id: 'anime', label: 'Anime', icon: '🌸' },
+                    { id: 'pixar', label: '3D Pixar', icon: '🎬' },
+                  ].map(style => {
+                    const isActive = avatarStyles[style.id] !== false;
+                    return (
+                      <motion.div
+                        key={style.id}
+                        className={`p-4 rounded-xl border text-center cursor-pointer transition-all ${
+                          isActive
+                            ? 'bg-navy-dark/30 border-gold/20 hover:border-gold/40'
+                            : 'bg-navy-dark/10 border-cream/10 opacity-60 hover:opacity-80'
+                        }`}
+                        onClick={() => toggleAvatarStyle(style.id)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <span className="text-3xl block mb-2">{style.icon}</span>
+                        <p className={`font-medium text-sm ${isActive ? 'text-cream' : 'text-cream/50'}`}>{style.label}</p>
+                        <span className={`text-xs mt-2 inline-block px-2 py-0.5 rounded-full ${
+                          isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 p-3 bg-navy-dark/30 rounded-lg border border-gold/10">
+                  <p className="text-cream/50 text-sm">
+                    Click on a style to enable/disable it. Inactive styles won't be shown to users in their avatar settings.
+                  </p>
                 </div>
               </div>
 

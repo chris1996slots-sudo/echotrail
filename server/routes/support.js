@@ -483,4 +483,40 @@ router.post('/admin/chats/:id/reopen', authenticate, requireAdmin, async (req, r
   }
 });
 
+// Archive chat as admin
+router.post('/admin/chats/:id/archive', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await req.prisma.supportChat.update({
+      where: { id },
+      data: { status: 'archived' }
+    });
+
+    res.json({ message: 'Chat archived' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to archive chat' });
+  }
+});
+
+// Delete chat permanently as admin
+router.delete('/admin/chats/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Delete all messages first, then the chat
+    await req.prisma.supportMessage.deleteMany({
+      where: { chatId: id }
+    });
+
+    await req.prisma.supportChat.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Chat deleted permanently' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+});
+
 export default router;
