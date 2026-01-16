@@ -41,8 +41,7 @@ import {
   Loader2,
   AlertCircle,
   ChevronDown,
-  ChevronUp,
-  Video
+  ChevronUp
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -294,11 +293,6 @@ export function PersonaPage({ onNavigate }) {
   const [deletingAvatar, setDeletingAvatar] = useState(null);
   const [editAvatarForm, setEditAvatarForm] = useState({ label: '' });
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
-
-  // Photo Avatar state
-  const [isCreatingPhotoAvatar, setIsCreatingPhotoAvatar] = useState(false);
-  const [photoAvatarError, setPhotoAvatarError] = useState(null);
-  const [photoAvatarSuccess, setPhotoAvatarSuccess] = useState(false);
 
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({
@@ -768,43 +762,6 @@ export function PersonaPage({ onNavigate }) {
       setVoiceCloneError(error.message || 'Failed to create voice clone');
     } finally {
       setIsCreatingVoiceClone(false);
-    }
-  };
-
-  // Create HeyGen Photo Avatar from active image
-  const handleCreatePhotoAvatar = async () => {
-    const activeImage = persona.avatarImages?.find(img => img.isActive || img.id === persona.activeAvatarId);
-    if (!activeImage) {
-      setPhotoAvatarError('Please select an active avatar image first');
-      return;
-    }
-
-    setIsCreatingPhotoAvatar(true);
-    setPhotoAvatarError(null);
-    setPhotoAvatarSuccess(false);
-
-    try {
-      const result = await api.createPhotoAvatar(
-        activeImage.imageData,
-        `${user.firstName}'s Avatar`
-      );
-
-      if (result.success) {
-        setPersona(prev => ({
-          ...prev,
-          heygenAvatarId: result.avatarId,
-          heygenAvatarName: result.avatarName,
-        }));
-        setPhotoAvatarSuccess(true);
-        setTimeout(() => setPhotoAvatarSuccess(false), 5000);
-      } else {
-        setPhotoAvatarError(result.error || 'Failed to create photo avatar');
-      }
-    } catch (error) {
-      console.error('Photo avatar error:', error);
-      setPhotoAvatarError(error.message || 'Failed to create photo avatar');
-    } finally {
-      setIsCreatingPhotoAvatar(false);
     }
   };
 
@@ -1477,37 +1434,13 @@ export function PersonaPage({ onNavigate }) {
                         Voice Clone Active
                       </span>
                     )}
-                    {persona.heygenAvatarId ? (
+                    {persona.heygenAvatarId && (
                       <span className="px-3 py-1.5 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Talking Avatar Active
                       </span>
-                    ) : (
-                      <button
-                        onClick={handleCreatePhotoAvatar}
-                        disabled={isCreatingPhotoAvatar}
-                        className="px-3 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold text-xs font-medium rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                      >
-                        {isCreatingPhotoAvatar ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Creating...
-                          </>
-                        ) : (
-                          <>
-                            <Video className="w-3.5 h-3.5" />
-                            Create Talking Avatar
-                          </>
-                        )}
-                      </button>
                     )}
                   </div>
-                  {/* Photo Avatar Error */}
-                  {photoAvatarError && (
-                    <div className="mb-4 px-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-xs">
-                      {photoAvatarError}
-                    </div>
-                  )}
 
                   {/* Edit/Delete Actions for Active Avatar */}
                   <div className="flex gap-2 mb-4">
