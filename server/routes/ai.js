@@ -1,7 +1,67 @@
 import express from 'express';
 import { authenticate, requireSubscription } from '../middleware/auth.js';
+import { spawn } from 'child_process';
+import { writeFile, readFile, unlink, mkdtemp } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 const router = express.Router();
+
+// Helper function to convert audio from webm to mp3 using ffmpeg
+async function convertAudioToMp3(inputBuffer, inputFormat = 'webm') {
+  // Create temp directory
+  const tempDir = await mkdtemp(join(tmpdir(), 'echotrail-audio-'));
+  const inputPath = join(tempDir, `input.${inputFormat}`);
+  const outputPath = join(tempDir, 'output.mp3');
+
+  try {
+    // Write input buffer to temp file
+    await writeFile(inputPath, inputBuffer);
+
+    // Convert using ffmpeg
+    await new Promise((resolve, reject) => {
+      const ffmpeg = spawn('ffmpeg', [
+        '-i', inputPath,
+        '-vn',                    // No video
+        '-acodec', 'libmp3lame',  // MP3 codec
+        '-ab', '128k',            // 128kbps bitrate
+        '-ar', '44100',           // 44.1kHz sample rate
+        '-y',                     // Overwrite output
+        outputPath
+      ]);
+
+      let stderr = '';
+      ffmpeg.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      ffmpeg.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`FFmpeg exited with code ${code}: ${stderr}`));
+        }
+      });
+
+      ffmpeg.on('error', (err) => {
+        reject(new Error(`FFmpeg spawn error: ${err.message}`));
+      });
+    });
+
+    // Read the converted file
+    const outputBuffer = await readFile(outputPath);
+    return outputBuffer;
+  } finally {
+    // Cleanup temp files
+    try {
+      await unlink(inputPath).catch(() => {});
+      await unlink(outputPath).catch(() => {});
+      // Note: temp directory cleanup is optional, OS will handle it
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+}
 
 // =====================
 // LLM API - Text Generation (Claude/Groq)
@@ -303,6 +363,7 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
     formData.append('description', description || `Voice clone for ${req.user.firstName} ${req.user.lastName}`);
 
     // Convert base64 voice samples to files
+    // ElevenLabs supports: mp3, wav, m4a - webm needs conversion
     for (let i = 0; i < persona.voiceSamples.length; i++) {
       const sample = persona.voiceSamples[i];
 
@@ -310,27 +371,46 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
       const formatMatch = sample.audioData.match(/^data:audio\/(\w+);base64,/);
       const audioFormat = formatMatch ? formatMatch[1] : 'webm';
 
-      // Map format to content type and extension
-      const formatMap = {
-        'webm': { contentType: 'audio/webm', extension: 'webm' },
-        'mp3': { contentType: 'audio/mpeg', extension: 'mp3' },
-        'mpeg': { contentType: 'audio/mpeg', extension: 'mp3' },
-        'wav': { contentType: 'audio/wav', extension: 'wav' },
-        'ogg': { contentType: 'audio/ogg', extension: 'ogg' },
-        'mp4': { contentType: 'audio/mp4', extension: 'm4a' }
-      };
-
-      const format = formatMap[audioFormat] || { contentType: 'audio/webm', extension: 'webm' };
-
       // Remove data URL prefix if present
       const base64Data = sample.audioData.replace(/^data:audio\/\w+;base64,/, '');
-      const audioBuffer = Buffer.from(base64Data, 'base64');
+      let audioBuffer = Buffer.from(base64Data, 'base64');
 
-      console.log(`Voice sample ${i + 1}: format=${audioFormat}, size=${audioBuffer.length} bytes`);
+      console.log(`Voice sample ${i + 1}: original format=${audioFormat}, size=${audioBuffer.length} bytes`);
+
+      // Convert webm/ogg to mp3 (ElevenLabs doesn't support webm well)
+      let finalFormat = audioFormat;
+      let contentType = 'audio/mpeg';
+      let extension = 'mp3';
+
+      if (audioFormat === 'webm' || audioFormat === 'ogg') {
+        try {
+          console.log(`Converting sample ${i + 1} from ${audioFormat} to mp3...`);
+          audioBuffer = await convertAudioToMp3(audioBuffer, audioFormat);
+          finalFormat = 'mp3';
+          console.log(`Sample ${i + 1} converted successfully, new size=${audioBuffer.length} bytes`);
+        } catch (conversionError) {
+          console.error(`Failed to convert sample ${i + 1}:`, conversionError.message);
+          // Return error with conversion details
+          return res.status(500).json({
+            error: `Failed to convert audio sample ${i + 1} to MP3 format`,
+            debug: {
+              originalFormat: audioFormat,
+              conversionError: conversionError.message,
+              hint: 'Make sure ffmpeg is installed on the server'
+            }
+          });
+        }
+      } else if (audioFormat === 'wav') {
+        contentType = 'audio/wav';
+        extension = 'wav';
+      } else if (audioFormat === 'mp4' || audioFormat === 'm4a') {
+        contentType = 'audio/mp4';
+        extension = 'm4a';
+      }
 
       formData.append('files', audioBuffer, {
-        filename: `sample_${i + 1}.${format.extension}`,
-        contentType: format.contentType
+        filename: `sample_${i + 1}.${extension}`,
+        contentType: contentType
       });
     }
 
