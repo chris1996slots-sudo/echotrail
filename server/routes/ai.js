@@ -1641,13 +1641,19 @@ router.post('/liveavatar/session', authenticate, requireSubscription('PREMIUM'),
 
       if (avatarsResponse.ok) {
         const avatarsData = await avatarsResponse.json();
-        const avatars = avatarsData.avatars || avatarsData.data?.avatars || avatarsData || [];
+        console.log('LiveAvatar: Raw response:', JSON.stringify(avatarsData, null, 2));
+
+        // LiveAvatar returns: { code, data: { count, next, previous, results: [...] } }
+        const avatars = avatarsData.data?.results || avatarsData.results || avatarsData.avatars || avatarsData.data?.avatars || [];
         console.log('LiveAvatar: Found', Array.isArray(avatars) ? avatars.length : 'unknown', 'public avatars');
 
         if (Array.isArray(avatars) && avatars.length > 0) {
-          // Use the first public avatar
-          avatarId = avatars[0].avatar_id || avatars[0].id;
-          console.log('LiveAvatar: Using public avatar:', avatarId);
+          // Use the first public avatar that is ready (status check)
+          const readyAvatar = avatars.find(a => a.status === 'ready' || a.status === 'completed' || !a.status) || avatars[0];
+          avatarId = readyAvatar.id || readyAvatar.avatar_id;
+          console.log('LiveAvatar: Using public avatar:', avatarId, 'name:', readyAvatar.name);
+        } else {
+          console.log('LiveAvatar: No public avatars found in response');
         }
       } else {
         const avatarsError = await avatarsResponse.text();
@@ -1777,8 +1783,11 @@ router.get('/liveavatar/avatars', authenticate, async (req, res) => {
     }
 
     const data = await response.json();
+    // LiveAvatar returns: { code, data: { count, next, previous, results: [...] } }
+    const avatars = data.data?.results || data.results || data.avatars || data.data?.avatars || [];
     res.json({
-      avatars: data.avatars || data.data?.avatars || []
+      avatars,
+      count: data.data?.count || avatars.length
     });
   } catch (error) {
     console.error('LiveAvatar avatars error:', error);
