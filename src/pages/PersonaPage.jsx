@@ -224,13 +224,13 @@ const occasionCategories = [
   { id: 'special', label: 'Special Occasion' },
 ];
 
-// Voice recording prompts
+// Voice recording prompts - Each should take about 30 seconds to read naturally
 const voicePrompts = [
-  "Hello, my name is [your name] and I'm recording my voice for my digital legacy.",
-  "The most important lesson I've learned in life is to always be kind to others.",
-  "Family means everything to me. They are my strength and my joy.",
-  "I want my grandchildren to know that I love them deeply.",
-  "Life is too short to hold grudges. Forgive often and love always.",
+  "Hello, my name is [your name]. I'm creating this voice recording for my digital legacy. I want future generations to hear my real voice and feel connected to me. This is my way of staying present in the lives of those I love, even when I can't be there in person. Thank you for listening to my story.",
+  "Let me tell you about a valuable lesson I've learned. Throughout my life, I've discovered that kindness is the most powerful force we have. Small acts of compassion create ripples that touch countless lives. When you treat others with respect and empathy, you not only brighten their day but also enrich your own soul. Always choose kindness, even when it's difficult.",
+  "Family is the foundation of everything meaningful in my life. The bonds we share, the memories we create together, and the unconditional love we give each other are treasures beyond measure. Through good times and challenges, family has been my anchor. I hope you always cherish these connections and nurture the relationships that matter most.",
+  "To my grandchildren and future generations, I want you to know how deeply I love you. Even if we've never met, you carry a piece of me within you. I've lived, learned, laughed, and loved so that your path might be a little brighter. Dream big, stay curious, and never forget that you come from a family that believes in you with all their hearts.",
+  "Here's some wisdom I want to share with you. Life moves quickly, so treasure every moment. Don't hold onto grudges because they only weigh you down. Forgive freely, love generously, and always make time for the people who matter. Remember that success isn't measured by wealth or status, but by the positive impact you have on others.",
 ];
 
 export function PersonaPage({ onNavigate }) {
@@ -265,6 +265,7 @@ export function PersonaPage({ onNavigate }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState(0);
+  const [recordedPrompts, setRecordedPrompts] = useState([]); // Track which prompts have been recorded in this session
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
@@ -465,10 +466,28 @@ export function PersonaPage({ onNavigate }) {
 
         await uploadVoiceSample(base64Audio, label, recordingTime, prompt);
 
-        setShowVoiceModal(false);
-        resetRecording();
-        setShowSaveConfirm(true);
-        setTimeout(() => setShowSaveConfirm(false), 2000);
+        // Mark this prompt as recorded
+        const newRecordedPrompts = [...recordedPrompts, selectedPrompt];
+        setRecordedPrompts(newRecordedPrompts);
+
+        // Find next unrecorded prompt
+        const nextUnrecordedPrompt = voicePrompts.findIndex((_, index) => !newRecordedPrompts.includes(index));
+
+        if (nextUnrecordedPrompt !== -1) {
+          // Move to next unrecorded prompt
+          setSelectedPrompt(nextUnrecordedPrompt);
+          resetRecording();
+          setShowSaveConfirm(true);
+          setTimeout(() => setShowSaveConfirm(false), 2000);
+        } else {
+          // All prompts recorded, close modal
+          setShowVoiceModal(false);
+          resetRecording();
+          setRecordedPrompts([]);
+          setSelectedPrompt(0);
+          setShowSaveConfirm(true);
+          setTimeout(() => setShowSaveConfirm(false), 2000);
+        }
         setSaving(false);
       };
       reader.readAsDataURL(audioBlob);
@@ -1328,8 +1347,8 @@ export function PersonaPage({ onNavigate }) {
 
         return (
           <div className="space-y-6">
-            {/* Avatar Gallery Preview - Only shown when avatars exist */}
-            {hasImages && (
+            {/* Avatar Gallery Preview - Only shown when at least one avatar is fully created (has active avatar) */}
+            {activeAvatar && (
               <FadeIn>
                 <div className="glass-card p-6 border-gold/30">
                   <div className="flex items-center justify-between mb-4">
@@ -2411,13 +2430,20 @@ export function PersonaPage({ onNavigate }) {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-serif text-cream">Record Voice Sample</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-serif text-cream">Record Voice Samples</h3>
+                  <p className="text-cream/50 text-sm">
+                    Recording {recordedPrompts.length + 1} of {voicePrompts.length}
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     if (!isRecording) {
                       setShowVoiceModal(false);
                       resetRecording();
+                      setRecordedPrompts([]);
+                      setSelectedPrompt(0);
                     }
                   }}
                   disabled={isRecording}
@@ -2427,26 +2453,52 @@ export function PersonaPage({ onNavigate }) {
                 </button>
               </div>
 
-              {/* Prompt Selection */}
+              {/* Progress Indicator */}
+              <div className="flex gap-1 mb-4">
+                {voicePrompts.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`flex-1 h-1.5 rounded-full transition-all ${
+                      recordedPrompts.includes(index)
+                        ? 'bg-green-500'
+                        : selectedPrompt === index
+                        ? 'bg-gold'
+                        : 'bg-navy-light/50'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Current Prompt Display */}
               <div className="mb-6">
-                <label className="block text-cream/70 text-sm mb-3">
-                  Read this prompt aloud:
+                <label className="block text-cream/70 text-sm mb-2">
+                  Read this prompt aloud (~30 seconds):
                 </label>
-                <div className="space-y-2">
-                  {voicePrompts.map((prompt, index) => (
-                    <motion.button
+                <div className="p-4 rounded-xl bg-navy-light/30 border border-gold/20">
+                  <p className="text-cream text-sm leading-relaxed">
+                    {voicePrompts[selectedPrompt]}
+                  </p>
+                </div>
+
+                {/* Quick Prompt Navigation */}
+                <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                  {voicePrompts.map((_, index) => (
+                    <button
                       key={index}
-                      onClick={() => setSelectedPrompt(index)}
+                      onClick={() => {
+                        if (!isRecording && !audioBlob) setSelectedPrompt(index);
+                      }}
                       disabled={isRecording || audioBlob}
-                      className={`w-full p-3 rounded-lg border-2 text-left text-sm transition-all ${
-                        selectedPrompt === index
-                          ? 'border-gold bg-gold/10 text-cream'
-                          : 'border-gold/20 hover:border-gold/40 text-cream/70'
+                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
+                        recordedPrompts.includes(index)
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                          : selectedPrompt === index
+                          ? 'bg-gold text-navy'
+                          : 'bg-navy-light/50 text-cream/60 hover:bg-navy-light hover:text-cream'
                       } disabled:opacity-50`}
-                      whileHover={{ scale: 1.01 }}
                     >
-                      {prompt}
-                    </motion.button>
+                      {recordedPrompts.includes(index) ? '✓' : index + 1}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -2537,13 +2589,15 @@ export function PersonaPage({ onNavigate }) {
                   onClick={() => {
                     setShowVoiceModal(false);
                     resetRecording();
+                    setRecordedPrompts([]);
+                    setSelectedPrompt(0);
                   }}
                   disabled={isRecording}
                   className="flex-1 btn-secondary disabled:opacity-50"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  Cancel
+                  {recordedPrompts.length > 0 ? 'Done' : 'Cancel'}
                 </motion.button>
                 <motion.button
                   onClick={saveVoiceSample}
@@ -2554,10 +2608,15 @@ export function PersonaPage({ onNavigate }) {
                 >
                   {saving ? (
                     <>Saving...</>
+                  ) : recordedPrompts.length + 1 >= voicePrompts.length ? (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save & Finish
+                    </>
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Recording
+                      Save & Next
                     </>
                   )}
                 </motion.button>
