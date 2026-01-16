@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Video, VideoOff, Loader2, X, AlertCircle, Volume2, VolumeX, Users, Sparkles, Image, Radio, RefreshCw } from 'lucide-react';
+import { Send, Video, VideoOff, Loader2, X, AlertCircle, Volume2, VolumeX, Mic, MicOff, Sparkles, Image, Radio, RefreshCw } from 'lucide-react';
+import { Room, RoomEvent, Track, ConnectionState } from 'livekit-client';
 import api from '../services/api';
 
 // Mode types
@@ -27,6 +28,15 @@ export default function LiveChat({ onClose, userName }) {
   const [isConnected, setIsConnected] = useState(false);
   const [sessionToken, setSessionToken] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [connectionState, setConnectionState] = useState('disconnected');
+  const [isMuted, setIsMuted] = useState(false);
+  const [wsUrl, setWsUrl] = useState(null);
+
+  // LiveKit refs
+  const roomRef = useRef(null);
+  const avatarVideoRef = useRef(null);
+  const avatarAudioRef = useRef(null);
+  const wsRef = useRef(null);
 
   const videoRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -44,8 +54,25 @@ export default function LiveChat({ onClose, userName }) {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
+      // Cleanup LiveKit room on unmount
+      cleanupLiveKit();
     };
   }, []);
+
+  const cleanupLiveKit = async () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (roomRef.current) {
+      try {
+        await roomRef.current.disconnect();
+      } catch (e) {
+        console.error('Error disconnecting room:', e);
+      }
+      roomRef.current = null;
+    }
+  };
 
   const checkStatus = async () => {
     try {
@@ -168,8 +195,180 @@ export default function LiveChat({ onClose, userName }) {
   };
 
   // =====================
-  // LiveAvatar Mode Functions (placeholder for now)
+  // LiveAvatar Mode Functions with LiveKit
   // =====================
+
+  const setupLiveKitRoom = async (livekitUrl, livekitToken, websocketUrl) => {
+    try {
+      console.log('LiveKit: Setting up room connection...');
+      addChatMessage('system', 'Connecting to LiveKit room...');
+
+      // Create a new Room instance
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        videoCaptureDefaults: {
+          resolution: { width: 640, height: 480 },
+        },
+      });
+
+      roomRef.current = room;
+
+      // Set up event handlers
+      room.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log('LiveKit: Connection state changed:', state);
+        setConnectionState(state);
+
+        if (state === ConnectionState.Connected) {
+          addChatMessage('system', '✓ Connected to LiveKit room!');
+        } else if (state === ConnectionState.Disconnected) {
+          addChatMessage('system', 'Disconnected from LiveKit room');
+        } else if (state === ConnectionState.Reconnecting) {
+          addChatMessage('system', 'Reconnecting to LiveKit...');
+        }
+      });
+
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log('LiveKit: Track subscribed:', track.kind, 'from', participant.identity);
+
+        if (track.kind === Track.Kind.Video) {
+          // Attach video track to video element
+          if (avatarVideoRef.current) {
+            track.attach(avatarVideoRef.current);
+            addChatMessage('system', '✓ Avatar video stream connected!');
+          }
+        } else if (track.kind === Track.Kind.Audio) {
+          // Attach audio track to audio element
+          if (avatarAudioRef.current) {
+            track.attach(avatarAudioRef.current);
+            addChatMessage('system', '✓ Avatar audio stream connected!');
+          }
+        }
+      });
+
+      room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+        console.log('LiveKit: Track unsubscribed:', track.kind);
+        track.detach();
+      });
+
+      room.on(RoomEvent.ParticipantConnected, (participant) => {
+        console.log('LiveKit: Participant connected:', participant.identity);
+        addChatMessage('system', `Participant joined: ${participant.identity}`);
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        console.log('LiveKit: Participant disconnected:', participant.identity);
+      });
+
+      room.on(RoomEvent.Disconnected, (reason) => {
+        console.log('LiveKit: Disconnected, reason:', reason);
+        addChatMessage('system', `Disconnected: ${reason || 'Session ended'}`);
+      });
+
+      room.on(RoomEvent.DataReceived, (payload, participant, kind) => {
+        // Handle data channel messages (for chat or commands)
+        try {
+          const decoder = new TextDecoder();
+          const message = JSON.parse(decoder.decode(payload));
+          console.log('LiveKit: Data received:', message);
+
+          if (message.type === 'chat' && message.content) {
+            addChatMessage('assistant', message.content);
+          }
+        } catch (e) {
+          console.log('LiveKit: Raw data received:', payload);
+        }
+      });
+
+      // Connect to the room
+      console.log('LiveKit: Connecting to', livekitUrl);
+      await room.connect(livekitUrl, livekitToken);
+
+      console.log('LiveKit: Connected successfully!');
+      setIsConnected(true);
+
+      // Store WebSocket URL for CUSTOM mode communication
+      if (websocketUrl) {
+        setWsUrl(websocketUrl);
+        setupWebSocket(websocketUrl);
+      }
+
+      return room;
+    } catch (err) {
+      console.error('LiveKit: Connection error:', err);
+      addChatMessage('system', `LiveKit connection failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const setupWebSocket = (url) => {
+    try {
+      console.log('WebSocket: Connecting to', url);
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('WebSocket: Connected');
+        addChatMessage('system', '✓ WebSocket connected for commands');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket: Message received:', data);
+
+          // Handle different message types from LiveAvatar
+          if (data.type === 'response' && data.text) {
+            addChatMessage('assistant', data.text);
+          } else if (data.type === 'audio_response') {
+            // Audio is handled via LiveKit
+          } else if (data.type === 'error') {
+            addChatMessage('system', `Error: ${data.message || 'Unknown error'}`);
+          }
+        } catch (e) {
+          console.log('WebSocket: Raw message:', event.data);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket: Error:', error);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket: Closed');
+      };
+
+      return ws;
+    } catch (err) {
+      console.error('WebSocket: Setup error:', err);
+    }
+  };
+
+  const sendLiveMessage = async () => {
+    if (!message.trim() || !isConnected) return;
+
+    const userMessage = message.trim();
+    setMessage('');
+    addChatMessage('user', userMessage);
+
+    // Send message via WebSocket if available
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'text',
+        text: userMessage
+      }));
+    } else {
+      // Fallback: Use data channel if WebSocket not available
+      if (roomRef.current) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify({
+          type: 'message',
+          content: userMessage
+        }));
+        await roomRef.current.localParticipant.publishData(data, { reliable: true });
+      }
+    }
+  };
 
   const startLiveAvatarSession = async () => {
     try {
@@ -195,30 +394,30 @@ export default function LiveChat({ onClose, userName }) {
 
       const startResponse = await api.startLiveAvatarSession(sessionResponse.sessionToken);
       console.log('LiveAvatar start response:', startResponse);
-      console.log('LiveAvatar start debug:', startResponse.debug);
 
       if (startResponse.livekitUrl && startResponse.livekitToken) {
-        // We have LiveKit connection details!
+        // We have LiveKit connection details - connect!
         if (startResponse.sessionId) {
           setSessionId(startResponse.sessionId);
         }
-        addChatMessage('system', `LiveAvatar connected! Session: ${startResponse.sessionId || 'active'}`);
-        addChatMessage('system', `LiveKit URL: ${startResponse.livekitUrl}`);
-        if (startResponse.wsUrl) {
-          addChatMessage('system', `WebSocket URL: ${startResponse.wsUrl}`);
-        }
+
+        addChatMessage('system', `Session started: ${startResponse.sessionId || 'active'}`);
         if (startResponse.maxDuration) {
-          addChatMessage('system', `Max session duration: ${startResponse.maxDuration} seconds`);
+          addChatMessage('system', `Max duration: ${Math.floor(startResponse.maxDuration / 60)} minutes`);
         }
-        addChatMessage('system', 'LiveKit WebRTC connection ready! Full video streaming integration coming soon.');
-        setIsConnected(true);
+
+        // Connect to LiveKit room
+        await setupLiveKitRoom(
+          startResponse.livekitUrl,
+          startResponse.livekitToken,
+          startResponse.wsUrl
+        );
       } else {
-        // Show debug info in console and UI
+        // Show debug info
         console.log('LiveAvatar: Missing LiveKit details, full response:', startResponse);
         if (startResponse.debug) {
-          addChatMessage('system', `Session started but missing connection details. Debug: ${JSON.stringify(startResponse.debug)}`);
-        } else {
-          addChatMessage('system', 'Session started but missing LiveKit details. Check server logs.');
+          addChatMessage('system', `Session started but missing connection details`);
+          console.error('Debug:', startResponse.debug);
         }
       }
 
@@ -227,39 +426,36 @@ export default function LiveChat({ onClose, userName }) {
       console.error('LiveAvatar session error:', err);
       const errorMessage = err.message || 'Failed to start session';
       addChatMessage('system', `Error: ${errorMessage}`);
-
-      // Add debug info if available
-      if (err.debug) {
-        console.error('LiveAvatar debug info:', err.debug);
-      }
-
       setIsLoading(false);
     }
   };
 
   const stopLiveAvatarSession = async () => {
-    if (!sessionToken) {
-      addChatMessage('system', 'No active session to stop.');
-      return;
-    }
-
     try {
       setIsLoading(true);
       addChatMessage('system', 'Stopping LiveAvatar session...');
 
-      const stopResponse = await api.stopLiveAvatarSession(sessionToken, sessionId);
-      console.log('LiveAvatar stop response:', stopResponse);
+      // Cleanup LiveKit first
+      await cleanupLiveKit();
 
-      if (stopResponse.stopped) {
-        addChatMessage('system', 'Session stopped successfully. You can start a new session.');
-      } else {
-        addChatMessage('system', stopResponse.message || 'Session ended (may have already timed out).');
+      // Then notify the server
+      if (sessionToken) {
+        const stopResponse = await api.stopLiveAvatarSession(sessionToken, sessionId);
+        console.log('LiveAvatar stop response:', stopResponse);
+
+        if (stopResponse.stopped) {
+          addChatMessage('system', 'Session stopped successfully.');
+        } else {
+          addChatMessage('system', stopResponse.message || 'Session ended.');
+        }
       }
 
       // Reset state
       setSessionToken(null);
       setSessionId(null);
       setIsConnected(false);
+      setConnectionState('disconnected');
+      setWsUrl(null);
       setIsLoading(false);
     } catch (err) {
       console.error('LiveAvatar stop error:', err);
@@ -268,7 +464,24 @@ export default function LiveChat({ onClose, userName }) {
       setSessionToken(null);
       setSessionId(null);
       setIsConnected(false);
+      setConnectionState('disconnected');
       setIsLoading(false);
+    }
+  };
+
+  const toggleMute = () => {
+    if (roomRef.current) {
+      const audioTracks = roomRef.current.localParticipant.audioTrackPublications;
+      audioTracks.forEach((publication) => {
+        if (publication.track) {
+          if (isMuted) {
+            publication.track.unmute();
+          } else {
+            publication.track.mute();
+          }
+        }
+      });
+      setIsMuted(!isMuted);
     }
   };
 
@@ -277,6 +490,8 @@ export default function LiveChat({ onClose, userName }) {
       e.preventDefault();
       if (mode === MODES.AVATAR_IV) {
         sendAvatarIVMessage();
+      } else if (mode === MODES.LIVE_AVATAR && isConnected) {
+        sendLiveMessage();
       }
     }
   };
@@ -286,9 +501,12 @@ export default function LiveChat({ onClose, userName }) {
       clearInterval(pollIntervalRef.current);
     }
     // Stop LiveAvatar session if active
-    if (sessionToken) {
+    if (sessionToken || roomRef.current) {
       try {
-        await api.stopLiveAvatarSession(sessionToken, sessionId);
+        await cleanupLiveKit();
+        if (sessionToken) {
+          await api.stopLiveAvatarSession(sessionToken, sessionId);
+        }
         console.log('LiveAvatar session stopped on close');
       } catch (err) {
         console.error('Error stopping session on close:', err);
@@ -332,7 +550,7 @@ export default function LiveChat({ onClose, userName }) {
           )}
 
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Avatar IV Option - Uses user's own photo */}
+            {/* Avatar IV Option */}
             <button
               onClick={() => setMode(MODES.AVATAR_IV)}
               disabled={!statusInfo?.hasPhoto}
@@ -353,7 +571,6 @@ export default function LiveChat({ onClose, userName }) {
               </div>
               <p className="text-gray-400 text-sm mb-3">
                 Create stunning lip-synced videos using YOUR photo and YOUR cloned voice.
-                The AI responds as you, and the video shows you speaking!
               </p>
               <div className="flex flex-wrap gap-2">
                 <span className={`px-2 py-1 rounded-full text-xs ${
@@ -367,14 +584,9 @@ export default function LiveChat({ onClose, userName }) {
                   {statusInfo?.hasVoiceClone ? '✓ Voice Clone' : '○ Voice Clone (optional)'}
                 </span>
               </div>
-              {!statusInfo?.hasPhoto && (
-                <p className="mt-3 text-amber-400 text-xs">
-                  Upload a photo in My Persona → Avatar tab first
-                </p>
-              )}
             </button>
 
-            {/* LiveAvatar Option - Real-time but needs video */}
+            {/* LiveAvatar Option */}
             <button
               onClick={() => setMode(MODES.LIVE_AVATAR)}
               disabled={!statusInfo?.liveAvatarConfigured}
@@ -395,7 +607,6 @@ export default function LiveChat({ onClose, userName }) {
               </div>
               <p className="text-gray-400 text-sm mb-3">
                 Real-time video conversation with instant responses.
-                Requires a 2-minute training video to create your custom avatar.
               </p>
               <div className="flex flex-wrap gap-2">
                 <span className={`px-2 py-1 rounded-full text-xs ${
@@ -403,17 +614,7 @@ export default function LiveChat({ onClose, userName }) {
                 }`}>
                   {statusInfo?.liveAvatarConfigured ? '✓ API Ready' : '✗ Not Configured'}
                 </span>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  statusInfo?.hasCustomLiveAvatar ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-                }`}>
-                  {statusInfo?.hasCustomLiveAvatar ? '✓ Custom Avatar' : '○ Needs Video Training'}
-                </span>
               </div>
-              {!statusInfo?.liveAvatarConfigured && (
-                <p className="mt-3 text-amber-400 text-xs">
-                  Admin needs to add LiveAvatar API key
-                </p>
-              )}
             </button>
           </div>
 
@@ -421,7 +622,7 @@ export default function LiveChat({ onClose, userName }) {
             <h4 className="text-white font-medium mb-2">What's the difference?</h4>
             <ul className="text-gray-400 text-sm space-y-1">
               <li><strong className="text-purple-400">Photo Avatar:</strong> Uses your uploaded photo. Video takes ~1-2 min to generate, but shows YOUR face.</li>
-              <li><strong className="text-pink-400">LiveAvatar:</strong> Real-time streaming, but requires recording a 2-min training video first.</li>
+              <li><strong className="text-pink-400">LiveAvatar:</strong> Real-time streaming with instant responses.</li>
             </ul>
           </div>
         </div>
@@ -505,11 +706,10 @@ export default function LiveChat({ onClose, userName }) {
 
           {/* Chat section */}
           <div className="w-1/2 p-4 flex flex-col border-l border-slate-700">
-            {/* Chat history */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
               {chatHistory.length === 0 && (
                 <p className="text-gray-500 text-center py-8">
-                  Type a message to start the conversation. Your avatar will respond with a video!
+                  Type a message to start the conversation.
                 </p>
               )}
               {chatHistory.map((msg) => (
@@ -533,7 +733,6 @@ export default function LiveChat({ onClose, userName }) {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Message input */}
             <div className="flex gap-2">
               <input
                 type="text"
@@ -552,19 +751,13 @@ export default function LiveChat({ onClose, userName }) {
                 {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </button>
             </div>
-
-            {isGenerating && (
-              <p className="text-purple-400 text-sm mt-2 text-center animate-pulse">
-                Creating your avatar video...
-              </p>
-            )}
           </div>
         </div>
       </div>
     );
   }
 
-  // LiveAvatar Mode UI
+  // LiveAvatar Mode UI with actual video
   if (mode === MODES.LIVE_AVATAR) {
     return (
       <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
@@ -582,100 +775,165 @@ export default function LiveChat({ onClose, userName }) {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">LiveAvatar Streaming</h2>
-              <p className="text-xs text-gray-400">Real-time video conversation</p>
+              <p className="text-xs text-gray-400">
+                {connectionState === 'connected' ? (
+                  <span className="text-green-400">● Connected</span>
+                ) : connectionState === 'connecting' ? (
+                  <span className="text-yellow-400">● Connecting...</span>
+                ) : (
+                  <span className="text-gray-400">● Disconnected</span>
+                )}
+              </p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isConnected && (
+              <button
+                onClick={toggleMute}
+                className={`p-2 rounded-lg transition-colors ${
+                  isMuted ? 'bg-red-600 text-white' : 'bg-slate-700 text-gray-400 hover:text-white'
+                }`}
+              >
+                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Main content */}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-lg text-center">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center mx-auto mb-6">
-              <Radio className="w-12 h-12 text-white" />
-            </div>
-
-            <h2 className="text-2xl font-serif text-white mb-4">LiveAvatar Coming Soon</h2>
-
-            <p className="text-gray-400 mb-6">
-              Real-time video streaming with LiveAvatar requires additional setup.
-              {!statusInfo?.hasCustomLiveAvatar && (
-                <span className="block mt-2 text-amber-400">
-                  You'll need to record a 2-minute training video to create your custom streaming avatar.
-                </span>
-              )}
-            </p>
-
-            <div className="space-y-3">
-              {!isConnected && !sessionToken ? (
-                <button
-                  onClick={startLiveAvatarSession}
-                  disabled={isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-500 hover:to-red-500 text-white rounded-xl font-medium transition-all flex items-center gap-2 mx-auto disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Video className="w-5 h-5" />
-                  )}
-                  Start Session
-                </button>
-              ) : isConnected ? (
-                <div className="space-y-3">
-                  <div className="px-4 py-3 bg-green-500/20 text-green-400 rounded-xl">
-                    Connected! LiveKit integration in progress...
+        <div className="flex-1 flex overflow-hidden">
+          {/* Video section */}
+          <div className="w-1/2 p-4 flex flex-col">
+            <div className="relative flex-1 bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
+              {!isConnected ? (
+                <div className="text-center p-6">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center mx-auto mb-6">
+                    <Radio className="w-12 h-12 text-white" />
                   </div>
-                  <button
-                    onClick={stopLiveAvatarSession}
-                    disabled={isLoading}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2 mx-auto disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <VideoOff className="w-5 h-5" />
-                    )}
-                    Stop Session
-                  </button>
+
+                  {!sessionToken ? (
+                    <>
+                      <h3 className="text-white text-xl mb-4">Start Live Session</h3>
+                      <p className="text-gray-400 text-sm mb-6">
+                        Connect to start a real-time conversation with your avatar.
+                      </p>
+                      <button
+                        onClick={startLiveAvatarSession}
+                        disabled={isLoading}
+                        className="px-6 py-3 bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-500 hover:to-red-500 text-white rounded-xl font-medium transition-all flex items-center gap-2 mx-auto disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Video className="w-5 h-5" />
+                        )}
+                        Start Session
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="w-12 h-12 text-pink-500 animate-spin mx-auto mb-4" />
+                      <h3 className="text-white text-lg mb-2">Connecting...</h3>
+                      <button
+                        onClick={stopLiveAvatarSession}
+                        className="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
-                <button
-                  onClick={stopLiveAvatarSession}
-                  disabled={isLoading}
-                  className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2 mx-auto disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-5 h-5" />
-                  )}
-                  Reset Session (Hit Limit)
-                </button>
-              )}
+                <>
+                  {/* Avatar video element */}
+                  <video
+                    ref={avatarVideoRef}
+                    className="w-full h-full object-contain"
+                    autoPlay
+                    playsInline
+                  />
+                  {/* Hidden audio element */}
+                  <audio ref={avatarAudioRef} autoPlay />
 
-              <button
-                onClick={() => setMode(null)}
-                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
-              >
-                Back to Selection
-              </button>
+                  {/* Connection status overlay */}
+                  {connectionState !== 'connected' && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
-            {/* Chat history for LiveAvatar */}
-            {chatHistory.length > 0 && (
-              <div className="mt-6 p-4 bg-slate-800 rounded-xl text-left max-h-48 overflow-y-auto">
-                {chatHistory.map((msg) => (
-                  <p key={msg.id} className={`text-sm ${msg.role === 'system' ? 'text-gray-400 italic' : 'text-white'}`}>
-                    {msg.content}
-                  </p>
-                ))}
+            {/* Controls */}
+            {isConnected && (
+              <div className="flex justify-center gap-4 mt-4">
+                <button
+                  onClick={stopLiveAvatarSession}
+                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+                >
+                  <VideoOff className="w-5 h-5" />
+                  End Session
+                </button>
               </div>
             )}
+          </div>
+
+          {/* Chat section */}
+          <div className="w-1/2 p-4 flex flex-col border-l border-slate-700">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+              {chatHistory.length === 0 && (
+                <p className="text-gray-500 text-center py-8">
+                  {isConnected
+                    ? 'Start typing to chat with your avatar!'
+                    : 'Connect to start the conversation.'}
+                </p>
+              )}
+              {chatHistory.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                      msg.role === 'user'
+                        ? 'bg-pink-600 text-white'
+                        : msg.role === 'assistant'
+                        ? 'bg-slate-700 text-white'
+                        : 'bg-slate-800 text-gray-400 text-sm italic'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={isConnected ? "Type your message..." : "Connect to start chatting"}
+                disabled={!isConnected}
+                className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-50"
+              />
+              <button
+                onClick={sendLiveMessage}
+                disabled={!message.trim() || !isConnected}
+                className="px-4 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
