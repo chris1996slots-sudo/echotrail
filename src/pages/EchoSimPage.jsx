@@ -249,12 +249,18 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
             const status = await api.getAvatarIVStatus(result.videoId);
             console.log('Video status:', status);
 
-            if (status.status === 'completed' && status.video_url) {
-              setVideoUrl(status.video_url);
+            if (status.status === 'completed' && status.videoUrl) {
+              setVideoUrl(status.videoUrl);
               setVideoGenerating(false);
               setVideoProgress('');
             } else if (status.status === 'failed') {
-              setError('Video generation failed: ' + (status.error || 'Unknown error'));
+              // Handle error object from HeyGen API
+              const errorMsg = status.error
+                ? (typeof status.error === 'object'
+                    ? status.error.message || status.error.detail || JSON.stringify(status.error)
+                    : status.error)
+                : 'Unknown error';
+              setError('Video generation failed: ' + errorMsg);
               setVideoGenerating(false);
               setVideoProgress('');
             } else if (pollCount >= maxPolls) {
