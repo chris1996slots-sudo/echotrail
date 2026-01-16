@@ -58,7 +58,9 @@ import {
   Flag,
   BarChart3,
   Archive,
-  RefreshCcw
+  RefreshCcw,
+  Wifi,
+  Circle
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -1305,18 +1307,18 @@ Ask clarifying questions if needed, then help them write or refine their message
                     color: 'text-blue-400'
                   },
                   {
+                    label: 'Online Now',
+                    value: stats?.onlineUsers || 0,
+                    icon: Wifi,
+                    color: 'text-green-400',
+                    isLive: true
+                  },
+                  {
                     label: 'Premium Subscriptions',
                     value: stats?.premiumUsers || 0,
                     change: stats?.newPremiumSubscriptions || 0,
                     icon: TrendingUp,
                     color: 'text-gold'
-                  },
-                  {
-                    label: 'Standard Subscriptions',
-                    value: stats?.standardUsers || 0,
-                    change: stats?.newStandardSubscriptions || 0,
-                    icon: Activity,
-                    color: 'text-blue-400'
                   },
                   {
                     label: 'Open Support Chats',
@@ -1330,7 +1332,14 @@ Ask clarifying questions if needed, then help them write or refine their message
                     <FadeIn key={stat.label} delay={index * 0.1}>
                       <div className="glass-card p-6">
                         <div className="flex items-center justify-between mb-4">
-                          <Icon className={`w-8 h-8 ${stat.color}`} />
+                          <div className="flex items-center gap-2">
+                            <Icon className={`w-8 h-8 ${stat.color}`} />
+                            {stat.isLive && (
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                              </span>
+                            )}
+                          </div>
                           {stat.change > 0 && statsPeriod !== 'all' && (
                             <span className="text-green-400 text-sm font-medium">+{stat.change}</span>
                           )}
@@ -1372,7 +1381,7 @@ Ask clarifying questions if needed, then help them write or refine their message
                 })}
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-6">
+              <div className="grid lg:grid-cols-2 gap-6 mb-8">
                 <FadeIn delay={0.4}>
                   <div className="glass-card p-6">
                     <h3 className="text-lg font-serif text-cream mb-4">Recent Users</h3>
@@ -1715,6 +1724,7 @@ Ask clarifying questions if needed, then help them write or refine their message
                     <thead>
                       <tr className="border-b border-gold/10">
                         <th className="text-left p-4 text-cream/60 font-medium">User</th>
+                        <th className="text-left p-4 text-cream/60 font-medium">Status</th>
                         <th className="text-left p-4 text-cream/60 font-medium">Role</th>
                         <th className="text-left p-4 text-cream/60 font-medium">Subscription</th>
                         <th className="text-left p-4 text-cream/60 font-medium">Content</th>
@@ -1730,6 +1740,28 @@ Ask clarifying questions if needed, then help them write or refine their message
                               <p className="text-cream font-medium">{u.firstName} {u.lastName}</p>
                               <p className="text-cream/50 text-sm">{u.email}</p>
                             </div>
+                          </td>
+                          <td className="p-4">
+                            {u.isOnline ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                <span className="text-green-400 text-xs">Online</span>
+                              </span>
+                            ) : u.lastActiveAt ? (
+                              <span className="text-cream/40 text-xs">
+                                {(() => {
+                                  const diff = Date.now() - new Date(u.lastActiveAt).getTime();
+                                  const mins = Math.floor(diff / 60000);
+                                  const hours = Math.floor(mins / 60);
+                                  const days = Math.floor(hours / 24);
+                                  if (mins < 60) return `${mins}m ago`;
+                                  if (hours < 24) return `${hours}h ago`;
+                                  return `${days}d ago`;
+                                })()}
+                              </span>
+                            ) : (
+                              <span className="text-cream/30 text-xs">Never</span>
+                            )}
                           </td>
                           <td className="p-4">
                             <span className={`px-2 py-1 rounded text-xs ${

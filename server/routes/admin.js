@@ -34,6 +34,9 @@ router.get('/stats', async (req, res) => {
       ? { subscribedAt: dateFilter }
       : {};
 
+    // Online = active in last 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
     const [
       totalUsers,
       newUsers,
@@ -52,6 +55,7 @@ router.get('/stats', async (req, res) => {
       totalWisdomChats,
       newWisdomChats,
       openSupportChats,
+      onlineUsers,
       recentUsers,
       recentActivity
     ] = await Promise.all([
@@ -73,6 +77,8 @@ router.get('/stats', async (req, res) => {
       req.prisma.wisdomChat.count(),
       req.prisma.wisdomChat.count({ where: periodWhere }),
       req.prisma.supportChat.count({ where: { status: 'open' } }),
+      // Online users (active in last 5 minutes)
+      req.prisma.user.count({ where: { lastActiveAt: { gte: fiveMinutesAgo } } }),
       // Recent users
       req.prisma.user.findMany({
         take: 5,
@@ -121,6 +127,7 @@ router.get('/stats', async (req, res) => {
       totalAvatarImages,
       totalWisdomChats,
       openSupportChats,
+      onlineUsers,
       // Period-specific
       newUsers,
       newPremiumSubscriptions,
@@ -170,6 +177,8 @@ router.get('/users', async (req, res) => {
           role: true,
           subscription: true,
           createdAt: true,
+          lastActiveAt: true,
+          lastLoginAt: true,
           _count: {
             select: {
               memories: true,
@@ -181,8 +190,15 @@ router.get('/users', async (req, res) => {
       req.prisma.user.count({ where })
     ]);
 
+    // Add online status (active within last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const usersWithStatus = users.map(user => ({
+      ...user,
+      isOnline: user.lastActiveAt && new Date(user.lastActiveAt) > fiveMinutesAgo
+    }));
+
     res.json({
-      users,
+      users: usersWithStatus,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -257,7 +273,7 @@ router.get('/users/:id/details', async (req, res) => {
         role: true,
         subscription: true,
         subscribedAt: true,
-        purpose: true,
+        purposes: true,
         tokenBalance: true,
         referralCode: true,
         referredBy: true,
