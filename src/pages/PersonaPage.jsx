@@ -288,6 +288,12 @@ export function PersonaPage({ onNavigate }) {
   const [voiceCloneSuccess, setVoiceCloneSuccess] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
 
+  // Avatar edit/delete state
+  const [editingAvatar, setEditingAvatar] = useState(null);
+  const [deletingAvatar, setDeletingAvatar] = useState(null);
+  const [editAvatarForm, setEditAvatarForm] = useState({ label: '' });
+  const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+
   // Photo Avatar state
   const [isCreatingPhotoAvatar, setIsCreatingPhotoAvatar] = useState(false);
   const [photoAvatarError, setPhotoAvatarError] = useState(null);
@@ -675,12 +681,34 @@ export function PersonaPage({ onNavigate }) {
   const deleteAvatarImage = async (imageId) => {
     setSaving(true);
     await deleteAvatar(imageId);
+    setDeletingAvatar(null);
     setSaving(false);
   };
 
   const updateAvatarLabel = async (imageId, newLabel) => {
     // Debounce label updates
     await updateAvatar(imageId, { label: newLabel });
+  };
+
+  // Open edit modal for an avatar
+  const openEditAvatarModal = (avatar) => {
+    setEditingAvatar(avatar);
+    setEditAvatarForm({ label: avatar.label || '' });
+  };
+
+  // Save avatar edits
+  const handleSaveAvatarEdit = async () => {
+    if (!editingAvatar) return;
+    setIsUpdatingAvatar(true);
+    await updateAvatar(editingAvatar.id, { label: editAvatarForm.label });
+    setIsUpdatingAvatar(false);
+    setEditingAvatar(null);
+  };
+
+  // Confirm delete avatar
+  const handleConfirmDeleteAvatar = async () => {
+    if (!deletingAvatar) return;
+    await deleteAvatarImage(deletingAvatar.id);
   };
 
   const handleBackgroundUpload = (e) => {
@@ -1428,31 +1456,74 @@ export function PersonaPage({ onNavigate }) {
                   )}
 
                   {/* Avatar Selection Gallery */}
-                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
-                    {avatarImages.map((img) => (
-                      <motion.button
-                        key={img.id}
-                        onClick={() => selectActiveAvatar(img.id)}
-                        className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
-                          (img.isActive || persona.activeAvatarId === img.id)
-                            ? 'border-gold ring-2 ring-gold/30'
-                            : 'border-gold/20 hover:border-gold/50'
-                        }`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <img
-                          src={img.imageData || img.image}
-                          alt={img.label}
-                          className="w-full h-full object-cover"
-                        />
-                        {(img.isActive || persona.activeAvatarId === img.id) && (
-                          <div className="absolute inset-0 bg-gold/20 flex items-center justify-center">
-                            <CheckCircle2 className="w-6 h-6 text-gold" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {avatarImages.map((img) => {
+                      const isActive = img.isActive || persona.activeAvatarId === img.id;
+                      return (
+                        <div
+                          key={img.id}
+                          className={`relative group rounded-xl overflow-hidden border-2 transition-all ${
+                            isActive
+                              ? 'border-gold ring-2 ring-gold/30'
+                              : 'border-gold/20 hover:border-gold/50'
+                          }`}
+                        >
+                          {/* Avatar Image */}
+                          <motion.button
+                            onClick={() => selectActiveAvatar(img.id)}
+                            className="w-full aspect-square"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <img
+                              src={img.imageData || img.image}
+                              alt={img.label}
+                              className="w-full h-full object-cover"
+                            />
+                            {isActive && (
+                              <div className="absolute inset-0 bg-gold/20 flex items-center justify-center">
+                                <CheckCircle2 className="w-8 h-8 text-gold" />
+                              </div>
+                            )}
+                          </motion.button>
+
+                          {/* Avatar Info & Actions */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-navy/95 via-navy/80 to-transparent p-3 pt-8">
+                            <p className="text-cream text-sm font-medium truncate mb-2">
+                              {img.label || 'Unnamed Avatar'}
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditAvatarModal(img);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-navy-light/80 hover:bg-gold/20 text-cream/70 hover:text-gold rounded-lg text-xs transition-colors"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingAvatar(img);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-navy-light/80 hover:bg-red-500/20 text-cream/70 hover:text-red-400 rounded-lg text-xs transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Delete
+                              </button>
+                            </div>
                           </div>
-                        )}
-                      </motion.button>
-                    ))}
+
+                          {/* Active Badge */}
+                          {isActive && (
+                            <div className="absolute top-2 right-2 px-2 py-1 bg-gold text-navy text-xs font-bold rounded-full">
+                              Active
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Avatar Status */}
@@ -2831,6 +2902,158 @@ export function PersonaPage({ onNavigate }) {
                     </>
                   )}
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Avatar Modal */}
+      <AnimatePresence>
+        {editingAvatar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setEditingAvatar(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-navy-light rounded-2xl p-6 max-w-md w-full border border-gold/30"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-serif text-cream">Edit Avatar</h3>
+                <button
+                  onClick={() => setEditingAvatar(null)}
+                  className="p-2 hover:bg-navy rounded-lg text-cream/50 hover:text-cream transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Avatar Preview */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-gold/30">
+                  <img
+                    src={editingAvatar.imageData || editingAvatar.image}
+                    alt={editingAvatar.label}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-cream/70 text-sm mb-2">Avatar Name</label>
+                  <input
+                    type="text"
+                    value={editAvatarForm.label}
+                    onChange={(e) => setEditAvatarForm({ label: e.target.value })}
+                    placeholder="Enter avatar name..."
+                    className="input-field w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditingAvatar(null)}
+                  className="flex-1 px-4 py-3 bg-navy hover:bg-navy-dark text-cream rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAvatarEdit}
+                  disabled={isUpdatingAvatar}
+                  className="flex-1 btn-primary flex items-center justify-center gap-2"
+                >
+                  {isUpdatingAvatar ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Avatar Confirmation Modal */}
+      <AnimatePresence>
+        {deletingAvatar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setDeletingAvatar(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-navy-light rounded-2xl p-6 max-w-md w-full border border-red-500/30"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-serif text-cream">Delete Avatar</h3>
+                  <p className="text-cream/50 text-sm">This action cannot be undone</p>
+                </div>
+              </div>
+
+              {/* Avatar Preview */}
+              <div className="flex items-center gap-4 p-4 bg-navy/50 rounded-xl mb-6">
+                <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-gold/20">
+                  <img
+                    src={deletingAvatar.imageData || deletingAvatar.image}
+                    alt={deletingAvatar.label}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="text-cream font-medium">{deletingAvatar.label || 'Unnamed Avatar'}</p>
+                  {(deletingAvatar.isActive || persona.activeAvatarId === deletingAvatar.id) && (
+                    <span className="text-gold text-xs">Currently Active</span>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-cream/70 text-sm mb-6">
+                Are you sure you want to delete this avatar? All associated data will be permanently removed.
+              </p>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeletingAvatar(null)}
+                  className="flex-1 px-4 py-3 bg-navy hover:bg-navy-dark text-cream rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDeleteAvatar}
+                  disabled={saving}
+                  className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Trash2 className="w-5 h-5" />
+                      Delete Avatar
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </motion.div>
