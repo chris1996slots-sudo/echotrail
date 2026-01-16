@@ -845,13 +845,6 @@ export function EchoSimPage({ onNavigate }) {
                     }`}>
                       {hasVoiceClone ? '✓' : '○'} Voice Clone
                     </span>
-                    <Link
-                      to="/video-archive"
-                      onClick={(e) => e.stopPropagation()}
-                      className="px-2 py-0.5 rounded-full text-xs bg-gold/20 text-gold hover:bg-gold/30 transition-colors"
-                    >
-                      → Video Archive
-                    </Link>
                   </div>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-cream/50 transition-transform ${
@@ -904,6 +897,34 @@ export function EchoSimPage({ onNavigate }) {
             </motion.div>
           </FadeIn>
         </div>
+
+        {/* Video Archive Card */}
+        <FadeIn delay={0.25}>
+          <Link to="/video-archive" className="block mb-10">
+            <motion.div
+              className="glass-card p-6 border-2 border-transparent hover:border-blue-500/30 transition-all cursor-pointer"
+              whileHover={{ y: -2 }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                  <Film className="w-7 h-7 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-serif text-cream">Video Archive</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs">
+                      Your Videos
+                    </span>
+                  </div>
+                  <p className="text-cream/60 text-sm">
+                    View all your generated videos, check status of pending videos, and download completed ones.
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-cream/50" />
+              </div>
+            </motion.div>
+          </Link>
+        </FadeIn>
 
         {/* Expanded Content for Option 1: Video Generation */}
         <AnimatePresence>
