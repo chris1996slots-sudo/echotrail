@@ -1423,141 +1423,100 @@ export function PersonaPage({ onNavigate }) {
               <FadeIn>
                 <div className="glass-card p-6 border-gold/30">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-serif text-cream">Your Avatars</h3>
-                    <span className="text-cream/50 text-sm">{avatarImages.length} avatar{avatarImages.length !== 1 ? 's' : ''}</span>
+                    <h3 className="text-xl font-serif text-cream">Your Digital Avatar</h3>
                   </div>
 
-                  {/* Active Avatar Preview */}
+                  {/* Active Avatar with Settings */}
                   {activeAvatar && (
-                    <div className="flex flex-col md:flex-row gap-6 mb-6">
-                      <div className="flex-shrink-0">
-                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-gold/60 shadow-xl">
+                    <div className="mb-6">
+                      {/* Avatar Info Row */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-gold/40">
                           <img
                             src={activeAvatar.imageData || activeAvatar.image}
                             alt={activeAvatar.label || 'Active Avatar'}
                             className="w-full h-full object-cover"
                           />
                         </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-1 bg-gold/20 text-gold text-xs font-medium rounded-full">Active</span>
-                          <span className="text-cream font-medium">{activeAvatar.label || 'Unnamed Avatar'}</span>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 bg-gold/20 text-gold text-xs font-medium rounded-full">Active</span>
+                            <span className="text-cream font-medium">{activeAvatar.label || 'Unnamed Avatar'}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            <span className="px-2 py-0.5 bg-navy-light/50 text-cream/60 text-xs rounded">
+                              {avatarStyles.find(s => s.id === persona.avatarStyle)?.label || 'Realistic'}
+                            </span>
+                            <span className="px-2 py-0.5 bg-navy-light/50 text-cream/60 text-xs rounded">
+                              {backgrounds.find(b => b.id === persona.backgroundType)?.label || 'Beach'}
+                            </span>
+                            <span className="px-2 py-0.5 bg-navy-light/50 text-cream/60 text-xs rounded flex items-center gap-1">
+                              <span className="text-xs">{vibeOptions.find(v => v.id === (activeAvatar.echoVibe || 'compassionate'))?.icon}</span>
+                              {vibeOptions.find(v => v.id === (activeAvatar.echoVibe || 'compassionate'))?.label}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <span className="px-3 py-1 bg-navy-light/50 text-cream/70 text-xs rounded-full">
-                            {avatarStyles.find(s => s.id === persona.avatarStyle)?.label || 'Realistic'}
-                          </span>
-                          <span className="px-3 py-1 bg-navy-light/50 text-cream/70 text-xs rounded-full">
-                            {backgrounds.find(b => b.id === persona.backgroundType)?.label || 'Beach'}
-                          </span>
-                          <span className="px-3 py-1 bg-navy-light/50 text-cream/70 text-xs rounded-full flex items-center gap-1">
-                            <span>{vibeOptions.find(v => v.id === (activeAvatar.echoVibe || 'compassionate'))?.icon}</span>
-                            {vibeOptions.find(v => v.id === (activeAvatar.echoVibe || 'compassionate'))?.label}
-                          </span>
-                        </div>
-                        <p className="text-cream/50 text-sm">
-                          This avatar will be used in EchoSim conversations
-                        </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Avatar Selection Gallery */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {avatarImages.map((img) => {
-                      const isActive = img.isActive || persona.activeAvatarId === img.id;
-                      return (
-                        <div
-                          key={img.id}
-                          className={`relative group rounded-xl overflow-hidden border-2 transition-all ${
-                            isActive
-                              ? 'border-gold ring-2 ring-gold/30'
-                              : 'border-gold/20 hover:border-gold/50'
-                          }`}
-                        >
-                          {/* Avatar Image */}
+                  {/* Avatar Status Badges */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {persona.elevenlabsVoiceId && (
+                      <span className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs font-medium rounded-full flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Voice Clone Active
+                      </span>
+                    )}
+                    {persona.heygenAvatarId && (
+                      <span className="px-3 py-1.5 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Talking Avatar Active
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Edit/Delete Actions for Active Avatar */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => openEditAvatarModal(activeAvatar)}
+                      className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-gold/20 text-cream/70 hover:text-gold rounded-lg text-sm transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit Name
+                    </button>
+                    <button
+                      onClick={() => setDeletingAvatar(activeAvatar)}
+                      className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-red-500/20 text-cream/70 hover:text-red-400 rounded-lg text-sm transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Other Avatars (if more than 1) */}
+                  {avatarImages.length > 1 && (
+                    <div className="border-t border-gold/20 pt-4">
+                      <p className="text-cream/50 text-sm mb-3">Switch to another avatar:</p>
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        {avatarImages.filter(img => !(img.isActive || persona.activeAvatarId === img.id)).map((img) => (
                           <motion.button
+                            key={img.id}
                             onClick={() => selectActiveAvatar(img.id)}
-                            className="w-full aspect-square"
-                            whileHover={{ scale: 1.02 }}
+                            className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 border-gold/20 hover:border-gold/50 transition-all"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                           >
                             <img
                               src={img.imageData || img.image}
                               alt={img.label}
                               className="w-full h-full object-cover"
                             />
-                            {isActive && (
-                              <div className="absolute inset-0 bg-gold/20 flex items-center justify-center">
-                                <CheckCircle2 className="w-8 h-8 text-gold" />
-                              </div>
-                            )}
                           </motion.button>
-
-                          {/* Avatar Info & Actions */}
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-navy/95 via-navy/80 to-transparent p-3 pt-8">
-                            <p className="text-cream text-sm font-medium truncate mb-2">
-                              {img.label || 'Unnamed Avatar'}
-                            </p>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEditAvatarModal(img);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-navy-light/80 hover:bg-gold/20 text-cream/70 hover:text-gold rounded-lg text-xs transition-colors"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeletingAvatar(img);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-navy-light/80 hover:bg-red-500/20 text-cream/70 hover:text-red-400 rounded-lg text-xs transition-colors"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Active Badge */}
-                          {isActive && (
-                            <div className="absolute top-2 right-2 px-2 py-1 bg-gold text-navy text-xs font-bold rounded-full">
-                              Active
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Avatar Status */}
-                  <div className="mt-6 space-y-3">
-                    {/* Voice Clone Status */}
-                    {persona.elevenlabsVoiceId && (
-                      <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center gap-3">
-                        <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                        <div>
-                          <p className="text-emerald-400 font-medium">Voice Clone Active</p>
-                          <p className="text-emerald-300/60 text-sm">Your AI speaks in your voice</p>
-                        </div>
+                        ))}
                       </div>
-                    )}
-
-                    {/* Talking Avatar Status */}
-                    {persona.heygenAvatarId && (
-                      <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/30 flex items-center gap-3">
-                        <CheckCircle2 className="w-6 h-6 text-purple-400" />
-                        <div>
-                          <p className="text-purple-400 font-medium">Talking Avatar Active</p>
-                          <p className="text-purple-300/60 text-sm">Your avatar can speak with lip sync</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </FadeIn>
             )}
