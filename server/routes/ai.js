@@ -1324,6 +1324,552 @@ router.get('/avatar/streaming/config', authenticate, async (req, res) => {
 });
 
 // =====================
+// HEYGEN AVATAR IV API - Photorealistic Video from Photo
+// =====================
+
+// Generate Avatar IV video from user's photo with their cloned voice
+router.post('/avatar/iv/generate', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    const { text, videoTitle } = req.body;
+
+    if (!text || text.length > 1500) {
+      return res.status(400).json({ error: 'Text is required and must be under 1500 characters' });
+    }
+
+    // Get HeyGen config
+    let avatarConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!avatarConfig?.apiKey) {
+      avatarConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!avatarConfig?.isActive || !avatarConfig?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
+    }
+
+    // Get ElevenLabs config for voice clone audio
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    // Get user's persona with avatar image and voice clone
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      include: {
+        avatarImages: {
+          where: { isActive: true },
+          take: 1
+        }
+      }
+    });
+
+    if (!persona) {
+      return res.status(404).json({ error: 'Persona not found. Please create your persona first.' });
+    }
+
+    // Get the active avatar image
+    const activeAvatar = persona.avatarImages[0];
+    if (!activeAvatar?.imageData) {
+      return res.status(400).json({
+        error: 'No avatar photo found. Please upload a photo in My Persona → Avatar tab.'
+      });
+    }
+
+    console.log('Avatar IV: Generating video for user', req.user.id);
+    console.log('Avatar IV: Has voice clone:', !!persona.elevenlabsVoiceId);
+
+    // Step 1: Upload the image to HeyGen for Avatar IV
+    const base64Match = activeAvatar.imageData.match(/^data:image\/(\w+);base64,/);
+    const imageFormat = base64Match ? base64Match[1] : 'jpeg';
+    const contentType = imageFormat === 'png' ? 'image/png' : 'image/jpeg';
+    const base64Data = activeAvatar.imageData.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    console.log('Avatar IV: Uploading image to HeyGen...');
+    const uploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': avatarConfig.apiKey,
+        'Content-Type': contentType
+      },
+      body: imageBuffer
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('Avatar IV upload error:', errorText);
+      return res.status(uploadResponse.status).json({
+        error: 'Failed to upload image to HeyGen',
+        debug: { status: uploadResponse.status, response: errorText }
+      });
+    }
+
+    const uploadData = await uploadResponse.json();
+    const imageKey = uploadData.data?.image_key;
+    console.log('Avatar IV: Image uploaded, key:', imageKey);
+
+    if (!imageKey) {
+      return res.status(500).json({
+        error: 'Failed to get image key from HeyGen',
+        debug: uploadData
+      });
+    }
+
+    // Step 2: Generate audio with ElevenLabs voice clone (if available)
+    let audioAssetId = null;
+
+    if (persona.elevenlabsVoiceId && voiceConfig?.apiKey) {
+      console.log('Avatar IV: Generating audio with voice clone...');
+
+      // Generate TTS audio
+      const ttsResponse = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${persona.elevenlabsVoiceId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': voiceConfig.apiKey,
+          },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_turbo_v2_5',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.85,
+            }
+          })
+        }
+      );
+
+      if (ttsResponse.ok) {
+        const audioBuffer = await ttsResponse.arrayBuffer();
+        console.log('Avatar IV: Audio generated, size:', audioBuffer.byteLength);
+
+        // Upload audio to HeyGen
+        console.log('Avatar IV: Uploading audio to HeyGen...');
+        const audioUploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
+          method: 'POST',
+          headers: {
+            'X-API-KEY': avatarConfig.apiKey,
+            'Content-Type': 'audio/mpeg'
+          },
+          body: Buffer.from(audioBuffer)
+        });
+
+        if (audioUploadResponse.ok) {
+          const audioUploadData = await audioUploadResponse.json();
+          audioAssetId = audioUploadData.data?.id || audioUploadData.data?.audio_asset_id;
+          console.log('Avatar IV: Audio uploaded, asset ID:', audioAssetId);
+        } else {
+          const audioError = await audioUploadResponse.text();
+          console.log('Avatar IV: Audio upload failed, will use HeyGen TTS:', audioError);
+        }
+      } else {
+        const ttsError = await ttsResponse.text();
+        console.log('Avatar IV: Voice clone TTS failed, will use HeyGen TTS:', ttsError);
+      }
+    }
+
+    // Step 3: Create Avatar IV video
+    console.log('Avatar IV: Generating video...');
+
+    const av4Request = {
+      image_key: imageKey,
+      video_title: videoTitle || `EchoTrail - ${new Date().toLocaleString()}`
+    };
+
+    // Use audio asset if we have voice clone audio, otherwise use HeyGen TTS
+    if (audioAssetId) {
+      av4Request.audio_asset_id = audioAssetId;
+    } else {
+      // Get a suitable HeyGen voice
+      const voicesResponse = await fetch('https://api.heygen.com/v2/voices', {
+        method: 'GET',
+        headers: { 'x-api-key': avatarConfig.apiKey }
+      });
+
+      let voiceId = '1bd001e7e50f421d891986aad5158bc8'; // Fallback voice
+      if (voicesResponse.ok) {
+        const voicesData = await voicesResponse.json();
+        const voices = voicesData.data?.voices || [];
+        const englishVoice = voices.find(v => v.language?.toLowerCase().includes('english'));
+        if (englishVoice) {
+          voiceId = englishVoice.voice_id;
+        }
+      }
+
+      av4Request.script = text;
+      av4Request.voice_id = voiceId;
+    }
+
+    console.log('Avatar IV request:', JSON.stringify(av4Request, null, 2));
+
+    const av4Response = await fetch('https://api.heygen.com/v2/video/av4/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': avatarConfig.apiKey,
+      },
+      body: JSON.stringify(av4Request)
+    });
+
+    const av4ResponseText = await av4Response.text();
+    let av4Data;
+    try {
+      av4Data = JSON.parse(av4ResponseText);
+    } catch (e) {
+      console.error('Avatar IV response not JSON:', av4ResponseText);
+      return res.status(av4Response.status).json({
+        error: 'Invalid response from HeyGen Avatar IV API',
+        debug: av4ResponseText
+      });
+    }
+
+    if (!av4Response.ok) {
+      console.error('Avatar IV generate error:', av4Data);
+      return res.status(av4Response.status).json({
+        error: av4Data.message || av4Data.error?.message || 'Avatar IV video generation failed',
+        debug: av4Data
+      });
+    }
+
+    console.log('Avatar IV: Video generation started:', av4Data);
+
+    res.json({
+      videoId: av4Data.data?.video_id,
+      status: 'processing',
+      usedVoiceClone: !!audioAssetId,
+      message: audioAssetId
+        ? 'Video is being generated with your cloned voice. This may take 1-2 minutes.'
+        : 'Video is being generated. This may take 1-2 minutes.'
+    });
+  } catch (error) {
+    console.error('Avatar IV error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate Avatar IV video' });
+  }
+});
+
+// Check Avatar IV video status (uses same endpoint as regular video)
+router.get('/avatar/iv/status/:videoId', authenticate, async (req, res) => {
+  try {
+    const { videoId } = req.params;
+
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!config?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured' });
+    }
+
+    const response = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {
+      headers: { 'x-api-key': config.apiKey }
+    });
+
+    const data = await response.json();
+
+    // Return full status with video URL when ready
+    res.json({
+      videoId,
+      status: data.data?.status,
+      videoUrl: data.data?.video_url,
+      thumbnailUrl: data.data?.thumbnail_url,
+      duration: data.data?.duration,
+      error: data.data?.error
+    });
+  } catch (error) {
+    console.error('Avatar IV status error:', error);
+    res.status(500).json({ error: 'Failed to check video status' });
+  }
+});
+
+// =====================
+// LIVEAVATAR API - Real-Time Interactive Avatar
+// =====================
+
+// Get LiveAvatar session token for real-time conversation
+router.post('/liveavatar/session', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    // Get LiveAvatar API config
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'liveavatar' }
+    });
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'LiveAvatar API not configured. Please add API key in Admin Dashboard → APIs → LiveAvatar.' });
+    }
+
+    // Get user's persona to check for custom avatar
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        liveavatarId: true,
+        liveavatarName: true,
+        liveavatarStatus: true,
+        elevenlabsVoiceId: true
+      }
+    });
+
+    // Determine which avatar to use
+    // If user has a custom LiveAvatar, use it; otherwise use a public avatar
+    const avatarId = persona?.liveavatarId && persona?.liveavatarStatus === 'ready'
+      ? persona.liveavatarId
+      : 'default'; // Will be replaced with actual public avatar ID
+
+    // Create session token from LiveAvatar API
+    const response = await fetch('https://api.liveavatar.com/v1/sessions/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': config.apiKey,
+      },
+      body: JSON.stringify({
+        avatar_id: avatarId,
+        mode: 'CUSTOM', // We'll handle voice ourselves with ElevenLabs
+        // For CUSTOM mode, we don't need avatar_persona
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      console.error('LiveAvatar session error:', errorData);
+      return res.status(response.status).json({
+        error: errorData.message || errorData.detail || 'Failed to create LiveAvatar session',
+        debug: errorData
+      });
+    }
+
+    const data = await response.json();
+    console.log('LiveAvatar session created:', { sessionId: data.session_id });
+
+    res.json({
+      sessionId: data.session_id,
+      sessionToken: data.session_token,
+      hasCustomAvatar: !!persona?.liveavatarId && persona?.liveavatarStatus === 'ready',
+      message: 'LiveAvatar session created successfully'
+    });
+  } catch (error) {
+    console.error('LiveAvatar session error:', error);
+    res.status(500).json({ error: 'Failed to create LiveAvatar session' });
+  }
+});
+
+// Start LiveAvatar session (get LiveKit room details)
+router.post('/liveavatar/start', authenticate, async (req, res) => {
+  try {
+    const { sessionToken } = req.body;
+
+    if (!sessionToken) {
+      return res.status(400).json({ error: 'Session token is required' });
+    }
+
+    // Start session with LiveAvatar
+    const response = await fetch('https://api.liveavatar.com/v1/sessions/start', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      console.error('LiveAvatar start error:', errorData);
+      return res.status(response.status).json({
+        error: errorData.message || 'Failed to start LiveAvatar session',
+        debug: errorData
+      });
+    }
+
+    const data = await response.json();
+    console.log('LiveAvatar session started:', { hasLivekitUrl: !!data.livekit_url });
+
+    res.json({
+      livekitUrl: data.livekit_url,
+      livekitToken: data.livekit_token,
+      roomName: data.room_name
+    });
+  } catch (error) {
+    console.error('LiveAvatar start error:', error);
+    res.status(500).json({ error: 'Failed to start LiveAvatar session' });
+  }
+});
+
+// List available public avatars from LiveAvatar
+router.get('/liveavatar/avatars', authenticate, async (req, res) => {
+  try {
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'liveavatar' }
+    });
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'LiveAvatar API not configured' });
+    }
+
+    const response = await fetch('https://api.liveavatar.com/v1/avatars/public', {
+      method: 'GET',
+      headers: {
+        'X-API-KEY': config.apiKey,
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: 'Failed to fetch avatars', debug: errorText });
+    }
+
+    const data = await response.json();
+    res.json({
+      avatars: data.avatars || data.data?.avatars || []
+    });
+  } catch (error) {
+    console.error('LiveAvatar avatars error:', error);
+    res.status(500).json({ error: 'Failed to fetch avatars' });
+  }
+});
+
+// Get LiveAvatar configuration status for user
+router.get('/liveavatar/status', authenticate, async (req, res) => {
+  try {
+    // Check if LiveAvatar API is configured
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'liveavatar' }
+    });
+
+    const isConfigured = !!(config?.isActive && config?.apiKey);
+
+    // Get user's LiveAvatar status
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        liveavatarId: true,
+        liveavatarName: true,
+        liveavatarStatus: true,
+        elevenlabsVoiceId: true,
+        elevenlabsVoiceName: true
+      }
+    });
+
+    res.json({
+      apiConfigured: isConfigured,
+      hasCustomAvatar: !!persona?.liveavatarId,
+      customAvatarStatus: persona?.liveavatarStatus,
+      customAvatarName: persona?.liveavatarName,
+      hasVoiceClone: !!persona?.elevenlabsVoiceId,
+      voiceCloneName: persona?.elevenlabsVoiceName
+    });
+  } catch (error) {
+    console.error('LiveAvatar status error:', error);
+    res.status(500).json({ error: 'Failed to get LiveAvatar status' });
+  }
+});
+
+// Upload video to create custom LiveAvatar
+router.post('/liveavatar/create-avatar', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    const { videoUrl, name } = req.body;
+
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'Video URL is required. Please upload a 2-minute video following the guidelines.' });
+    }
+
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'liveavatar' }
+    });
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'LiveAvatar API not configured' });
+    }
+
+    const avatarName = name || `${req.user.firstName}'s Avatar`;
+
+    // Create custom avatar via LiveAvatar API
+    const response = await fetch('https://api.liveavatar.com/v1/avatars', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': config.apiKey,
+      },
+      body: JSON.stringify({
+        name: avatarName,
+        training_video_url: videoUrl,
+        // consent_video_url may be required - check docs
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      console.error('LiveAvatar create avatar error:', errorData);
+      return res.status(response.status).json({
+        error: errorData.message || errorData.detail || 'Failed to create custom avatar',
+        debug: errorData
+      });
+    }
+
+    const data = await response.json();
+    const avatarId = data.avatar_id || data.data?.avatar_id;
+
+    // Save to persona
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (persona) {
+      await req.prisma.persona.update({
+        where: { id: persona.id },
+        data: {
+          liveavatarId: avatarId,
+          liveavatarName: avatarName,
+          liveavatarStatus: 'pending' // Will be 'training' then 'ready'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      avatarId,
+      avatarName,
+      status: 'pending',
+      message: 'Custom avatar creation started. Training may take several hours.'
+    });
+  } catch (error) {
+    console.error('LiveAvatar create avatar error:', error);
+    res.status(500).json({ error: 'Failed to create custom avatar' });
+  }
+});
+
+// =====================
 // Helper Functions
 // =====================
 function buildEchoPrompt(persona, user, context) {

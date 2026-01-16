@@ -444,6 +444,53 @@ class ApiService {
   async getAdminReferralList() {
     return this.request('/api/admin/referral/list');
   }
+
+  // =====================
+  // Avatar IV API (Photo → Video with Voice Clone)
+  // =====================
+
+  async generateAvatarIV(text, videoTitle) {
+    return this.request('/api/ai/avatar/iv/generate', {
+      method: 'POST',
+      body: JSON.stringify({ text, videoTitle }),
+    });
+  }
+
+  async getAvatarIVStatus(videoId) {
+    return this.request(`/api/ai/avatar/iv/status/${videoId}`);
+  }
+
+  // =====================
+  // LiveAvatar API (Real-Time Interactive Avatar)
+  // =====================
+
+  async getLiveAvatarSession() {
+    return this.request('/api/ai/liveavatar/session', {
+      method: 'POST',
+    });
+  }
+
+  async startLiveAvatarSession(sessionToken) {
+    return this.request('/api/ai/liveavatar/start', {
+      method: 'POST',
+      body: JSON.stringify({ sessionToken }),
+    });
+  }
+
+  async getLiveAvatarAvatars() {
+    return this.request('/api/ai/liveavatar/avatars');
+  }
+
+  async getLiveAvatarStatus() {
+    return this.request('/api/ai/liveavatar/status');
+  }
+
+  async createLiveAvatar(videoUrl, name) {
+    return this.request('/api/ai/liveavatar/create-avatar', {
+      method: 'POST',
+      body: JSON.stringify({ videoUrl, name }),
+    });
+  }
 }
 
 export const api = new ApiService();

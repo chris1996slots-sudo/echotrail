@@ -90,11 +90,20 @@ const serviceCategories = {
   },
   avatar: {
     name: 'Avatar (Video)',
-    description: 'Talking avatar and lip-sync',
+    description: 'Talking avatar, lip-sync, and Avatar IV',
     icon: Video,
     color: 'from-orange-500 to-red-500',
     providers: [
-      { id: 'heygen', name: 'HeyGen', docsUrl: 'https://heygen.com/', tier: 'premium', description: 'Professional avatars' },
+      { id: 'heygen', name: 'HeyGen', docsUrl: 'https://heygen.com/', tier: 'premium', description: 'Photo avatars & Avatar IV' },
+    ]
+  },
+  liveavatar: {
+    name: 'LiveAvatar (Real-Time)',
+    description: 'Real-time interactive avatar streaming',
+    icon: Video,
+    color: 'from-pink-500 to-purple-500',
+    providers: [
+      { id: 'liveavatar', name: 'LiveAvatar', docsUrl: 'https://app.liveavatar.com/developers', tier: 'premium', description: 'Real-time video conversations' },
     ]
   }
 };
@@ -104,6 +113,7 @@ const aiServices = [
   { id: 'llm', name: 'AI Brain', icon: Cpu, color: 'from-purple-500 to-indigo-500', category: 'llm' },
   { id: 'voice', name: 'Voice', icon: Mic, color: 'from-emerald-500 to-teal-500', category: 'voice' },
   { id: 'avatar', name: 'Avatar', icon: Video, color: 'from-orange-500 to-red-500', category: 'avatar' },
+  { id: 'liveavatar', name: 'LiveAvatar', icon: Video, color: 'from-pink-500 to-purple-500', category: 'liveavatar' },
 ];
 
 export function AdminDashboard({ onNavigate }) {

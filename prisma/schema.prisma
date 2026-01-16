@@ -98,6 +98,11 @@ model Persona {
   heygenAvatarId      String?  // The photo avatar group ID from HeyGen
   heygenAvatarName    String?  // Name of the photo avatar
 
+  // LiveAvatar Custom Interactive Avatar
+  liveavatarId        String?  // Custom avatar ID from LiveAvatar
+  liveavatarName      String?  // Name of the custom avatar
+  liveavatarStatus    String?  // pending, training, ready, failed
+
   lifeStories    LifeStory[]
   avatarImages   AvatarImage[]
   voiceSamples   VoiceSample[]

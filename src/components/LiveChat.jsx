@@ -1,164 +1,75 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
-import { Send, Video, VideoOff, Loader2, X, AlertCircle, Volume2, VolumeX, Users } from 'lucide-react';
+import { Send, Video, VideoOff, Loader2, X, AlertCircle, Volume2, VolumeX, Users, Sparkles, Image, Radio, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 
-// HeyGen Public Streaming Avatars (these are compatible with streaming API)
-// See: https://docs.heygen.com/docs/streaming-avatar-sdk
-const PUBLIC_AVATARS = [
-  { id: 'Anna_public_3_20240108', name: 'Anna', preview: '👩' },
-  { id: 'josh_lite3_20230714', name: 'Josh', preview: '👨' },
-  { id: 'Santa_Claus_Front_public', name: 'Santa', preview: '🎅' },
-  { id: 'Kristin_public_2_20240108', name: 'Kristin', preview: '👩‍💼' },
-  { id: 'Tyler-incasualsuit-20220721', name: 'Tyler', preview: '👔' },
-  { id: 'Angela-inblackskirt-20220820', name: 'Angela', preview: '👩‍💻' },
-];
+// Mode types
+const MODES = {
+  AVATAR_IV: 'avatar_iv', // Photo -> Video with voice clone (user's own face)
+  LIVE_AVATAR: 'live_avatar', // Real-time streaming (requires video training)
+};
 
 export default function LiveChat({ onClose, userName }) {
+  const [mode, setMode] = useState(null); // null = selection screen
   const [isLoading, setIsLoading] = useState(true);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
-  const [streamingConfig, setStreamingConfig] = useState(null);
-  const [selectedAvatar, setSelectedAvatar] = useState(PUBLIC_AVATARS[0]);
-  const [showAvatarSelect, setShowAvatarSelect] = useState(false);
+  const [statusInfo, setStatusInfo] = useState(null);
 
-  const avatarRef = useRef(null);
+  // Avatar IV specific state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentVideoId, setCurrentVideoId] = useState(null);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(null);
+  const [videoStatus, setVideoStatus] = useState(null);
+
+  // LiveAvatar specific state
+  const [liveAvatarStatus, setLiveAvatarStatus] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
   const videoRef = useRef(null);
   const chatEndRef = useRef(null);
+  const pollIntervalRef = useRef(null);
 
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
-  // Initialize streaming avatar
+  // Initialize - check what's available
   useEffect(() => {
-    initializeStreaming();
+    checkStatus();
     return () => {
-      cleanup();
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
     };
   }, []);
 
-  const cleanup = useCallback(async () => {
-    if (avatarRef.current) {
-      try {
-        await avatarRef.current.stopAvatar();
-      } catch (e) {
-        console.log('Cleanup error:', e);
-      }
-      avatarRef.current = null;
-    }
-  }, []);
-
-  const initializeStreaming = async () => {
+  const checkStatus = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Get streaming config (voice clone info)
-      const config = await api.getStreamingConfig();
-      setStreamingConfig(config);
-      console.log('Streaming config:', config);
+      // Check photo avatar status and LiveAvatar status in parallel
+      const [photoStatus, liveStatus] = await Promise.all([
+        api.getPhotoAvatarStatus().catch(() => ({ hasPhotoAvatar: false })),
+        api.getLiveAvatarStatus().catch(() => ({ apiConfigured: false })),
+      ]);
 
+      setStatusInfo({
+        hasPhoto: photoStatus.hasPhotoAvatar,
+        hasVoiceClone: photoStatus.hasVoiceClone || liveStatus.hasVoiceClone,
+        liveAvatarConfigured: liveStatus.apiConfigured,
+        hasCustomLiveAvatar: liveStatus.hasCustomAvatar,
+        customAvatarStatus: liveStatus.customAvatarStatus,
+      });
+
+      setLiveAvatarStatus(liveStatus);
       setIsLoading(false);
     } catch (err) {
-      console.error('Init error:', err);
-      // Don't fail completely - we can still use public avatars
-      setStreamingConfig({ hasAvatar: false, hasVoiceClone: false });
+      console.error('Status check error:', err);
+      setError('Failed to load configuration');
       setIsLoading(false);
-    }
-  };
-
-  const startSession = async () => {
-    try {
-      setIsConnecting(true);
-      setError(null);
-
-      // Get session token from backend
-      const tokenResponse = await api.getStreamingToken();
-      const { token } = tokenResponse;
-
-      if (!token) {
-        throw new Error('Failed to get streaming session token');
-      }
-
-      console.log('Got streaming token, initializing avatar...');
-
-      // Initialize StreamingAvatar SDK
-      const avatar = new StreamingAvatar({ token });
-      avatarRef.current = avatar;
-
-      // Set up event listeners
-      avatar.on(StreamingEvents.STREAM_READY, (event) => {
-        console.log('Stream ready:', event);
-        if (videoRef.current && event.detail) {
-          videoRef.current.srcObject = event.detail;
-          videoRef.current.play().catch(console.error);
-        }
-        setIsConnected(true);
-        setIsConnecting(false);
-      });
-
-      avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
-        console.log('Avatar started talking');
-        setIsSpeaking(true);
-      });
-
-      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
-        console.log('Avatar stopped talking');
-        setIsSpeaking(false);
-      });
-
-      avatar.on(StreamingEvents.STREAM_DISCONNECTED, () => {
-        console.log('Stream disconnected');
-        setIsConnected(false);
-        setIsConnecting(false);
-      });
-
-      // Build session configuration with PUBLIC avatar
-      // Note: Photo Avatars are NOT compatible with Streaming API
-      // See: https://docs.heygen.com/docs/streaming-avatar-sdk
-      const sessionConfig = {
-        quality: AvatarQuality.Medium,
-        avatarName: selectedAvatar.id, // Use public streaming avatar
-      };
-
-      // If user has ElevenLabs voice clone, configure it
-      if (streamingConfig?.voiceClone?.voiceId && streamingConfig?.voiceClone?.apiKey) {
-        sessionConfig.voice = {
-          voiceId: streamingConfig.voiceClone.voiceId,
-          rate: 1.0,
-          emotion: 'friendly',
-        };
-        // Use ElevenLabs settings for custom voice
-        sessionConfig.voice.elevenlabsSettings = {
-          apiKey: streamingConfig.voiceClone.apiKey,
-          voiceId: streamingConfig.voiceClone.voiceId,
-          model: 'eleven_turbo_v2_5',
-          stability: 0.5,
-          similarityBoost: 0.85,
-        };
-        console.log('Using ElevenLabs voice clone:', streamingConfig.voiceClone.voiceName);
-      }
-
-      console.log('Starting session with config:', sessionConfig);
-
-      // Start new session
-      await avatar.createStartAvatar(sessionConfig);
-
-      // Send initial greeting
-      addChatMessage('system', `Connected! ${userName ? `Hello ${userName}!` : 'Hello!'} I'm ready to chat with ${selectedAvatar.name}'s avatar.`);
-
-    } catch (err) {
-      console.error('Session start error:', err);
-      setError(err.message || 'Failed to start streaming session');
-      setIsConnecting(false);
     }
   };
 
@@ -171,294 +82,490 @@ export default function LiveChat({ onClose, userName }) {
     }]);
   };
 
-  const sendMessage = async () => {
-    if (!message.trim() || !avatarRef.current || !isConnected) return;
+  // =====================
+  // Avatar IV Mode Functions
+  // =====================
+
+  const sendAvatarIVMessage = async () => {
+    if (!message.trim() || isGenerating) return;
 
     const userMessage = message.trim();
     setMessage('');
     addChatMessage('user', userMessage);
 
     try {
-      // First, get AI response from our backend
+      setIsGenerating(true);
+      addChatMessage('system', 'Generating personalized AI response...');
+
+      // First, get AI response
       const aiResponse = await api.generateText(
         userMessage,
-        'Live conversation with streaming avatar'
+        'Personal conversation - respond as yourself would'
       );
 
       const responseText = aiResponse.response;
       addChatMessage('assistant', responseText);
+      addChatMessage('system', 'Creating your avatar video with lip-sync...');
 
-      // Make avatar speak the response
-      await avatarRef.current.speak({
-        text: responseText,
-        taskType: 'repeat', // or 'talk' for more natural conversation
-        taskMode: 'sync'
-      });
+      // Generate Avatar IV video with the response
+      const videoResponse = await api.generateAvatarIV(responseText);
+
+      if (videoResponse.videoId) {
+        setCurrentVideoId(videoResponse.videoId);
+        setVideoStatus('processing');
+        addChatMessage('system', videoResponse.usedVoiceClone
+          ? 'Video generating with your cloned voice...'
+          : 'Video generating...');
+
+        // Start polling for video status
+        startVideoPolling(videoResponse.videoId);
+      } else {
+        throw new Error('No video ID received');
+      }
 
     } catch (err) {
-      console.error('Send message error:', err);
-      addChatMessage('system', 'Failed to get response. Please try again.');
+      console.error('Avatar IV error:', err);
+      addChatMessage('system', `Error: ${err.message || 'Failed to generate video'}`);
+      setIsGenerating(false);
+    }
+  };
+
+  const startVideoPolling = (videoId) => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const status = await api.getAvatarIVStatus(videoId);
+        console.log('Video status:', status);
+
+        if (status.status === 'completed' && status.videoUrl) {
+          clearInterval(pollIntervalRef.current);
+          setCurrentVideoUrl(status.videoUrl);
+          setVideoStatus('ready');
+          setIsGenerating(false);
+          addChatMessage('system', 'Video ready! Playing now...');
+
+          // Auto-play the video
+          if (videoRef.current) {
+            videoRef.current.src = status.videoUrl;
+            videoRef.current.play().catch(console.error);
+          }
+        } else if (status.status === 'failed' || status.error) {
+          clearInterval(pollIntervalRef.current);
+          setVideoStatus('failed');
+          setIsGenerating(false);
+          addChatMessage('system', `Video generation failed: ${status.error || 'Unknown error'}`);
+        }
+        // If still processing, continue polling
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+    }, 3000); // Poll every 3 seconds
+  };
+
+  // =====================
+  // LiveAvatar Mode Functions (placeholder for now)
+  // =====================
+
+  const startLiveAvatarSession = async () => {
+    try {
+      setIsLoading(true);
+      addChatMessage('system', 'Starting LiveAvatar session...');
+
+      const sessionResponse = await api.getLiveAvatarSession();
+
+      if (sessionResponse.sessionToken) {
+        const startResponse = await api.startLiveAvatarSession(sessionResponse.sessionToken);
+
+        // Here we would connect to LiveKit using the provided URL and token
+        // This requires the LiveKit SDK which we'll add if needed
+        addChatMessage('system', 'LiveAvatar connected! (LiveKit integration coming soon)');
+        setIsConnected(true);
+      }
+
+      setIsLoading(false);
+    } catch (err) {
+      console.error('LiveAvatar session error:', err);
+      addChatMessage('system', `Error: ${err.message || 'Failed to start session'}`);
+      setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const interruptSpeaking = async () => {
-    if (avatarRef.current) {
-      try {
-        await avatarRef.current.interrupt();
-        setIsSpeaking(false);
-      } catch (e) {
-        console.error('Interrupt error:', e);
+      if (mode === MODES.AVATAR_IV) {
+        sendAvatarIVMessage();
       }
     }
   };
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const toggleVideo = () => {
-    if (videoRef.current) {
-      videoRef.current.style.visibility = isVideoOn ? 'hidden' : 'visible';
-      setIsVideoOn(!isVideoOn);
-    }
-  };
-
   const handleClose = () => {
-    cleanup();
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
     onClose();
   };
 
   // Loading state
-  if (isLoading) {
+  if (isLoading && !mode) {
     return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
         <div className="bg-slate-800 rounded-2xl p-8 max-w-md text-center">
           <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">Initializing Live Chat</h3>
-          <p className="text-gray-400">Loading configuration...</p>
+          <h3 className="text-xl font-semibold text-white mb-2">Loading Live Chat</h3>
+          <p className="text-gray-400">Checking your avatar and voice setup...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-700">
-        <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'} ${isSpeaking ? 'animate-pulse' : ''}`} />
-          <h2 className="text-lg font-semibold text-white">
-            Live Chat with {selectedAvatar.name}
-          </h2>
-          {streamingConfig?.hasVoiceClone && (
-            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
-              Voice Clone Active
-            </span>
-          )}
-        </div>
-        <button
-          onClick={handleClose}
-          className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Video section */}
-        <div className="w-1/2 p-4 flex flex-col">
-          <div className="relative flex-1 bg-slate-900 rounded-xl overflow-hidden">
-            {!isConnected && !isConnecting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-                <Video className="w-16 h-16 text-gray-600 mb-4" />
-
-                {/* Avatar Selection */}
-                <div className="mb-4 w-full max-w-xs">
-                  <p className="text-gray-400 text-sm mb-2 text-center">Select an avatar for your conversation:</p>
-                  <button
-                    onClick={() => setShowAvatarSelect(!showAvatarSelect)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white flex items-center justify-between hover:bg-slate-700 transition-colors"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-2xl">{selectedAvatar.preview}</span>
-                      <span>{selectedAvatar.name}</span>
-                    </span>
-                    <Users className="w-5 h-5 text-gray-400" />
-                  </button>
-
-                  {showAvatarSelect && (
-                    <div className="absolute mt-2 w-full max-w-xs bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10">
-                      {PUBLIC_AVATARS.map((avatar) => (
-                        <button
-                          key={avatar.id}
-                          onClick={() => {
-                            setSelectedAvatar(avatar);
-                            setShowAvatarSelect(false);
-                          }}
-                          className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-700 transition-colors ${
-                            selectedAvatar.id === avatar.id ? 'bg-purple-600/20 text-purple-300' : 'text-white'
-                          }`}
-                        >
-                          <span className="text-2xl">{avatar.preview}</span>
-                          <span>{avatar.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Info about photo avatars */}
-                <div className="mb-4 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg max-w-xs">
-                  <p className="text-amber-300 text-xs text-center">
-                    <AlertCircle className="w-4 h-4 inline mr-1" />
-                    Photo Avatars are not compatible with live streaming. Use HeyGen's public avatars instead.
-                    {streamingConfig?.hasVoiceClone && (
-                      <span className="block mt-1 text-green-400">
-                        ✓ Your voice clone will be used!
-                      </span>
-                    )}
-                  </p>
-                </div>
-
-                <button
-                  onClick={startSession}
-                  className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <Video className="w-5 h-5" />
-                  Start Session
-                </button>
-              </div>
-            )}
-
-            {isConnecting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
-                <p className="text-gray-400">Connecting to {selectedAvatar.name}...</p>
-              </div>
-            )}
-
-            {error && !isConnected && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-                <p className="text-red-400 text-center mb-4">{error}</p>
-                <button
-                  onClick={startSession}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                >
-                  Try Again
-                </button>
-              </div>
-            )}
-
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              autoPlay
-              playsInline
-            />
-
-            {/* Video controls overlay */}
-            {isConnected && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                <button
-                  onClick={toggleVideo}
-                  className={`p-3 rounded-full transition-colors ${
-                    isVideoOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
-                >
-                  {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-                </button>
-                <button
-                  onClick={toggleMute}
-                  className={`p-3 rounded-full transition-colors ${
-                    !isMuted ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
-                >
-                  {!isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-                </button>
-                {isSpeaking && (
-                  <button
-                    onClick={interruptSpeaking}
-                    className="p-3 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition-colors"
-                    title="Interrupt"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Chat section */}
-        <div className="w-1/2 p-4 flex flex-col border-l border-slate-700">
-          {/* Chat history */}
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-            {chatHistory.length === 0 && !isConnected && (
-              <p className="text-gray-500 text-center py-8">Select an avatar and click "Start Session" to begin.</p>
-            )}
-            {chatHistory.length === 0 && isConnected && (
-              <p className="text-gray-500 text-center py-8">Start the conversation by typing a message below.</p>
-            )}
-            {chatHistory.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                    msg.role === 'user'
-                      ? 'bg-purple-600 text-white'
-                      : msg.role === 'assistant'
-                      ? 'bg-slate-700 text-white'
-                      : 'bg-slate-800 text-gray-400 text-sm italic'
-                  }`}
-                >
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Message input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={isConnected ? "Type your message..." : "Connect to start chatting..."}
-              disabled={!isConnected || isSpeaking}
-              className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
-            />
+  // Mode selection screen
+  if (!mode) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-slate-800 rounded-2xl p-6 max-w-2xl w-full">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-serif text-white">Choose Your Experience</h2>
             <button
-              onClick={sendMessage}
-              disabled={!isConnected || !message.trim() || isSpeaking}
-              className="px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+              onClick={handleClose}
+              className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <Send className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {isSpeaking && (
-            <p className="text-purple-400 text-sm mt-2 text-center animate-pulse">
-              {selectedAvatar.name} is speaking...
-            </p>
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
           )}
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Avatar IV Option - Uses user's own photo */}
+            <button
+              onClick={() => setMode(MODES.AVATAR_IV)}
+              disabled={!statusInfo?.hasPhoto}
+              className={`p-6 rounded-xl border-2 text-left transition-all ${
+                statusInfo?.hasPhoto
+                  ? 'border-purple-500/50 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500'
+                  : 'border-slate-700 bg-slate-700/50 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <Image className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Your Photo Avatar</h3>
+                  <span className="text-xs text-purple-400">Recommended</span>
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">
+                Create stunning lip-synced videos using YOUR photo and YOUR cloned voice.
+                The AI responds as you, and the video shows you speaking!
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  statusInfo?.hasPhoto ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {statusInfo?.hasPhoto ? '✓ Photo Ready' : '✗ Need Photo'}
+                </span>
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  statusInfo?.hasVoiceClone ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                }`}>
+                  {statusInfo?.hasVoiceClone ? '✓ Voice Clone' : '○ Voice Clone (optional)'}
+                </span>
+              </div>
+              {!statusInfo?.hasPhoto && (
+                <p className="mt-3 text-amber-400 text-xs">
+                  Upload a photo in My Persona → Avatar tab first
+                </p>
+              )}
+            </button>
+
+            {/* LiveAvatar Option - Real-time but needs video */}
+            <button
+              onClick={() => setMode(MODES.LIVE_AVATAR)}
+              disabled={!statusInfo?.liveAvatarConfigured}
+              className={`p-6 rounded-xl border-2 text-left transition-all ${
+                statusInfo?.liveAvatarConfigured
+                  ? 'border-pink-500/50 bg-pink-500/10 hover:bg-pink-500/20 hover:border-pink-500'
+                  : 'border-slate-700 bg-slate-700/50 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center">
+                  <Radio className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">LiveAvatar Streaming</h3>
+                  <span className="text-xs text-pink-400">Real-Time</span>
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">
+                Real-time video conversation with instant responses.
+                Requires a 2-minute training video to create your custom avatar.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  statusInfo?.liveAvatarConfigured ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {statusInfo?.liveAvatarConfigured ? '✓ API Ready' : '✗ Not Configured'}
+                </span>
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  statusInfo?.hasCustomLiveAvatar ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                }`}>
+                  {statusInfo?.hasCustomLiveAvatar ? '✓ Custom Avatar' : '○ Needs Video Training'}
+                </span>
+              </div>
+              {!statusInfo?.liveAvatarConfigured && (
+                <p className="mt-3 text-amber-400 text-xs">
+                  Admin needs to add LiveAvatar API key
+                </p>
+              )}
+            </button>
+          </div>
+
+          <div className="mt-6 p-4 bg-slate-700/50 rounded-xl">
+            <h4 className="text-white font-medium mb-2">What's the difference?</h4>
+            <ul className="text-gray-400 text-sm space-y-1">
+              <li><strong className="text-purple-400">Photo Avatar:</strong> Uses your uploaded photo. Video takes ~1-2 min to generate, but shows YOUR face.</li>
+              <li><strong className="text-pink-400">LiveAvatar:</strong> Real-time streaming, but requires recording a 2-min training video first.</li>
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Avatar IV Mode UI
+  if (mode === MODES.AVATAR_IV) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMode(null)}
+              className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Image className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Your Photo Avatar</h2>
+              <p className="text-xs text-gray-400">AI-powered lip-sync video generation</p>
+            </div>
+            {statusInfo?.hasVoiceClone && (
+              <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
+                Voice Clone Active
+              </span>
+            )}
+          </div>
+          <button
+            onClick={handleClose}
+            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Video section */}
+          <div className="w-1/2 p-4 flex flex-col">
+            <div className="relative flex-1 bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
+              {!currentVideoUrl && !isGenerating && (
+                <div className="text-center p-6">
+                  <Sparkles className="w-16 h-16 text-purple-500 mx-auto mb-4" />
+                  <h3 className="text-white text-lg mb-2">Ready to Chat</h3>
+                  <p className="text-gray-400 text-sm">
+                    Type a message and your avatar will respond with a lip-synced video!
+                  </p>
+                </div>
+              )}
+
+              {isGenerating && !currentVideoUrl && (
+                <div className="text-center p-6">
+                  <Loader2 className="w-16 h-16 text-purple-500 animate-spin mx-auto mb-4" />
+                  <h3 className="text-white text-lg mb-2">Creating Your Video</h3>
+                  <p className="text-gray-400 text-sm">
+                    {videoStatus === 'processing'
+                      ? 'HeyGen is generating your lip-synced video...'
+                      : 'Getting AI response...'}
+                  </p>
+                  <p className="text-purple-400 text-xs mt-2">This usually takes 1-2 minutes</p>
+                </div>
+              )}
+
+              {currentVideoUrl && (
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-contain"
+                  controls
+                  autoPlay
+                  src={currentVideoUrl}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Chat section */}
+          <div className="w-1/2 p-4 flex flex-col border-l border-slate-700">
+            {/* Chat history */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+              {chatHistory.length === 0 && (
+                <p className="text-gray-500 text-center py-8">
+                  Type a message to start the conversation. Your avatar will respond with a video!
+                </p>
+              )}
+              {chatHistory.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                      msg.role === 'user'
+                        ? 'bg-purple-600 text-white'
+                        : msg.role === 'assistant'
+                        ? 'bg-slate-700 text-white'
+                        : 'bg-slate-800 text-gray-400 text-sm italic'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Message input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={isGenerating ? "Generating video..." : "Type your message..."}
+                disabled={isGenerating}
+                className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+              />
+              <button
+                onClick={sendAvatarIVMessage}
+                disabled={!message.trim() || isGenerating}
+                className="px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+              >
+                {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {isGenerating && (
+              <p className="text-purple-400 text-sm mt-2 text-center animate-pulse">
+                Creating your avatar video...
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // LiveAvatar Mode UI
+  if (mode === MODES.LIVE_AVATAR) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMode(null)}
+              className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center">
+              <Radio className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">LiveAvatar Streaming</h2>
+              <p className="text-xs text-gray-400">Real-time video conversation</p>
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-lg text-center">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center mx-auto mb-6">
+              <Radio className="w-12 h-12 text-white" />
+            </div>
+
+            <h2 className="text-2xl font-serif text-white mb-4">LiveAvatar Coming Soon</h2>
+
+            <p className="text-gray-400 mb-6">
+              Real-time video streaming with LiveAvatar requires additional setup.
+              {!statusInfo?.hasCustomLiveAvatar && (
+                <span className="block mt-2 text-amber-400">
+                  You'll need to record a 2-minute training video to create your custom streaming avatar.
+                </span>
+              )}
+            </p>
+
+            <div className="space-y-3">
+              {!isConnected ? (
+                <button
+                  onClick={startLiveAvatarSession}
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-500 hover:to-red-500 text-white rounded-xl font-medium transition-all flex items-center gap-2 mx-auto disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Video className="w-5 h-5" />
+                  )}
+                  Test Connection
+                </button>
+              ) : (
+                <div className="px-4 py-3 bg-green-500/20 text-green-400 rounded-xl">
+                  Connected! LiveKit integration in progress...
+                </div>
+              )}
+
+              <button
+                onClick={() => setMode(null)}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
+              >
+                Back to Selection
+              </button>
+            </div>
+
+            {/* Chat history for LiveAvatar */}
+            {chatHistory.length > 0 && (
+              <div className="mt-6 p-4 bg-slate-800 rounded-xl text-left max-h-48 overflow-y-auto">
+                {chatHistory.map((msg) => (
+                  <p key={msg.id} className={`text-sm ${msg.role === 'system' ? 'text-gray-400 italic' : 'text-white'}`}>
+                    {msg.content}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
