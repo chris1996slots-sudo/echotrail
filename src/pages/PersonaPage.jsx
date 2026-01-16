@@ -628,9 +628,10 @@ export function PersonaPage({ onNavigate }) {
       if (timerRef.current) clearInterval(timerRef.current);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       if (videoTimerRef.current) clearInterval(videoTimerRef.current);
-      if (liveAvatarVideoPreview) URL.revokeObjectURL(liveAvatarVideoPreview);
+      if (trainingVideoPreview) URL.revokeObjectURL(trainingVideoPreview);
+      if (consentVideoPreview) URL.revokeObjectURL(consentVideoPreview);
     };
-  }, [audioUrl, liveAvatarVideoPreview]);
+  }, [audioUrl, trainingVideoPreview, consentVideoPreview]);
 
   // Fetch LiveAvatar status on mount
   useEffect(() => {
