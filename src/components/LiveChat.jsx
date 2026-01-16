@@ -1,7 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
-import { Send, Mic, MicOff, Video, VideoOff, Loader2, X, AlertCircle, Volume2, VolumeX } from 'lucide-react';
+import { Send, Video, VideoOff, Loader2, X, AlertCircle, Volume2, VolumeX, Users } from 'lucide-react';
 import api from '../services/api';
+
+// HeyGen Public Streaming Avatars (these are compatible with streaming API)
+// See: https://docs.heygen.com/docs/streaming-avatar-sdk
+const PUBLIC_AVATARS = [
+  { id: 'Anna_public_3_20240108', name: 'Anna', preview: '👩' },
+  { id: 'josh_lite3_20230714', name: 'Josh', preview: '👨' },
+  { id: 'Santa_Claus_Front_public', name: 'Santa', preview: '🎅' },
+  { id: 'Kristin_public_2_20240108', name: 'Kristin', preview: '👩‍💼' },
+  { id: 'Tyler-incasualsuit-20220721', name: 'Tyler', preview: '👔' },
+  { id: 'Angela-inblackskirt-20220820', name: 'Angela', preview: '👩‍💻' },
+];
 
 export default function LiveChat({ onClose, userName }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -14,6 +25,8 @@ export default function LiveChat({ onClose, userName }) {
   const [isMuted, setIsMuted] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const [streamingConfig, setStreamingConfig] = useState(null);
+  const [selectedAvatar, setSelectedAvatar] = useState(PUBLIC_AVATARS[0]);
+  const [showAvatarSelect, setShowAvatarSelect] = useState(false);
 
   const avatarRef = useRef(null);
   const videoRef = useRef(null);
@@ -48,20 +61,16 @@ export default function LiveChat({ onClose, userName }) {
       setIsLoading(true);
       setError(null);
 
-      // Get streaming config (avatar ID, voice clone info)
+      // Get streaming config (voice clone info)
       const config = await api.getStreamingConfig();
-
-      if (!config.hasAvatar) {
-        throw new Error('No photo avatar found. Please create one on the Persona page first.');
-      }
-
       setStreamingConfig(config);
       console.log('Streaming config:', config);
 
       setIsLoading(false);
     } catch (err) {
       console.error('Init error:', err);
-      setError(err.message || 'Failed to initialize streaming');
+      // Don't fail completely - we can still use public avatars
+      setStreamingConfig({ hasAvatar: false, hasVoiceClone: false });
       setIsLoading(false);
     }
   };
@@ -112,9 +121,12 @@ export default function LiveChat({ onClose, userName }) {
         setIsConnecting(false);
       });
 
-      // Build session configuration
+      // Build session configuration with PUBLIC avatar
+      // Note: Photo Avatars are NOT compatible with Streaming API
+      // See: https://docs.heygen.com/docs/streaming-avatar-sdk
       const sessionConfig = {
         quality: AvatarQuality.Medium,
+        avatarName: selectedAvatar.id, // Use public streaming avatar
       };
 
       // If user has ElevenLabs voice clone, configure it
@@ -135,18 +147,13 @@ export default function LiveChat({ onClose, userName }) {
         console.log('Using ElevenLabs voice clone:', streamingConfig.voiceClone.voiceName);
       }
 
-      // For talking photos, we use the avatarId (talking_photo_id)
-      // HeyGen streaming uses different avatar types
-      // We'll try using the knowledgeId approach with custom prompt
-      sessionConfig.avatarName = streamingConfig.avatarId;
-
       console.log('Starting session with config:', sessionConfig);
 
       // Start new session
       await avatar.createStartAvatar(sessionConfig);
 
       // Send initial greeting
-      addChatMessage('system', `Connected! ${userName ? `Hello ${userName}!` : 'Hello!'} I'm ready to chat.`);
+      addChatMessage('system', `Connected! ${userName ? `Hello ${userName}!` : 'Hello!'} I'm ready to chat with ${selectedAvatar.name}'s avatar.`);
 
     } catch (err) {
       console.error('Session start error:', err);
@@ -238,36 +245,7 @@ export default function LiveChat({ onClose, userName }) {
         <div className="bg-slate-800 rounded-2xl p-8 max-w-md text-center">
           <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">Initializing Live Chat</h3>
-          <p className="text-gray-400">Loading your avatar configuration...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error && !isConnected && !isConnecting) {
-    return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-slate-800 rounded-2xl p-8 max-w-md">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertCircle className="w-8 h-8 text-red-500" />
-            <h3 className="text-xl font-semibold text-white">Connection Error</h3>
-          </div>
-          <p className="text-gray-400 mb-6">{error}</p>
-          <div className="flex gap-3">
-            <button
-              onClick={initializeStreaming}
-              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={handleClose}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-            >
-              Close
-            </button>
-          </div>
+          <p className="text-gray-400">Loading configuration...</p>
         </div>
       </div>
     );
@@ -280,7 +258,7 @@ export default function LiveChat({ onClose, userName }) {
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'} ${isSpeaking ? 'animate-pulse' : ''}`} />
           <h2 className="text-lg font-semibold text-white">
-            Live Chat {streamingConfig?.avatarName ? `with ${streamingConfig.avatarName}` : ''}
+            Live Chat with {selectedAvatar.name}
           </h2>
           {streamingConfig?.hasVoiceClone && (
             <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
@@ -302,9 +280,57 @@ export default function LiveChat({ onClose, userName }) {
         <div className="w-1/2 p-4 flex flex-col">
           <div className="relative flex-1 bg-slate-900 rounded-xl overflow-hidden">
             {!isConnected && !isConnecting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
                 <Video className="w-16 h-16 text-gray-600 mb-4" />
-                <p className="text-gray-400 mb-4">Ready to start live conversation</p>
+
+                {/* Avatar Selection */}
+                <div className="mb-4 w-full max-w-xs">
+                  <p className="text-gray-400 text-sm mb-2 text-center">Select an avatar for your conversation:</p>
+                  <button
+                    onClick={() => setShowAvatarSelect(!showAvatarSelect)}
+                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white flex items-center justify-between hover:bg-slate-700 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-2xl">{selectedAvatar.preview}</span>
+                      <span>{selectedAvatar.name}</span>
+                    </span>
+                    <Users className="w-5 h-5 text-gray-400" />
+                  </button>
+
+                  {showAvatarSelect && (
+                    <div className="absolute mt-2 w-full max-w-xs bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10">
+                      {PUBLIC_AVATARS.map((avatar) => (
+                        <button
+                          key={avatar.id}
+                          onClick={() => {
+                            setSelectedAvatar(avatar);
+                            setShowAvatarSelect(false);
+                          }}
+                          className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-700 transition-colors ${
+                            selectedAvatar.id === avatar.id ? 'bg-purple-600/20 text-purple-300' : 'text-white'
+                          }`}
+                        >
+                          <span className="text-2xl">{avatar.preview}</span>
+                          <span>{avatar.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Info about photo avatars */}
+                <div className="mb-4 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg max-w-xs">
+                  <p className="text-amber-300 text-xs text-center">
+                    <AlertCircle className="w-4 h-4 inline mr-1" />
+                    Photo Avatars are not compatible with live streaming. Use HeyGen's public avatars instead.
+                    {streamingConfig?.hasVoiceClone && (
+                      <span className="block mt-1 text-green-400">
+                        ✓ Your voice clone will be used!
+                      </span>
+                    )}
+                  </p>
+                </div>
+
                 <button
                   onClick={startSession}
                   className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -318,7 +344,20 @@ export default function LiveChat({ onClose, userName }) {
             {isConnecting && (
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
-                <p className="text-gray-400">Connecting to streaming avatar...</p>
+                <p className="text-gray-400">Connecting to {selectedAvatar.name}...</p>
+              </div>
+            )}
+
+            {error && !isConnected && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                <p className="text-red-400 text-center mb-4">{error}</p>
+                <button
+                  onClick={startSession}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Try Again
+                </button>
               </div>
             )}
 
@@ -354,7 +393,7 @@ export default function LiveChat({ onClose, userName }) {
                     className="p-3 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition-colors"
                     title="Interrupt"
                   >
-                    <MicOff className="w-5 h-5" />
+                    <X className="w-5 h-5" />
                   </button>
                 )}
               </div>
@@ -366,6 +405,9 @@ export default function LiveChat({ onClose, userName }) {
         <div className="w-1/2 p-4 flex flex-col border-l border-slate-700">
           {/* Chat history */}
           <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+            {chatHistory.length === 0 && !isConnected && (
+              <p className="text-gray-500 text-center py-8">Select an avatar and click "Start Session" to begin.</p>
+            )}
             {chatHistory.length === 0 && isConnected && (
               <p className="text-gray-500 text-center py-8">Start the conversation by typing a message below.</p>
             )}
@@ -412,7 +454,7 @@ export default function LiveChat({ onClose, userName }) {
 
           {isSpeaking && (
             <p className="text-purple-400 text-sm mt-2 text-center animate-pulse">
-              Avatar is speaking...
+              {selectedAvatar.name} is speaking...
             </p>
           )}
         </div>
