@@ -812,12 +812,19 @@ export function PersonaPage({ onNavigate }) {
         }
       }
 
-      // Step 2: Save avatar settings
+      // Step 2: Save avatar settings and mark setup as complete
       setProcessingStep('Saving avatar settings...');
       await api.updateAvatarSettings({
         avatarStyle: persona.avatarStyle,
         backgroundType: persona.backgroundType,
+        avatarSetupComplete: true,
       });
+
+      // Update local state
+      setPersona(prev => ({
+        ...prev,
+        avatarSetupComplete: true,
+      }));
 
       // Step 3: Complete
       setProcessingStep('Finalizing your digital avatar...');
@@ -1477,8 +1484,8 @@ export function PersonaPage({ onNavigate }) {
 
         return (
           <div className="space-y-6">
-            {/* Avatar Gallery Preview - Only shown when at least one avatar is fully created (has active avatar) */}
-            {activeAvatar && (
+            {/* Avatar Gallery Preview - Only shown when avatar setup wizard is complete */}
+            {activeAvatar && persona.avatarSetupComplete && (
               <FadeIn>
                 <div className="glass-card p-6 border-gold/30">
                   <div className="flex items-center justify-between mb-4">

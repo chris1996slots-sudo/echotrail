@@ -296,16 +296,17 @@ router.delete('/avatar/:id', authenticate, async (req, res) => {
   }
 });
 
-// Update avatar settings (style, background)
+// Update avatar settings (style, background, setup complete flag)
 router.put('/avatar-settings', authenticate, async (req, res) => {
   try {
-    const { avatarStyle, backgroundType } = req.body;
+    const { avatarStyle, backgroundType, avatarSetupComplete } = req.body;
 
     const persona = await req.prisma.persona.update({
       where: { userId: req.user.id },
       data: {
         ...(avatarStyle && { avatarStyle }),
         ...(backgroundType && { backgroundType }),
+        ...(avatarSetupComplete !== undefined && { avatarSetupComplete }),
       }
     });
 
