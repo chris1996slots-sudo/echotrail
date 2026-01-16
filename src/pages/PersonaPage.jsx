@@ -355,14 +355,13 @@ export function PersonaPage({ onNavigate }) {
     },
   ];
 
-  // Avatar creation step flow
+  // Avatar creation step flow (5 steps - Create Avatar on last step sends to ElevenLabs + HeyGen)
   const avatarSteps = [
     { id: 'photos', label: 'Photos', icon: Camera, description: 'Upload your photos' },
     { id: 'voice', label: 'Voice', icon: Mic, description: 'Record your voice' },
     { id: 'background', label: 'Background', icon: ImageIcon, description: 'Choose a background' },
     { id: 'style', label: 'Style', icon: Palette, description: 'Choose your avatar style' },
     { id: 'vibe', label: 'Vibe', icon: Heart, description: 'Choose your echo vibe' },
-    { id: 'preview', label: 'Preview', icon: Eye, description: 'See your result' },
   ];
 
   // Echo Vibe options
@@ -1375,100 +1374,7 @@ export function PersonaPage({ onNavigate }) {
                 </div>
               );
 
-            case 'preview':
-              return (
-                <div className="space-y-6">
-                  {/* Main Preview */}
-                  <div
-                    className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-gold/30 shadow-xl"
-                    style={{
-                      backgroundImage: persona.backgroundType === 'custom' && persona.backgroundImage
-                        ? `url(${persona.backgroundImage})`
-                        : selectedBackground.preview
-                        ? `url(${selectedBackground.preview})`
-                        : undefined,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }}
-                  >
-                    {/* Overlay for better visibility */}
-                    <div className="absolute inset-0 bg-black/20" />
-
-                    {/* Avatar in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex flex-col items-center">
-                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-gold/60 shadow-2xl">
-                          {persona.avatarImage ? (
-                            <img
-                              src={persona.avatarImage}
-                              alt="Avatar preview"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-navy-dark flex items-center justify-center">
-                              <UserIcon className="w-16 h-16 text-gold/30" />
-                            </div>
-                          )}
-                        </div>
-                        {/* Active Photo Label */}
-                        {persona.activeAvatarId && avatarImages.find(img => img.id === persona.activeAvatarId)?.label && (
-                          <span className="mt-3 px-4 py-1.5 bg-navy/80 backdrop-blur text-cream rounded-full text-sm">
-                            {avatarImages.find(img => img.id === persona.activeAvatarId)?.label}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Style Badge */}
-                    <div className="absolute top-4 right-4 px-4 py-2 bg-navy/80 backdrop-blur rounded-full border border-gold/30">
-                      <span className="text-cream flex items-center gap-2">
-                        <span className="text-xl">{selectedStyle.icon}</span>
-                        <span className="font-medium">{selectedStyle.label}</span>
-                      </span>
-                    </div>
-
-                    {/* Background Label */}
-                    <div className="absolute bottom-4 left-4 px-4 py-2 bg-navy/80 backdrop-blur rounded-full border border-gold/30">
-                      <span className="text-cream text-sm">
-                        <ImageIcon className="w-4 h-4 inline mr-2" />
-                        {selectedBackground.label}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="bg-navy-dark/30 rounded-xl p-5">
-                    <h4 className="text-cream font-medium mb-4">Summary</h4>
-                    <div className="grid grid-cols-4 gap-4 text-center">
-                      <div className="p-3 bg-navy-light/30 rounded-lg">
-                        <Camera className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Photos</p>
-                        <p className="text-cream font-medium">{avatarImages.length}</p>
-                      </div>
-                      <div className="p-3 bg-navy-light/30 rounded-lg">
-                        <ImageIcon className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Background</p>
-                        <p className="text-cream font-medium text-sm">{selectedBackground.label}</p>
-                      </div>
-                      <div className="p-3 bg-navy-light/30 rounded-lg">
-                        <Palette className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Style</p>
-                        <p className="text-cream font-medium text-sm">{selectedStyle.label}</p>
-                      </div>
-                      <div className="p-3 bg-navy-light/30 rounded-lg">
-                        <Heart className="w-6 h-6 text-gold mx-auto mb-2" />
-                        <p className="text-cream/50 text-xs">Vibe</p>
-                        <p className="text-cream font-medium text-sm">{vibeOptions.find(v => v.id === selectedVibe)?.label || 'Compassionate'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-cream/50 text-center text-sm">
-                    Your avatar will be animated and speak your wisdom
-                  </p>
-                </div>
-              );
-
+            
             default:
               return null;
           }
