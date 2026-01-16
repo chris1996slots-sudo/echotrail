@@ -283,6 +283,9 @@ export function PersonaPage({ onNavigate }) {
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [processingError, setProcessingError] = useState(null);
+  const [isCreatingVoiceClone, setIsCreatingVoiceClone] = useState(false);
+  const [voiceCloneError, setVoiceCloneError] = useState(null);
+  const [voiceCloneSuccess, setVoiceCloneSuccess] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
 
   // Confirm dialog state
@@ -704,6 +707,37 @@ export function PersonaPage({ onNavigate }) {
     setTimeout(() => setShowSaveConfirm(false), 2000);
   };
 
+  // Create voice clone directly from voice samples
+  const handleCreateVoiceClone = async () => {
+    setIsCreatingVoiceClone(true);
+    setVoiceCloneError(null);
+    setVoiceCloneSuccess(false);
+
+    try {
+      const voiceResult = await api.createVoiceClone(
+        `${user.firstName}'s Voice`,
+        `Voice clone for ${user.firstName} ${user.lastName}`
+      );
+
+      if (voiceResult.success) {
+        setPersona(prev => ({
+          ...prev,
+          elevenlabsVoiceId: voiceResult.voiceId,
+          elevenlabsVoiceName: voiceResult.voiceName,
+        }));
+        setVoiceCloneSuccess(true);
+        setTimeout(() => setVoiceCloneSuccess(false), 5000);
+      } else {
+        setVoiceCloneError(voiceResult.error || 'Failed to create voice clone');
+      }
+    } catch (error) {
+      console.error('Voice clone error:', error);
+      setVoiceCloneError(error.message || 'Failed to create voice clone');
+    } finally {
+      setIsCreatingVoiceClone(false);
+    }
+  };
+
   // Handle avatar creation completion (Step 5)
   const handleAvatarCreation = async () => {
     setIsProcessingAvatar(true);
@@ -1079,6 +1113,60 @@ export function PersonaPage({ onNavigate }) {
                       </div>
                     )}
                   </div>
+
+                  {/* Create Voice Clone Button */}
+                  {hasVoiceSamples && !persona.elevenlabsVoiceId && (
+                    <motion.button
+                      onClick={handleCreateVoiceClone}
+                      disabled={isCreatingVoiceClone}
+                      className="w-full p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl text-white font-medium flex items-center justify-center gap-3 disabled:opacity-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {isCreatingVoiceClone ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Creating Voice Clone...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5" />
+                          Create Voice Clone ({voiceSamples.length} samples)
+                        </>
+                      )}
+                    </motion.button>
+                  )}
+
+                  {/* Voice Clone Status */}
+                  {persona.elevenlabsVoiceId && (
+                    <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3">
+                      <CheckCircle2 className="w-6 h-6 text-green-400" />
+                      <div>
+                        <p className="text-green-400 font-medium">Voice Clone Active</p>
+                        <p className="text-green-300/60 text-sm">Your AI will speak in your voice</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Voice Clone Error */}
+                  {voiceCloneError && (
+                    <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/30 flex items-center gap-3">
+                      <AlertCircle className="w-6 h-6 text-red-400" />
+                      <p className="text-red-300 text-sm">{voiceCloneError}</p>
+                    </div>
+                  )}
+
+                  {/* Voice Clone Success */}
+                  {voiceCloneSuccess && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3"
+                    >
+                      <CheckCircle2 className="w-6 h-6 text-green-400" />
+                      <p className="text-green-300">Voice clone created successfully!</p>
+                    </motion.div>
+                  )}
 
                   {/* Tips */}
                   <div className="bg-gold/10 rounded-xl p-4 border border-gold/20">
