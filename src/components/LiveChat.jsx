@@ -190,15 +190,22 @@ export default function LiveChat({ onClose, userName }) {
       console.log('LiveAvatar start debug:', startResponse.debug);
 
       if (startResponse.livekitUrl && startResponse.livekitToken) {
-        // We have LiveKit connection details
-        addChatMessage('system', `LiveAvatar ready! Room: ${startResponse.roomName || 'connected'}`);
-        addChatMessage('system', 'LiveKit WebRTC connection details received. Full video streaming integration coming soon!');
+        // We have LiveKit connection details!
+        addChatMessage('system', `LiveAvatar connected! Session: ${startResponse.sessionId || 'active'}`);
+        addChatMessage('system', `LiveKit URL: ${startResponse.livekitUrl}`);
+        if (startResponse.wsUrl) {
+          addChatMessage('system', `WebSocket URL: ${startResponse.wsUrl}`);
+        }
+        if (startResponse.maxDuration) {
+          addChatMessage('system', `Max session duration: ${startResponse.maxDuration} seconds`);
+        }
+        addChatMessage('system', 'LiveKit WebRTC connection ready! Full video streaming integration coming soon.');
         setIsConnected(true);
       } else {
         // Show debug info in console and UI
         console.log('LiveAvatar: Missing LiveKit details, full response:', startResponse);
         if (startResponse.debug) {
-          addChatMessage('system', `Session started. API Response: ${JSON.stringify(startResponse.debug)}`);
+          addChatMessage('system', `Session started but missing connection details. Debug: ${JSON.stringify(startResponse.debug)}`);
         } else {
           addChatMessage('system', 'Session started but missing LiveKit details. Check server logs.');
         }

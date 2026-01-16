@@ -1760,15 +1760,25 @@ router.post('/liveavatar/start', authenticate, async (req, res) => {
     const data = await response.json();
     console.log('LiveAvatar START - FULL RESPONSE:', JSON.stringify(data, null, 2));
 
-    // Try different possible field names for LiveKit connection details
-    const livekitUrl = data.livekit_url || data.livekitUrl || data.url || data.data?.livekit_url || data.data?.url || data.room_url || data.data?.room_url;
-    const livekitToken = data.livekit_token || data.livekitToken || data.token || data.access_token || data.data?.livekit_token || data.data?.token || data.data?.access_token;
-    const roomName = data.room_name || data.roomName || data.room || data.data?.room_name || data.data?.room;
+    // LiveAvatar API returns:
+    // - livekit_url: the LiveKit server URL
+    // - livekit_client_token: the token for client connection (NOT livekit_token!)
+    // - livekit_agent_token: optional agent token
+    // - ws_url: WebSocket URL for CUSTOM mode
+    // - max_session_duration: session time limit
+    // - session_id: the session identifier
+    const livekitUrl = data.livekit_url;
+    const livekitToken = data.livekit_client_token; // This is the correct field name!
+    const sessionId = data.session_id;
+    const wsUrl = data.ws_url;
+    const maxDuration = data.max_session_duration;
 
     res.json({
       livekitUrl: livekitUrl,
       livekitToken: livekitToken,
-      roomName: roomName,
+      sessionId: sessionId,
+      wsUrl: wsUrl,
+      maxDuration: maxDuration,
       // Include full response for debugging
       debug: data
     });
