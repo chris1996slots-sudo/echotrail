@@ -1926,13 +1926,27 @@ router.get('/liveavatar/status', authenticate, async (req, res) => {
   }
 });
 
-// Upload training video for LiveAvatar (base64 encoded)
+// Upload training video to HeyGen's CDN (base64 encoded)
 router.post('/liveavatar/upload-video', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
   try {
-    const { videoData, filename } = req.body;
+    const { videoData, videoType } = req.body;
 
     if (!videoData) {
       return res.status(400).json({ error: 'Video data is required' });
+    }
+
+    // Get HeyGen API key
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!config?.isActive || !config?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
     }
 
     // Parse base64 video
@@ -1947,28 +1961,49 @@ router.post('/liveavatar/upload-video', authenticate, requireSubscription('PREMI
       return res.status(400).json({ error: 'Video file too large. Maximum size is 200MB.' });
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(__dirname, '..', '..', 'uploads', 'liveavatar');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
+    // Determine content type
+    const contentType = videoFormat === 'webm' ? 'video/webm' : 'video/mp4';
+
+    console.log(`LiveAvatar: Uploading ${videoType || 'training'} video to HeyGen (${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB)...`);
+
+    // Upload to HeyGen's CDN
+    const uploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': config.apiKey,
+        'Content-Type': contentType
+      },
+      body: videoBuffer
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('HeyGen video upload error:', errorText);
+      return res.status(uploadResponse.status).json({
+        error: 'Failed to upload video to HeyGen',
+        debug: errorText
+      });
     }
 
-    // Generate unique filename
-    const uniqueFilename = `${req.user.id}_${Date.now()}.${videoFormat}`;
-    const filePath = join(uploadsDir, uniqueFilename);
+    const uploadData = await uploadResponse.json();
+    console.log('HeyGen video upload response:', uploadData);
 
-    // Write file
-    await writeFile(filePath, videoBuffer);
+    const assetId = uploadData.data?.id;
+    const videoUrl = uploadData.data?.url;
 
-    // Generate public URL
-    const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
-    const publicUrl = `${baseUrl}/uploads/liveavatar/${uniqueFilename}`;
+    if (!videoUrl) {
+      return res.status(500).json({
+        error: 'HeyGen did not return a video URL',
+        debug: uploadData
+      });
+    }
 
     res.json({
       success: true,
-      videoUrl: publicUrl,
-      filename: uniqueFilename,
-      size: videoBuffer.length
+      assetId,
+      videoUrl,
+      size: videoBuffer.length,
+      videoType: videoType || 'training'
     });
   } catch (error) {
     console.error('Video upload error:', error);
@@ -1976,56 +2011,72 @@ router.post('/liveavatar/upload-video', authenticate, requireSubscription('PREMI
   }
 });
 
-// Upload video to create custom LiveAvatar
+// Create custom Video Avatar via HeyGen V2 API
+// Requires: training footage URL + consent video URL
 router.post('/liveavatar/create-avatar', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
   try {
-    const { videoUrl, name } = req.body;
+    const { trainingVideoUrl, consentVideoUrl, name } = req.body;
 
-    if (!videoUrl) {
-      return res.status(400).json({ error: 'Video URL is required. Please upload a 2-minute video following the guidelines.' });
+    if (!trainingVideoUrl) {
+      return res.status(400).json({ error: 'Training video URL is required. Please upload a 2-minute video following the guidelines.' });
     }
 
+    if (!consentVideoUrl) {
+      return res.status(400).json({ error: 'Consent video URL is required. Please record a consent statement.' });
+    }
+
+    // Get HeyGen API key
     let config = await req.prisma.apiConfig.findUnique({
-      where: { service: 'liveavatar' }
+      where: { service: 'avatar' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
 
     if (!config?.isActive || !config?.apiKey) {
-      return res.status(503).json({ error: 'LiveAvatar API not configured' });
+      return res.status(503).json({ error: 'HeyGen API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
     }
 
     const avatarName = name || `${req.user.firstName}'s Avatar`;
 
-    // Create custom avatar via LiveAvatar API
-    const response = await fetch('https://api.liveavatar.com/v1/avatars', {
+    console.log('Creating HeyGen Video Avatar:', { avatarName, trainingVideoUrl, consentVideoUrl });
+
+    // Create custom avatar via HeyGen V2 Video Avatar API
+    const response = await fetch('https://api.heygen.com/v2/video_avatar', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-KEY': config.apiKey,
+        'x-api-key': config.apiKey,
       },
       body: JSON.stringify({
-        name: avatarName,
-        training_video_url: videoUrl,
-        // consent_video_url may be required - check docs
+        avatar_name: avatarName,
+        training_footage_url: trainingVideoUrl,
+        video_consent_url: consentVideoUrl,
       })
     });
 
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      data = { message: responseText };
+    }
+
     if (!response.ok) {
-      const errorText = await response.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch (e) {
-        errorData = { message: errorText };
-      }
-      console.error('LiveAvatar create avatar error:', errorData);
+      console.error('HeyGen create avatar error:', data);
       return res.status(response.status).json({
-        error: errorData.message || errorData.detail || 'Failed to create custom avatar',
-        debug: errorData
+        error: data.message || data.error?.message || 'Failed to create custom avatar. This may require an Enterprise HeyGen plan.',
+        debug: data
       });
     }
 
-    const data = await response.json();
-    const avatarId = data.avatar_id || data.data?.avatar_id;
+    console.log('HeyGen Video Avatar creation response:', data);
+
+    const avatarId = data.data?.avatar_id;
+    const avatarGroupId = data.data?.avatar_group_id;
 
     // Save to persona
     const persona = await req.prisma.persona.findUnique({
@@ -2038,7 +2089,8 @@ router.post('/liveavatar/create-avatar', authenticate, requireSubscription('PREM
         data: {
           liveavatarId: avatarId,
           liveavatarName: avatarName,
-          liveavatarStatus: 'pending' // Will be 'training' then 'ready'
+          liveavatarStatus: 'in_progress', // HeyGen status: in_progress -> complete
+          // Store avatar group ID in settings if needed
         }
       });
     }
@@ -2046,13 +2098,78 @@ router.post('/liveavatar/create-avatar', authenticate, requireSubscription('PREM
     res.json({
       success: true,
       avatarId,
+      avatarGroupId,
       avatarName,
-      status: 'pending',
-      message: 'Custom avatar creation started. Training may take several hours.'
+      status: 'in_progress',
+      message: 'Video Avatar creation started. Training typically takes a few hours. You can check status in the Live Avatar tab.'
     });
   } catch (error) {
-    console.error('LiveAvatar create avatar error:', error);
+    console.error('HeyGen create avatar error:', error);
     res.status(500).json({ error: 'Failed to create custom avatar' });
+  }
+});
+
+// Check Video Avatar training status
+router.get('/liveavatar/avatar-status/:avatarId', authenticate, async (req, res) => {
+  try {
+    const { avatarId } = req.params;
+
+    // Get HeyGen API key
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
+    });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
+
+    if (!config?.apiKey) {
+      return res.status(503).json({ error: 'HeyGen API not configured' });
+    }
+
+    const response = await fetch(`https://api.heygen.com/v2/video_avatar/${avatarId}/status`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': config.apiKey,
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data.message || 'Failed to check avatar status',
+        debug: data
+      });
+    }
+
+    const status = data.data?.status; // 'in_progress' or 'complete'
+
+    // Update persona if status changed to complete
+    if (status === 'complete') {
+      const persona = await req.prisma.persona.findUnique({
+        where: { userId: req.user.id }
+      });
+
+      if (persona && persona.liveavatarId === avatarId && persona.liveavatarStatus !== 'ready') {
+        await req.prisma.persona.update({
+          where: { id: persona.id },
+          data: {
+            liveavatarStatus: 'ready'
+          }
+        });
+      }
+    }
+
+    res.json({
+      avatarId,
+      status: status === 'complete' ? 'ready' : status,
+      rawStatus: status
+    });
+  } catch (error) {
+    console.error('Avatar status check error:', error);
+    res.status(500).json({ error: 'Failed to check avatar status' });
   }
 });
 

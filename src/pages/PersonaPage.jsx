@@ -44,7 +44,8 @@ import {
   ChevronUp,
   Video,
   RefreshCw,
-  Info
+  Info,
+  Shield
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -298,13 +299,21 @@ export function PersonaPage({ onNavigate }) {
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
 
   // LiveAvatar video upload state
-  const [liveAvatarVideo, setLiveAvatarVideo] = useState(null);
-  const [liveAvatarVideoUrl, setLiveAvatarVideoUrl] = useState(null);
-  const [liveAvatarVideoPreview, setLiveAvatarVideoPreview] = useState(null);
-  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  // Training video (2 minutes)
+  const [trainingVideo, setTrainingVideo] = useState(null);
+  const [trainingVideoUrl, setTrainingVideoUrl] = useState(null);
+  const [trainingVideoPreview, setTrainingVideoPreview] = useState(null);
+  const [isUploadingTraining, setIsUploadingTraining] = useState(false);
+  // Consent video (short statement)
+  const [consentVideo, setConsentVideo] = useState(null);
+  const [consentVideoUrl, setConsentVideoUrl] = useState(null);
+  const [consentVideoPreview, setConsentVideoPreview] = useState(null);
+  const [isUploadingConsent, setIsUploadingConsent] = useState(false);
+  // General state
   const [isCreatingLiveAvatar, setIsCreatingLiveAvatar] = useState(false);
   const [liveAvatarError, setLiveAvatarError] = useState(null);
   const [liveAvatarStatus, setLiveAvatarStatus] = useState(null);
+  const [activeVideoType, setActiveVideoType] = useState('training'); // 'training' or 'consent'
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [videoRecordingTime, setVideoRecordingTime] = useState(0);
   const videoInputRef = useRef(null);
@@ -637,7 +646,7 @@ export function PersonaPage({ onNavigate }) {
   }, []);
 
   // LiveAvatar video functions
-  const handleVideoFileSelect = (e) => {
+  const handleVideoFileSelect = (e, videoType) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -654,18 +663,25 @@ export function PersonaPage({ onNavigate }) {
     }
 
     setLiveAvatarError(null);
-    setLiveAvatarVideo(file);
-
-    // Create preview URL
     const previewUrl = URL.createObjectURL(file);
-    setLiveAvatarVideoPreview(previewUrl);
+
+    if (videoType === 'consent') {
+      if (consentVideoPreview) URL.revokeObjectURL(consentVideoPreview);
+      setConsentVideo(file);
+      setConsentVideoPreview(previewUrl);
+    } else {
+      if (trainingVideoPreview) URL.revokeObjectURL(trainingVideoPreview);
+      setTrainingVideo(file);
+      setTrainingVideoPreview(previewUrl);
+    }
 
     // Reset file input
     if (e.target) e.target.value = '';
   };
 
-  const startVideoRecording = async () => {
+  const startVideoRecording = async (videoType) => {
     try {
+      setActiveVideoType(videoType);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 1280, height: 720, facingMode: 'user' },
         audio: true
@@ -690,9 +706,17 @@ export function PersonaPage({ onNavigate }) {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
-        setLiveAvatarVideo(blob);
         const previewUrl = URL.createObjectURL(blob);
-        setLiveAvatarVideoPreview(previewUrl);
+
+        if (videoType === 'consent') {
+          if (consentVideoPreview) URL.revokeObjectURL(consentVideoPreview);
+          setConsentVideo(blob);
+          setConsentVideoPreview(previewUrl);
+        } else {
+          if (trainingVideoPreview) URL.revokeObjectURL(trainingVideoPreview);
+          setTrainingVideo(blob);
+          setTrainingVideoPreview(previewUrl);
+        }
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -722,59 +746,90 @@ export function PersonaPage({ onNavigate }) {
     }
   };
 
-  const resetLiveAvatarVideo = () => {
-    if (liveAvatarVideoPreview) {
-      URL.revokeObjectURL(liveAvatarVideoPreview);
+  const resetVideo = (videoType) => {
+    if (videoType === 'consent') {
+      if (consentVideoPreview) URL.revokeObjectURL(consentVideoPreview);
+      setConsentVideo(null);
+      setConsentVideoPreview(null);
+      setConsentVideoUrl(null);
+    } else {
+      if (trainingVideoPreview) URL.revokeObjectURL(trainingVideoPreview);
+      setTrainingVideo(null);
+      setTrainingVideoPreview(null);
+      setTrainingVideoUrl(null);
     }
-    setLiveAvatarVideo(null);
-    setLiveAvatarVideoPreview(null);
-    setLiveAvatarVideoUrl(null);
     setVideoRecordingTime(0);
     setLiveAvatarError(null);
   };
 
+  const resetAllVideos = () => {
+    resetVideo('training');
+    resetVideo('consent');
+  };
+
   const uploadAndCreateLiveAvatar = async () => {
-    if (!liveAvatarVideo) {
-      setLiveAvatarError('Please select or record a video first.');
+    if (!trainingVideo) {
+      setLiveAvatarError('Please select or record a training video first.');
+      return;
+    }
+    if (!consentVideo) {
+      setLiveAvatarError('Please select or record a consent video first.');
       return;
     }
 
-    setIsUploadingVideo(true);
     setLiveAvatarError(null);
 
     try {
-      // Convert video to base64
-      const reader = new FileReader();
-      const videoData = await new Promise((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(liveAvatarVideo);
+      // Upload training video
+      setIsUploadingTraining(true);
+      const trainingReader = new FileReader();
+      const trainingData = await new Promise((resolve, reject) => {
+        trainingReader.onloadend = () => resolve(trainingReader.result);
+        trainingReader.onerror = reject;
+        trainingReader.readAsDataURL(trainingVideo);
       });
 
-      // Upload video
-      const uploadResult = await api.uploadLiveAvatarVideo(videoData, liveAvatarVideo.name);
-      setLiveAvatarVideoUrl(uploadResult.videoUrl);
-      setIsUploadingVideo(false);
+      const trainingResult = await api.uploadLiveAvatarVideo(trainingData, 'training');
+      setTrainingVideoUrl(trainingResult.videoUrl);
+      setIsUploadingTraining(false);
 
-      // Create LiveAvatar
+      // Upload consent video
+      setIsUploadingConsent(true);
+      const consentReader = new FileReader();
+      const consentData = await new Promise((resolve, reject) => {
+        consentReader.onloadend = () => resolve(consentReader.result);
+        consentReader.onerror = reject;
+        consentReader.readAsDataURL(consentVideo);
+      });
+
+      const consentResult = await api.uploadLiveAvatarVideo(consentData, 'consent');
+      setConsentVideoUrl(consentResult.videoUrl);
+      setIsUploadingConsent(false);
+
+      // Create LiveAvatar with both videos
       setIsCreatingLiveAvatar(true);
-      const avatarResult = await api.createLiveAvatar(uploadResult.videoUrl, `${user.firstName}'s Avatar`);
+      const avatarResult = await api.createLiveAvatar(
+        trainingResult.videoUrl,
+        consentResult.videoUrl,
+        `${user.firstName}'s Avatar`
+      );
 
       // Update status
       setLiveAvatarStatus({
         ...liveAvatarStatus,
         hasCustomAvatar: true,
-        customAvatarStatus: 'pending',
+        customAvatarStatus: 'in_progress',
         customAvatarName: avatarResult.avatarName
       });
 
-      showToast('LiveAvatar training started! This may take 2-5 days.', 'success');
-      resetLiveAvatarVideo();
+      showToast('Video Avatar training started! This may take a few hours.', 'success');
+      resetAllVideos();
     } catch (error) {
       console.error('Failed to create LiveAvatar:', error);
-      setLiveAvatarError(error.message || 'Failed to create LiveAvatar. Please try again.');
+      setLiveAvatarError(error.message || 'Failed to create Video Avatar. Please try again.');
     } finally {
-      setIsUploadingVideo(false);
+      setIsUploadingTraining(false);
+      setIsUploadingConsent(false);
       setIsCreatingLiveAvatar(false);
     }
   };
@@ -783,6 +838,17 @@ export function PersonaPage({ onNavigate }) {
     try {
       const status = await api.getLiveAvatarStatus();
       setLiveAvatarStatus(status);
+
+      // If we have an avatar in progress, check its detailed status
+      if (status.hasCustomAvatar && status.customAvatarStatus === 'in_progress') {
+        const persona = await api.getPersona();
+        if (persona.liveavatarId) {
+          const avatarStatus = await api.checkLiveAvatarStatus(persona.liveavatarId);
+          if (avatarStatus.status === 'ready') {
+            setLiveAvatarStatus(prev => ({ ...prev, customAvatarStatus: 'ready' }));
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to refresh LiveAvatar status:', error);
     }
@@ -2410,9 +2476,9 @@ export function PersonaPage({ onNavigate }) {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 mb-4">
                 <Video className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-serif text-cream mb-2">Create Your Live Avatar</h3>
+              <h3 className="text-xl font-serif text-cream mb-2">Create Your Video Avatar</h3>
               <p className="text-cream/60 text-sm max-w-lg mx-auto">
-                Record or upload a training video to create your personalized real-time interactive avatar.
+                Upload two videos to create your personalized AI avatar that can speak with your voice and likeness.
               </p>
             </div>
 
@@ -2450,7 +2516,7 @@ export function PersonaPage({ onNavigate }) {
                           : 'bg-blue-500/20 text-blue-400'
                       }`}>
                         {liveAvatarStatus.customAvatarStatus === 'ready' ? '✓ Ready' :
-                         liveAvatarStatus.customAvatarStatus === 'training' ? '⏳ Training (2-5 days)' :
+                         liveAvatarStatus.customAvatarStatus === 'training' ? '⏳ Training' :
                          liveAvatarStatus.customAvatarStatus === 'failed' ? '✗ Failed' :
                          '🕐 Pending'}
                       </span>
@@ -2459,7 +2525,7 @@ export function PersonaPage({ onNavigate }) {
                       <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
                         <p className="text-green-400 text-sm flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4" />
-                          Your LiveAvatar is ready! Go to Echo Sim → Live Conversation to use it.
+                          Your Video Avatar is ready! Go to Echo Sim → Live Conversation to use it.
                         </p>
                       </div>
                     )}
@@ -2467,7 +2533,7 @@ export function PersonaPage({ onNavigate }) {
                       <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
                         <p className="text-amber-400 text-sm flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Your avatar is being trained. This typically takes 2-5 days.
+                          Your avatar is being trained. This may take a few hours.
                         </p>
                       </div>
                     )}
@@ -2480,70 +2546,19 @@ export function PersonaPage({ onNavigate }) {
               </div>
             )}
 
-            {/* Video Recording Guidelines */}
-            <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 rounded-xl p-5 border border-purple-500/30">
-              <h4 className="text-cream font-medium mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-purple-400" />
-                Video Recording Guidelines
-              </h4>
-              <div className="space-y-4 text-sm">
-                <p className="text-cream/70">
-                  Record a <span className="text-gold font-semibold">2-minute video</span> following this structure:
+            {/* Error Message */}
+            {liveAvatarError && (
+              <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/30">
+                <p className="text-red-400 text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  {liveAvatarError}
                 </p>
-                <div className="grid gap-3">
-                  <div className="flex items-start gap-3 bg-navy-dark/50 rounded-lg p-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-purple-400 text-xs font-bold">1</span>
-                    </div>
-                    <div>
-                      <p className="text-cream font-medium">First 15 seconds: Listen</p>
-                      <p className="text-cream/50">Look at the camera and stay silent, as if listening to someone.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 bg-navy-dark/50 rounded-lg p-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-purple-400 text-xs font-bold">2</span>
-                    </div>
-                    <div>
-                      <p className="text-cream font-medium">Next 90 seconds: Talk</p>
-                      <p className="text-cream/50">Speak naturally about any topic. Share stories, thoughts, or read something aloud.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 bg-navy-dark/50 rounded-lg p-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-purple-400 text-xs font-bold">3</span>
-                    </div>
-                    <div>
-                      <p className="text-cream font-medium">Last 15 seconds: Idle</p>
-                      <p className="text-cream/50">Stay silent again with a neutral expression.</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 p-3 bg-navy-dark/50 rounded-lg">
-                  <p className="text-cream/70 text-xs">
-                    <span className="text-gold">Tips:</span> Use good lighting, face the camera directly,
-                    minimize background noise, and keep a steady head position. Training takes 2-5 days.
-                  </p>
-                </div>
               </div>
-            </div>
+            )}
 
-            {/* Video Upload/Record Section */}
-            <div className="bg-navy-dark/30 rounded-xl p-5 border border-gold/20">
-              <h4 className="text-cream font-medium mb-4">Upload or Record Video</h4>
-
-              {/* Error Message */}
-              {liveAvatarError && (
-                <div className="mb-4 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
-                  <p className="text-red-400 text-sm flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    {liveAvatarError}
-                  </p>
-                </div>
-              )}
-
-              {/* Video Preview */}
-              {isRecordingVideo && (
+            {/* Recording in progress overlay */}
+            {isRecordingVideo && (
+              <div className="bg-navy-dark/30 rounded-xl p-5 border border-purple-500/50">
                 <div className="mb-4">
                   <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
                     <video
@@ -2555,11 +2570,11 @@ export function PersonaPage({ onNavigate }) {
                     />
                     <div className="absolute top-4 left-4 flex items-center gap-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-white text-sm font-medium">
-                        Recording: {formatTime(videoRecordingTime)}
+                      <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded">
+                        Recording {activeVideoType === 'consent' ? 'Consent' : 'Training'}: {formatTime(videoRecordingTime)}
                       </span>
                     </div>
-                    {videoRecordingTime < 120 && (
+                    {activeVideoType === 'training' && videoRecordingTime < 120 && (
                       <div className="absolute bottom-4 left-4 right-4">
                         <div className="bg-black/50 rounded-full h-2">
                           <div
@@ -2576,54 +2591,6 @@ export function PersonaPage({ onNavigate }) {
                     )}
                   </div>
                 </div>
-              )}
-
-              {liveAvatarVideoPreview && !isRecordingVideo && (
-                <div className="mb-4">
-                  <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
-                    <video
-                      ref={recordedVideoRef}
-                      src={liveAvatarVideoPreview}
-                      className="w-full h-full object-cover"
-                      controls
-                    />
-                    <button
-                      onClick={resetLiveAvatarVideo}
-                      className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
-                    >
-                      <X className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              {!liveAvatarVideoPreview && !isRecordingVideo && (
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <label className="flex flex-col items-center justify-center p-6 bg-navy-light/30 rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 cursor-pointer transition-all">
-                    <Upload className="w-8 h-8 text-gold/50 mb-2" />
-                    <span className="text-cream text-sm font-medium">Upload Video</span>
-                    <span className="text-cream/40 text-xs">MP4, WebM (max 200MB)</span>
-                    <input
-                      type="file"
-                      accept="video/*"
-                      onChange={handleVideoFileSelect}
-                      className="hidden"
-                      ref={videoInputRef}
-                    />
-                  </label>
-                  <button
-                    onClick={startVideoRecording}
-                    className="flex flex-col items-center justify-center p-6 bg-purple-500/20 rounded-xl border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 transition-all"
-                  >
-                    <Camera className="w-8 h-8 text-purple-400 mb-2" />
-                    <span className="text-cream text-sm font-medium">Record Video</span>
-                    <span className="text-cream/40 text-xs">Use your webcam</span>
-                  </button>
-                </div>
-              )}
-
-              {isRecordingVideo && (
                 <div className="flex justify-center">
                   <motion.button
                     onClick={stopVideoRecording}
@@ -2635,37 +2602,217 @@ export function PersonaPage({ onNavigate }) {
                     Stop Recording
                   </motion.button>
                 </div>
-              )}
+              </div>
+            )}
 
-              {liveAvatarVideoPreview && !isRecordingVideo && (
-                <div className="flex justify-center">
-                  <motion.button
-                    onClick={uploadAndCreateLiveAvatar}
-                    disabled={isUploadingVideo || isCreatingLiveAvatar}
-                    className="px-8 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl flex items-center gap-2 hover:from-purple-600 hover:to-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {isUploadingVideo ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Uploading Video...
-                      </>
-                    ) : isCreatingLiveAvatar ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Starting Training...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5" />
-                        Create LiveAvatar
-                      </>
+            {/* Two Video Upload Sections */}
+            {!isRecordingVideo && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Training Video Section */}
+                <div className="bg-navy-dark/30 rounded-xl p-5 border border-gold/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                      <Video className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-cream font-medium">Training Video</h4>
+                      <p className="text-cream/50 text-xs">2 minutes: 15s listen, 90s talk, 15s idle</p>
+                    </div>
+                    {trainingVideoPreview && (
+                      <CheckCircle2 className="w-5 h-5 text-green-400 ml-auto" />
                     )}
-                  </motion.button>
+                  </div>
+
+                  {trainingVideoPreview ? (
+                    <div className="space-y-3">
+                      <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
+                        <video
+                          src={trainingVideoPreview}
+                          className="w-full h-full object-cover"
+                          controls
+                        />
+                        <button
+                          onClick={() => resetVideo('training')}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+                        >
+                          <X className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                      {isUploadingTraining && (
+                        <div className="flex items-center gap-2 text-amber-400 text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Uploading training video...
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex flex-col items-center justify-center p-4 bg-navy-light/30 rounded-lg border-2 border-dashed border-gold/30 hover:border-gold/50 cursor-pointer transition-all">
+                        <Upload className="w-6 h-6 text-gold/50 mb-1" />
+                        <span className="text-cream text-xs font-medium">Upload</span>
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={(e) => handleVideoFileSelect(e, 'training')}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        onClick={() => startVideoRecording('training')}
+                        className="flex flex-col items-center justify-center p-4 bg-purple-500/20 rounded-lg border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 transition-all"
+                      >
+                        <Camera className="w-6 h-6 text-purple-400 mb-1" />
+                        <span className="text-cream text-xs font-medium">Record</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Training video guidelines */}
+                  <div className="mt-4 p-3 bg-purple-900/20 rounded-lg border border-purple-500/20">
+                    <p className="text-cream/60 text-xs leading-relaxed">
+                      <span className="text-purple-400 font-medium">Structure:</span> Start with 15s of listening silence,
+                      then talk naturally for 90s, end with 15s silent idle. Good lighting and clear audio are essential.
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Consent Video Section */}
+                <div className="bg-navy-dark/30 rounded-xl p-5 border border-gold/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-cream font-medium">Consent Video</h4>
+                      <p className="text-cream/50 text-xs">Short statement granting permission</p>
+                    </div>
+                    {consentVideoPreview && (
+                      <CheckCircle2 className="w-5 h-5 text-green-400 ml-auto" />
+                    )}
+                  </div>
+
+                  {consentVideoPreview ? (
+                    <div className="space-y-3">
+                      <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
+                        <video
+                          src={consentVideoPreview}
+                          className="w-full h-full object-cover"
+                          controls
+                        />
+                        <button
+                          onClick={() => resetVideo('consent')}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+                        >
+                          <X className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                      {isUploadingConsent && (
+                        <div className="flex items-center gap-2 text-amber-400 text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Uploading consent video...
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex flex-col items-center justify-center p-4 bg-navy-light/30 rounded-lg border-2 border-dashed border-gold/30 hover:border-gold/50 cursor-pointer transition-all">
+                        <Upload className="w-6 h-6 text-gold/50 mb-1" />
+                        <span className="text-cream text-xs font-medium">Upload</span>
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={(e) => handleVideoFileSelect(e, 'consent')}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        onClick={() => startVideoRecording('consent')}
+                        className="flex flex-col items-center justify-center p-4 bg-indigo-500/20 rounded-lg border-2 border-dashed border-indigo-500/30 hover:border-indigo-500/50 transition-all"
+                      >
+                        <Camera className="w-6 h-6 text-indigo-400 mb-1" />
+                        <span className="text-cream text-xs font-medium">Record</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Consent script */}
+                  <div className="mt-4 p-3 bg-indigo-900/20 rounded-lg border border-indigo-500/20">
+                    <p className="text-cream/60 text-xs leading-relaxed">
+                      <span className="text-indigo-400 font-medium">Say this:</span> "I, [your name], authorize the use of
+                      my likeness and voice for creating a digital avatar for EchoTrail."
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Create Button */}
+            {!isRecordingVideo && (trainingVideoPreview || consentVideoPreview) && (
+              <div className="flex justify-center">
+                <motion.button
+                  onClick={uploadAndCreateLiveAvatar}
+                  disabled={!trainingVideo || !consentVideo || isUploadingTraining || isUploadingConsent || isCreatingLiveAvatar}
+                  className="px-8 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl flex items-center gap-2 hover:from-purple-600 hover:to-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isUploadingTraining ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Uploading Training Video...
+                    </>
+                  ) : isUploadingConsent ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Uploading Consent Video...
+                    </>
+                  ) : isCreatingLiveAvatar ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Starting Avatar Training...
+                    </>
+                  ) : !trainingVideo || !consentVideo ? (
+                    <>
+                      <AlertCircle className="w-5 h-5" />
+                      Upload Both Videos
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      Create Video Avatar
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            )}
+
+            {/* Requirements Info */}
+            {!isRecordingVideo && !trainingVideoPreview && !consentVideoPreview && (
+              <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 rounded-xl p-5 border border-purple-500/20">
+                <h4 className="text-cream font-medium mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-purple-400" />
+                  Video Avatar Requirements
+                </h4>
+                <ul className="space-y-2 text-cream/60 text-sm">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">1.</span>
+                    <span><strong className="text-cream">Training Video (2 min):</strong> Shows your face and voice for AI learning</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">2.</span>
+                    <span><strong className="text-cream">Consent Video:</strong> Verbal permission for avatar creation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">3.</span>
+                    <span>Good lighting, clear audio, face the camera directly</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">4.</span>
+                    <span>Training typically takes a few hours after upload</span>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
         );
 

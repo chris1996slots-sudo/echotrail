@@ -485,18 +485,22 @@ class ApiService {
     return this.request('/api/ai/liveavatar/status');
   }
 
-  async uploadLiveAvatarVideo(videoData, filename) {
+  async uploadLiveAvatarVideo(videoData, videoType = 'training') {
     return this.request('/api/ai/liveavatar/upload-video', {
       method: 'POST',
-      body: JSON.stringify({ videoData, filename }),
+      body: JSON.stringify({ videoData, videoType }),
     });
   }
 
-  async createLiveAvatar(videoUrl, name) {
+  async createLiveAvatar(trainingVideoUrl, consentVideoUrl, name) {
     return this.request('/api/ai/liveavatar/create-avatar', {
       method: 'POST',
-      body: JSON.stringify({ videoUrl, name }),
+      body: JSON.stringify({ trainingVideoUrl, consentVideoUrl, name }),
     });
+  }
+
+  async checkLiveAvatarStatus(avatarId) {
+    return this.request(`/api/ai/liveavatar/avatar-status/${avatarId}`);
   }
 
   async stopLiveAvatarSession(sessionToken, sessionId) {
