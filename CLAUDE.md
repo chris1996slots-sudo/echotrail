@@ -132,6 +132,26 @@ Wenn User zu **Echo Sim** geht:
 
 ## Bekannte Patterns & Fixes
 
+### WICHTIG: Immer API-Dokumentation lesen!
+
+**Bei jeder Arbeit mit externen APIs (Simli, HeyGen, ElevenLabs, etc.):**
+
+1. **ZUERST** die offizielle API-Dokumentation lesen
+2. **NIEMALS** Annahmen über Format, Chunk Size, Datentypen etc. machen
+3. **IMMER** nach Code-Beispielen in der Dokumentation suchen
+4. **PRÜFEN** welche spezifischen Requirements (PCM16, 16kHz, 6000 bytes, etc.) existieren
+
+**Beispiel: Simli Audio Static Problem**
+- Problem: Starkes Rauschen/Crackling im Audio
+- Lösung war in `/docs/SIMLI_API.md` dokumentiert:
+  - Format: PCM Int16 (nicht μ-law!)
+  - Sample Rate: 16,000 Hz
+  - Chunk Size: 6,000 bytes (nicht 1024, nicht single buffer!)
+  - WAV Header: Muss entfernt werden (erste 44 bytes)
+  - Datentyp: Int16Array (nicht Uint8Array!)
+
+**→ Erspart viele Debugging-Runden und falsche Lösungsversuche!**
+
 ### React State Update Conflicts
 Bei State-Updates die Navigation/Rendering auslösen, immer `setTimeout` verwenden:
 
@@ -249,10 +269,12 @@ curl https://echotrail-qt41.onrender.com/api/auth/me
 - **Verwendung**: Echo Sim → Option 2: Live Conversation
 - **Endpoints**:
   - `/api/ai/simli/session` - API Keys und Voice Clone Config holen
-  - `/api/ai/simli/start` - WebRTC Session starten
+  - `/api/ai/simli/start` - WebRTC Session starten (NICHT VERWENDET - simli-client SDK macht das direkt)
   - `/api/ai/simli/faces` - Verfügbare Avatare auflisten
   - `/api/ai/simli/tts` - TTS mit ElevenLabs Voice Clone (PCM16, 16kHz)
   - `/api/ai/simli/status` - Konfigurationsstatus prüfen
+  - `/api/ai/simli/create-face` - Custom Face erstellen (POST mit imageData + faceName)
+  - `/api/ai/simli/face-status` - Custom Face Status prüfen
 - **Config Key**: `simli`
 - **Vorteile**:
   - ✅ Unterstützt ElevenLabs Voice Clone für Echtzeit-Streaming!
@@ -260,8 +282,99 @@ curl https://echotrail-qt41.onrender.com/api/auth/me
   - ✅ Kein eigenes Avatar-Training nötig (nutzt Simli Standard-Avatare)
   - ✅ WebRTC-basiert mit STUN/TURN Fallback
   - ✅ Bis zu 20 Minuten Sessions
-- **Frontend**: `SimliAvatar.jsx` Komponente mit simli-client SDK
+  - ✅ Custom Faces via Photo Upload möglich
+- **Frontend**:
+  - `SimliAvatar.jsx` - Live Conversation Komponente mit simli-client SDK
+  - `SimliChatConfig.jsx` - Face & Voice Selection vor Session Start
 - **Dokumentation**: `/docs/SIMLI_API.md`
+
+#### Simli Audio Format Requirements (KRITISCH!)
+**WICHTIG:** Simli benötigt exakt folgendes Audio-Format, sonst kommt es zu Rauschen/Crackling:
+
+1. **Format**: PCM Int16 (signed 16-bit integers)
+2. **Sample Rate**: 16,000 Hz (16kHz)
+3. **Channels**: Mono (single channel)
+4. **Chunk Size**: 6,000 bytes = 3,000 Int16 samples
+5. **WAV Header**: MUSS entfernt werden (erste 44 bytes)!
+6. **Datentyp**: Int16Array (NICHT Uint8Array!)
+
+**Backend Implementation** ([server/routes/ai.js:2600-2620](server/routes/ai.js#L2600-L2620)):
+```javascript
+// ElevenLabs TTS → PCM16 16kHz
+const response = await axios.post('https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream',
+  { text },
+  {
+    params: { output_format: 'pcm_16000' }, // PCM 16kHz
+    responseType: 'arraybuffer'
+  }
+);
+
+// WAV Header entfernen (erste 44 bytes)
+const audioBuffer = await response.arrayBuffer();
+const rawPCM = audioBuffer.byteLength > 44 ? audioBuffer.slice(44) : audioBuffer;
+
+// Als Base64 zum Frontend senden
+const base64Audio = Buffer.from(rawPCM).toString('base64');
+```
+
+**Frontend Implementation** ([src/components/SimliAvatar.jsx:174-207](src/components/SimliAvatar.jsx#L174-L207)):
+```javascript
+// Base64 → Uint8Array → Int16Array
+const binaryString = atob(ttsResponse.audio);
+const uint8Array = new Uint8Array(binaryString.length);
+for (let i = 0; i < binaryString.length; i++) {
+  uint8Array[i] = binaryString.charCodeAt(i);
+}
+const int16Array = new Int16Array(uint8Array.buffer);
+
+// Send in 6000-byte chunks (3000 Int16 samples)
+const CHUNK_SIZE = 6000;
+const samplesPerChunk = CHUNK_SIZE / 2; // 2 bytes per Int16 sample
+
+for (let i = 0; i < int16Array.length; i += samplesPerChunk) {
+  const chunk = int16Array.slice(i, Math.min(i + samplesPerChunk, int16Array.length));
+  simliClientRef.current.sendAudioData(chunk);
+}
+```
+
+#### Simli Face Selection Flow
+
+1. **Custom Faces (Priorität 1)**:
+   - `persona.simliFaceId` - Face aus Real-Time Chat Face Upload (My Persona → Avatar)
+   - `avatarImages[].simliFaceId` - Faces aus Avatar Image Uploads mit Simli ID
+   - Werden als "Your custom face" angezeigt
+
+2. **Standard Faces (Fallback)**:
+   - Von `/api/ai/simli/faces` geladen
+   - Simli's vorgefertigte Avatare
+   - Werden als "Standard avatar" angezeigt
+
+3. **Face Upload**:
+   - User geht zu My Persona → Avatar
+   - Lädt Foto hoch
+   - Button "Upload as Simli Face" → Backend ruft Simli API
+   - Simli erstellt Face ID (dauert 1-2 Minuten)
+   - Face wird als `simliFaceId` in Persona gespeichert
+
+#### Simli Voice Selection Flow
+
+1. **Voice Clone (Priorität 1)**:
+   - `persona.elevenlabsVoiceId` - Geklonte Stimme von ElevenLabs
+   - Wird als "Your cloned voice" angezeigt mit grünem Badge
+   - FUNKTIONIERT mit Simli Echtzeit-Streaming! ✅
+
+2. **Standard Voices (Fallback)**:
+   - ElevenLabs Pre-Made Voices:
+     - Sarah (Female, Soft) - EXAVITQu4vr4xnSDxMaL
+     - Adam (Male, Deep) - pNInz6obpgDQGcFmaJgB
+     - Antoni (Male, Well-rounded) - ErXwobaYiN019PkySvjV
+     - Arnold (Male, Crisp) - VR6AewLTigWG4xSOukaG
+
+3. **Voice Clone erstellen**:
+   - User geht zu My Persona → Voice
+   - Nimmt 5 Voice Samples auf (~30 Sekunden je)
+   - Button "Create Voice Clone" → ElevenLabs API
+   - Voice ID wird als `elevenlabsVoiceId` gespeichert
 
 ## Persona Schema (Wichtige Felder)
 
