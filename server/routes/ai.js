@@ -484,28 +484,21 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
     }
 
     // Create voice clone at ElevenLabs
-    const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
-      method: 'POST',
+    // Use axios instead of fetch for better FormData support
+    const axios = (await import('axios')).default;
+    const response = await axios.post('https://api.elevenlabs.io/v1/voices/add', formData, {
       headers: {
         'xi-api-key': config.apiKey,
         ...formData.getHeaders()
       },
-      body: formData
+      validateStatus: () => true // Don't throw on non-2xx status
     });
 
-    if (!response.ok) {
-      const responseText = await response.text();
-      let errorData = null;
-      let errorMessage = 'Voice cloning failed';
+    if (response.status !== 200) {
+      const errorData = response.data;
+      const errorMessage = errorData?.detail?.message || errorData?.detail || errorData?.message || 'Voice cloning failed';
 
-      try {
-        errorData = JSON.parse(responseText);
-        console.error('ElevenLabs clone error:', errorData);
-        errorMessage = errorData.detail?.message || errorData.detail || errorData.message || responseText;
-      } catch (parseError) {
-        console.error('ElevenLabs clone error (text):', responseText);
-        errorMessage = responseText || `HTTP ${response.status}`;
-      }
+      console.error('ElevenLabs clone error:', errorData);
 
       // Return full debug info to frontend
       return res.status(response.status).json({
@@ -513,7 +506,7 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
         debug: {
           status: response.status,
           statusText: response.statusText,
-          apiResponse: errorData || responseText,
+          apiResponse: errorData,
           samplesCount: persona.voiceSamples.length,
           sampleFormats: persona.voiceSamples.map((s, i) => {
             const match = s.audioData.match(/^data:audio\/(\w+);base64,/);
@@ -523,7 +516,7 @@ router.post('/voice/clone', authenticate, requireSubscription('STANDARD'), async
       });
     }
 
-    const data = await response.json();
+    const data = response.data;
 
     // Save the voice ID to persona
     await req.prisma.persona.update({
