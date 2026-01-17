@@ -2358,6 +2358,10 @@ router.delete('/videos/:id', authenticate, async (req, res) => {
 // Refresh status for pending videos
 router.post('/videos/:id/refresh', authenticate, async (req, res) => {
   try {
+    console.log('=== Video Refresh Request ===');
+    console.log('Video ID:', req.params.id);
+    console.log('User ID:', req.user.id);
+
     const { id } = req.params;
 
     const video = await req.prisma.generatedVideo.findUnique({
@@ -2365,26 +2369,43 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
     });
 
     if (!video) {
+      console.log('ERROR: Video not found');
       return res.status(404).json({ error: 'Video not found' });
     }
 
+    console.log('Video found:', {
+      videoId: video.videoId,
+      status: video.status,
+      userId: video.userId
+    });
+
     if (video.userId !== req.user.id) {
+      console.log('ERROR: Not authorized');
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Only refresh if still pending or processing
     if (video.status === 'completed' || video.status === 'failed') {
+      console.log('Video already completed/failed, returning as-is');
       return res.json(video);
     }
 
     // Get HeyGen API key
+    console.log('Fetching HeyGen API config...');
     const config = await req.prisma.apiConfig.findFirst({
       where: {
         OR: [{ service: 'avatar' }, { service: 'heygen' }]
       }
     });
 
+    console.log('Config found:', config ? {
+      service: config.service,
+      hasApiKey: !!config.apiKey,
+      isActive: config.isActive
+    } : 'NO CONFIG');
+
     if (!config?.apiKey) {
+      console.log('ERROR: Avatar API not configured');
       return res.status(500).json({ error: 'Avatar API not configured' });
     }
 
@@ -2443,9 +2464,14 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
       },
     });
 
+    console.log('Successfully updated video status');
     res.json(updatedVideo);
   } catch (error) {
-    console.error('Refresh video status error:', error);
+    console.error('=== REFRESH VIDEO ERROR ===');
+    console.error('Error type:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Full error:', error);
+    console.error('==========================');
     res.status(500).json({ error: 'Failed to refresh video status' });
   }
 });
