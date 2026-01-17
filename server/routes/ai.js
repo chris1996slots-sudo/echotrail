@@ -2742,10 +2742,77 @@ router.get('/simli/face-status', authenticate, async (req, res) => {
       }
     });
 
+    if (!persona?.simliFaceId) {
+      return res.json({
+        hasCustomFace: false,
+        faceId: null,
+        faceName: null,
+        status: null,
+        isReady: false
+      });
+    }
+
+    // Check actual status from Simli API
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    let simliStatus = 'unknown';
+    let isReady = false;
+
+    if (simliConfig?.isActive && simliConfig?.apiKey) {
+      try {
+        // Try to use the face in a test session to see if it's ready
+        // If face is not ready, Simli will return an error
+        const axios = (await import('axios')).default;
+        const testResponse = await axios.post(
+          'https://api.simli.ai/startAudioToVideoSession',
+          {
+            faceId: persona.simliFaceId,
+            apiKey: simliConfig.apiKey,
+            // Minimal test request to check if face exists
+            syncAudio: false
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            validateStatus: () => true // Don't throw on any status
+          }
+        );
+
+        console.log('Simli face status check response:', {
+          faceId: persona.simliFaceId,
+          status: testResponse.status,
+          data: testResponse.data
+        });
+
+        if (testResponse.status === 200) {
+          // Face is ready
+          simliStatus = 'ready';
+          isReady = true;
+        } else if (testResponse.status === 400 && testResponse.data?.detail?.includes('Invalid face ID')) {
+          // Face is still processing
+          simliStatus = 'processing';
+          isReady = false;
+        } else {
+          // Unknown error
+          simliStatus = 'error';
+          isReady = false;
+        }
+      } catch (error) {
+        console.error('Error checking Simli face status:', error);
+        simliStatus = 'unknown';
+        isReady = false;
+      }
+    }
+
     res.json({
-      hasCustomFace: !!persona?.simliFaceId,
-      faceId: persona?.simliFaceId || null,
-      faceName: persona?.simliFaceName || null
+      hasCustomFace: true,
+      faceId: persona.simliFaceId,
+      faceName: persona.simliFaceName,
+      status: simliStatus,
+      isReady: isReady
     });
   } catch (error) {
     console.error('Simli face status error:', error);

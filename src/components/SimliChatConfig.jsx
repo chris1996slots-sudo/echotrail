@@ -36,14 +36,25 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
       const customFacesList = [];
 
       // PRIORITY 1: Check if persona has a Simli face ID (from Real-Time Chat Face upload)
+      // But first check if it's actually ready
       if (persona?.simliFaceId) {
-        customFacesList.push({
-          id: persona.simliFaceId,
-          name: persona.simliFaceName || 'My Custom Face',
-          type: 'custom',
-          hasSimliFace: true,
-          isPrimary: true
-        });
+        try {
+          const faceStatus = await api.getSimliFaceStatus();
+
+          // Only add face if it's ready
+          if (faceStatus.isReady) {
+            customFacesList.push({
+              id: persona.simliFaceId,
+              name: persona.simliFaceName || 'My Custom Face',
+              type: 'custom',
+              hasSimliFace: true,
+              isPrimary: true,
+              status: 'ready'
+            });
+          }
+        } catch (err) {
+          console.error('Failed to check face status:', err);
+        }
       }
 
       // PRIORITY 2: Load avatar images that have simliFaceId
@@ -57,7 +68,8 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
               imageUrl: avatarImage.imageUrl,
               type: 'custom',
               avatarImageId: avatarImage.id,
-              hasSimliFace: true
+              hasSimliFace: true,
+              status: 'unknown' // We don't check status for avatar images
             });
           }
         }

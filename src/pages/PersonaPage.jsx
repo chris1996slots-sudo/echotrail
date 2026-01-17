@@ -2606,12 +2606,42 @@ export function PersonaPage({ onNavigate }) {
                       <span className="text-cream/60 text-sm">Face ID:</span>
                       <span className="text-cream/50 text-xs font-mono">{simliFaceStatus.faceId}</span>
                     </div>
-                    <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
-                      <p className="text-green-400 text-sm flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Your custom face is ready! It will be used in Echo Sim → Live Conversation.
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Status:</span>
+                      <span className={`text-sm font-medium ${
+                        simliFaceStatus.status === 'ready' ? 'text-green-400' :
+                        simliFaceStatus.status === 'processing' ? 'text-yellow-400' :
+                        simliFaceStatus.status === 'error' ? 'text-red-400' :
+                        'text-cream/50'
+                      }`}>
+                        {simliFaceStatus.status === 'ready' ? '✓ Ready' :
+                         simliFaceStatus.status === 'processing' ? '⏳ Processing...' :
+                         simliFaceStatus.status === 'error' ? '✗ Error' :
+                         '? Unknown'}
+                      </span>
                     </div>
+                    {simliFaceStatus.isReady ? (
+                      <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                        <p className="text-green-400 text-sm flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Your custom face is ready! It will be used in Echo Sim → Live Conversation.
+                        </p>
+                      </div>
+                    ) : simliFaceStatus.status === 'processing' ? (
+                      <div className="mt-4 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                        <p className="text-yellow-400 text-sm flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Your face is being processed by Simli. This usually takes 5-30 minutes. Check back soon!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                        <p className="text-red-400 text-sm flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          Face processing failed or status unknown. Try uploading again.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-4">
