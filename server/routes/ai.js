@@ -2647,54 +2647,49 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
       apiKeyExists: !!simliConfig.apiKey
     });
 
-    // Create form data for Simli API - IMPORTANT: Use form-data library correctly
+    // Use axios for reliable multipart/form-data upload
+    const axios = (await import('axios')).default;
     const FormData = (await import('form-data')).default;
     const formData = new FormData();
 
-    // Append image as a stream from buffer with proper filename
+    // Append image buffer as file
     formData.append('image', imageBuffer, {
       filename: 'avatar.jpg',
-      contentType: 'image/jpeg',
-      knownLength: imageBuffer.length
+      contentType: 'image/jpeg'
     });
 
-    // Call Simli generateFaceID API with query parameter for face_name
+    // Call Simli generateFaceID API
     const url = `https://api.simli.ai/generateFaceID?face_name=${encodeURIComponent(avatarName)}`;
 
     console.log('Calling Simli API:', url);
 
-    const response = await fetch(url, {
-      method: 'POST',
+    const response = await axios.post(url, formData, {
       headers: {
         'api-key': simliConfig.apiKey,
-        ...formData.getHeaders() // This adds correct Content-Type with boundary
+        ...formData.getHeaders()
       },
-      body: formData,
-      // Important for form-data streaming
-      duplex: 'half'
+      validateStatus: () => true // Get response even for non-2xx status
     });
 
     console.log('Simli API response:', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
+      data: response.data
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    if (response.status !== 200) {
       console.error('Simli face creation error:', {
         status: response.status,
-        statusText: response.statusText,
-        body: errorText
+        data: response.data
       });
       return res.status(response.status).json({
         error: 'Failed to create custom face',
-        details: `Simli API error: ${response.status} - ${errorText}`,
+        details: `Simli API error: ${response.status} - ${JSON.stringify(response.data)}`,
         simliStatus: response.status
       });
     }
 
-    const result = await response.json();
+    const result = response.data;
     console.log('Simli face creation result:', result);
 
     // Save custom face ID to persona
