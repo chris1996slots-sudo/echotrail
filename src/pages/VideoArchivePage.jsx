@@ -188,7 +188,20 @@ export function VideoArchivePage() {
               </div>
               <div className="glass-card p-4 text-center">
                 <button
-                  onClick={loadVideos}
+                  onClick={async () => {
+                    // Reload videos from DB
+                    await loadVideos();
+                    // Also try to refresh pending videos from HeyGen
+                    const pendingVideos = videos.filter(v => v.status === 'pending' || v.status === 'processing');
+                    if (pendingVideos.length > 0) {
+                      // Re-enable API check
+                      setApiConfigured(true);
+                      // Refresh all pending videos
+                      for (const video of pendingVideos) {
+                        await handleRefresh(video);
+                      }
+                    }
+                  }}
                   className="text-cream/60 hover:text-gold transition-colors"
                 >
                   <RefreshCw className={`w-6 h-6 mx-auto ${loading ? 'animate-spin' : ''}`} />
