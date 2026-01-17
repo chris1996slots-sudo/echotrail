@@ -2601,13 +2601,29 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     const audioBuffer = await response.arrayBuffer();
     const uint8View = new Uint8Array(audioBuffer);
 
-    // Detect and remove WAV header dynamically
-    // WAV format starts with "RIFF" (52 49 46 46) and contains "data" chunk
+    // Detect and remove headers (ID3 tags or WAV headers)
+    // ElevenLabs with pcm_16000 format sends ID3 tags (like MP3 metadata)
     let rawPCM = audioBuffer;
     let headerSize = 0;
+    let headerType = 'none';
 
-    // Check if buffer starts with "RIFF" magic number
-    if (uint8View.length > 44 &&
+    // Check for ID3 tag (49 44 33) - common in MP3/audio files
+    if (uint8View.length > 10 &&
+        uint8View[0] === 0x49 && uint8View[1] === 0x44 && uint8View[2] === 0x33) {
+      // ID3v2 tag found
+      // ID3 size is stored in bytes 6-9 as synchsafe integer
+      // Each byte only uses 7 bits (bit 7 is always 0)
+      const size = ((uint8View[6] & 0x7F) << 21) |
+                   ((uint8View[7] & 0x7F) << 14) |
+                   ((uint8View[8] & 0x7F) << 7) |
+                   (uint8View[9] & 0x7F);
+      // ID3v2 header is 10 bytes + size
+      headerSize = 10 + size;
+      headerType = 'ID3';
+      rawPCM = audioBuffer.slice(headerSize);
+    }
+    // Check for WAV header "RIFF" (52 49 46 46)
+    else if (uint8View.length > 44 &&
         uint8View[0] === 0x52 && uint8View[1] === 0x49 &&
         uint8View[2] === 0x46 && uint8View[3] === 0x46) {
 
@@ -2618,6 +2634,7 @@ router.post('/simli/tts', authenticate, async (req, res) => {
             uint8View[i+2] === 0x74 && uint8View[i+3] === 0x61) {
           // "data" chunk found - skip 8 bytes (4 for "data" + 4 for chunk size)
           headerSize = i + 8;
+          headerType = 'WAV';
           rawPCM = audioBuffer.slice(headerSize);
           break;
         }
@@ -2628,12 +2645,12 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     console.log('TTS Audio Generated:', {
       voiceId,
       audioBytes: audioBuffer.byteLength,
-      hasWAVHeader: headerSize > 0,
+      headerType: headerType,
       headerSize: headerSize,
       rawPCMBytes: rawPCM.byteLength,
       format: 'pcm_16000',
       textLength: text.length,
-      firstBytes: Array.from(uint8View.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+      firstBytes: Array.from(uint8View.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ')
     });
 
     // Return as base64 for easy transmission to frontend
