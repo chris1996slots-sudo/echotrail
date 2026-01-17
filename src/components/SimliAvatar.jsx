@@ -290,13 +290,13 @@ export function SimliAvatar({ onClose, persona, config }) {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Video Section */}
         <div className="lg:w-1/2 p-4 flex items-center justify-center bg-black/30">
-          <div className="relative w-full max-w-md aspect-video rounded-2xl overflow-hidden bg-navy-dark border border-gold/20">
+          <div className="relative w-full max-w-lg aspect-[3/4] rounded-2xl overflow-hidden bg-navy-dark border border-gold/20">
             {/* Video Element */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
-              className={`w-full h-full object-cover ${isVideoOff ? 'hidden' : ''}`}
+              className={`w-full h-full object-contain ${isVideoOff ? 'hidden' : ''}`}
             />
 
             {/* Audio Element (hidden) */}
