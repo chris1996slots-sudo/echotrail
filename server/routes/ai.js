@@ -2574,8 +2574,8 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     console.log('Using voice ID for TTS:', voiceId);
 
     // Call ElevenLabs TTS API
-    // CRITICAL BUG: ElevenLabs returns MP3 data (ff fb header) despite requesting pcm_16000!
-    // We'll use ulaw_8000 which is truly uncompressed, then convert to PCM16 16kHz
+    // NOTE: We discovered that ElevenLabs wraps all formats in MP3/ID3 containers
+    // Let's try requesting PCM format directly from their WebSocket API or try a different parameter
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
       headers: {
@@ -2585,7 +2585,7 @@ router.post('/simli/tts', authenticate, async (req, res) => {
       body: JSON.stringify({
         text,
         model_id: 'eleven_turbo_v2_5', // Fast model for real-time
-        output_format: 'ulaw_8000', // μ-law 8kHz - truly uncompressed
+        output_format: 'pcm_16000', // Request PCM 16kHz directly
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
@@ -2599,71 +2599,61 @@ router.post('/simli/tts', authenticate, async (req, res) => {
       return res.status(response.status).json({ error: 'TTS generation failed' });
     }
 
-    // Get audio as buffer (μ-law 8kHz format)
+    // Get audio as buffer
     const audioBuffer = await response.arrayBuffer();
-    let ulawData = new Uint8Array(audioBuffer);
+    let pcmData = new Uint8Array(audioBuffer);
 
-    // CRITICAL: ElevenLabs sends ID3 tags even with ulaw_8000 format!
-    // Remove ID3 tag if present (49 44 33 = "ID3")
-    let headerSize = 0;
-    if (ulawData.length > 10 &&
-        ulawData[0] === 0x49 && ulawData[1] === 0x44 && ulawData[2] === 0x33) {
-      // ID3v2 tag - parse synchsafe integer for size
-      const size = ((ulawData[6] & 0x7F) << 21) |
-                   ((ulawData[7] & 0x7F) << 14) |
-                   ((ulawData[8] & 0x7F) << 7) |
-                   (ulawData[9] & 0x7F);
-      headerSize = 10 + size;
-      // Skip ID3 header
-      ulawData = ulawData.slice(headerSize);
-      console.log('Removed ID3 tag:', headerSize, 'bytes');
+    console.log('Raw audio received:', {
+      totalBytes: pcmData.length,
+      firstBytes: Array.from(pcmData.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+    });
+
+    // Strip ALL headers/metadata that ElevenLabs might include
+    let dataStart = 0;
+
+    // Check for ID3v2 tag (49 44 33 = "ID3")
+    if (pcmData.length > 10 &&
+        pcmData[0] === 0x49 && pcmData[1] === 0x44 && pcmData[2] === 0x33) {
+      const size = ((pcmData[6] & 0x7F) << 21) |
+                   ((pcmData[7] & 0x7F) << 14) |
+                   ((pcmData[8] & 0x7F) << 7) |
+                   (pcmData[9] & 0x7F);
+      dataStart = 10 + size;
+      console.log('Found ID3v2 tag, skipping', dataStart, 'bytes');
     }
 
-    // μ-law to PCM16 decoding table (standard ITU-T G.711)
-    const ulawToPcm = (ulaw) => {
-      ulaw = ~ulaw;
-      const sign = (ulaw & 0x80);
-      const exponent = (ulaw >> 4) & 0x07;
-      const mantissa = ulaw & 0x0F;
-      let sample = ((mantissa << 3) + 132) << exponent;
-      sample -= 132;
-      return sign ? -sample : sample;
-    };
+    // Check for MP3 frame header (ff fb or ff fa)
+    if (pcmData.length > dataStart + 2 &&
+        pcmData[dataStart] === 0xFF &&
+        (pcmData[dataStart + 1] === 0xFB || pcmData[dataStart + 1] === 0xFA)) {
+      console.error('ERROR: ElevenLabs returned MP3 data despite requesting pcm_16000!');
+      console.error('This indicates the API does not support raw PCM output.');
+      console.error('We need to implement MP3 decoding or use a different TTS provider.');
 
-    // Convert μ-law to PCM16 and upsample from 8kHz to 16kHz
-    // Simple linear interpolation: insert one sample between each pair
-    const pcm16Samples = new Int16Array(ulawData.length * 2);
-
-    for (let i = 0; i < ulawData.length; i++) {
-      const pcmValue = ulawToPcm(ulawData[i]);
-
-      // Original sample
-      pcm16Samples[i * 2] = pcmValue;
-
-      // Interpolated sample (average of current and next)
-      if (i < ulawData.length - 1) {
-        const nextPcmValue = ulawToPcm(ulawData[i + 1]);
-        pcm16Samples[i * 2 + 1] = Math.floor((pcmValue + nextPcmValue) / 2);
-      } else {
-        // Last sample - just duplicate
-        pcm16Samples[i * 2 + 1] = pcmValue;
-      }
+      // For now, return an error
+      return res.status(500).json({
+        error: 'TTS provider returned compressed audio (MP3) instead of raw PCM. Server-side MP3 decoding is required.',
+        debug: {
+          format: 'MP3',
+          firstBytes: Array.from(pcmData.slice(dataStart, dataStart + 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+        }
+      });
     }
 
-    // Convert Int16Array to Buffer for base64 encoding
-    const rawPCM = Buffer.from(pcm16Samples.buffer);
+    // Extract the actual PCM data
+    pcmData = pcmData.slice(dataStart);
+
+    // Convert to Buffer for base64 encoding
+    const rawPCM = Buffer.from(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength);
 
     // Log audio details for debugging
-    console.log('TTS Audio Generated:', {
+    console.log('TTS Audio Processed:', {
       voiceId,
-      ulawBytes: ulawData.length,
-      pcm16Samples: pcm16Samples.length,
-      pcm16Bytes: rawPCM.length,
-      sampleRate: '16000Hz (upsampled from 8kHz)',
-      format: 'PCM Int16 Little Endian',
+      pcmBytes: rawPCM.length,
+      sampleRate: '16000Hz',
+      format: 'PCM Int16 Little Endian (if valid)',
       textLength: text.length,
-      ulawFirstBytes: Array.from(ulawData.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' '),
-      pcm16FirstValues: Array.from(pcm16Samples.slice(0, 8)).join(', ')
+      firstValues: Array.from(new Int16Array(rawPCM.buffer, rawPCM.byteOffset, Math.min(8, rawPCM.length / 2))).join(', ')
     });
 
     // Return as base64 for easy transmission to frontend
