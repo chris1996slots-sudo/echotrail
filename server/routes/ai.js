@@ -2391,7 +2391,7 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
 // =====================
 
 // Get Simli session for real-time avatar streaming
-router.post('/simli/session', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+router.post('/simli/session', authenticate, async (req, res) => {
   try {
     // Get Simli API config
     const simliConfig = await req.prisma.apiConfig.findUnique({
