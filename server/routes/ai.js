@@ -2599,19 +2599,41 @@ router.post('/simli/tts', authenticate, async (req, res) => {
 
     // Get audio as buffer
     const audioBuffer = await response.arrayBuffer();
+    const uint8View = new Uint8Array(audioBuffer);
 
-    // Remove WAV header (first 44 bytes) to get raw PCM data
-    // ElevenLabs may include a WAV header even with pcm_16000 format
-    const rawPCM = audioBuffer.byteLength > 44 ? audioBuffer.slice(44) : audioBuffer;
+    // Detect and remove WAV header dynamically
+    // WAV format starts with "RIFF" (52 49 46 46) and contains "data" chunk
+    let rawPCM = audioBuffer;
+    let headerSize = 0;
+
+    // Check if buffer starts with "RIFF" magic number
+    if (uint8View.length > 44 &&
+        uint8View[0] === 0x52 && uint8View[1] === 0x49 &&
+        uint8View[2] === 0x46 && uint8View[3] === 0x46) {
+
+      // Find "data" chunk which marks start of audio data
+      // Search for "data" (64 61 74 61) in first 100 bytes
+      for (let i = 12; i < Math.min(100, uint8View.length - 4); i++) {
+        if (uint8View[i] === 0x64 && uint8View[i+1] === 0x61 &&
+            uint8View[i+2] === 0x74 && uint8View[i+3] === 0x61) {
+          // "data" chunk found - skip 8 bytes (4 for "data" + 4 for chunk size)
+          headerSize = i + 8;
+          rawPCM = audioBuffer.slice(headerSize);
+          break;
+        }
+      }
+    }
 
     // Log audio details for debugging
     console.log('TTS Audio Generated:', {
       voiceId,
       audioBytes: audioBuffer.byteLength,
+      hasWAVHeader: headerSize > 0,
+      headerSize: headerSize,
       rawPCMBytes: rawPCM.byteLength,
-      removedHeader: audioBuffer.byteLength > 44,
       format: 'pcm_16000',
-      textLength: text.length
+      textLength: text.length,
+      firstBytes: Array.from(uint8View.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')
     });
 
     // Return as base64 for easy transmission to frontend
