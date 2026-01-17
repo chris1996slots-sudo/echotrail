@@ -190,11 +190,21 @@ export function SimliAvatar({ onClose, persona, config }) {
             format: ttsResponse.format
           });
 
-          // Send all audio at once - Simli handles internal buffering
-          // Simli's WebRTC implementation manages the streaming internally
-          simliClientRef.current.sendAudioData(int16Array);
+          // Send audio in chunks of 6000 bytes (Simli requirement)
+          // Simli documentation specifies 6000 bytes as preferred chunk size
+          const CHUNK_SIZE = 6000;
+          let bytesSent = 0;
 
-          console.log('Audio sent to Simli as Int16Array');
+          // Convert bytes to Int16 samples (2 bytes per sample)
+          const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples per chunk
+
+          for (let i = 0; i < int16Array.length; i += samplesPerChunk) {
+            const chunk = int16Array.slice(i, Math.min(i + samplesPerChunk, int16Array.length));
+            simliClientRef.current.sendAudioData(chunk);
+            bytesSent += chunk.length * 2; // 2 bytes per Int16 sample
+          }
+
+          console.log(`Audio sent to Simli in ${Math.ceil(int16Array.length / samplesPerChunk)} chunks (${bytesSent} bytes total)`);
         }
       }
     } catch (err) {
