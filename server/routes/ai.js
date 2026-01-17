@@ -2400,6 +2400,15 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
     }
 
     const statusData = await statusResponse.json();
+
+    // Log the full HeyGen response for debugging
+    console.log('=== HeyGen Status Response ===');
+    console.log('Video ID:', video.videoId);
+    console.log('Full Response:', JSON.stringify(statusData, null, 2));
+    console.log('Status Value:', statusData.data?.status);
+    console.log('Video URL:', statusData.data?.video_url);
+    console.log('==============================');
+
     const heygenStatus = statusData.data?.status;
 
     // Map HeyGen status to our status
@@ -2416,6 +2425,13 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
     } else if (heygenStatus === 'processing') {
       newStatus = 'processing';
     }
+
+    // Log what we're updating to
+    console.log('Updating video status:', {
+      from: video.status,
+      to: newStatus,
+      videoUrl: newVideoUrl ? 'YES' : 'NO'
+    });
 
     // Update in database
     const updatedVideo = await req.prisma.generatedVideo.update({
