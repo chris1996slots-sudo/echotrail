@@ -341,4 +341,50 @@ router.put('/language', async (req, res) => {
   }
 });
 
+// Update user profile
+router.put('/profile', async (req, res) => {
+  const prisma = req.app.get('prisma');
+  const userId = req.userId;
+
+  const { firstName, lastName, phoneNumber, telegramUsername } = req.body;
+
+  // Validation
+  if (!firstName || !firstName.trim()) {
+    return res.status(400).json({ error: 'First name is required' });
+  }
+  if (!lastName || !lastName.trim()) {
+    return res.status(400).json({ error: 'Last name is required' });
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phoneNumber: phoneNumber?.trim() || null,
+        telegramUsername: telegramUsername?.trim() || null,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        language: true,
+        subscription: true,
+        tokenBalance: true,
+        phoneNumber: true,
+        telegramUsername: true,
+        createdAt: true,
+      }
+    });
+
+    res.json({ user });
+  } catch (error) {
+    console.error('Failed to update profile:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
 export default router;

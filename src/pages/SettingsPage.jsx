@@ -46,6 +46,8 @@ export function SettingsPage({ onNavigate }) {
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
+    phoneNumber: user?.phoneNumber || '',
+    telegramUsername: user?.telegramUsername || '',
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -241,16 +243,17 @@ export function SettingsPage({ onNavigate }) {
 
     setIsLoading(true);
     try {
-      // API call would go here
-      setUser(prev => ({
-        ...prev,
+      const response = await api.updateProfile({
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
-      }));
+        phoneNumber: profileForm.phoneNumber,
+        telegramUsername: profileForm.telegramUsername,
+      });
+      setUser(response.user);
       showMessage('Profile updated successfully');
       setActiveSection(null);
     } catch (error) {
-      showMessage('Failed to update profile', 'error');
+      showMessage(error.message || 'Failed to update profile', 'error');
     }
     setIsLoading(false);
   };
@@ -756,6 +759,28 @@ export function SettingsPage({ onNavigate }) {
                               className="input-field w-full opacity-50 cursor-not-allowed"
                             />
                             <p className="text-xs text-cream/40 mt-1">Email cannot be changed</p>
+                          </div>
+                          <div>
+                            <label className="block text-sm text-cream/70 mb-2">Phone Number (Optional)</label>
+                            <input
+                              type="tel"
+                              value={profileForm.phoneNumber}
+                              onChange={(e) => setProfileForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                              placeholder="+49 123 456789"
+                              className="input-field w-full"
+                            />
+                            <p className="text-xs text-cream/40 mt-1">For notifications and birthday reminders</p>
+                          </div>
+                          <div>
+                            <label className="block text-sm text-cream/70 mb-2">Telegram Username (Optional)</label>
+                            <input
+                              type="text"
+                              value={profileForm.telegramUsername}
+                              onChange={(e) => setProfileForm(prev => ({ ...prev, telegramUsername: e.target.value }))}
+                              placeholder="@username"
+                              className="input-field w-full"
+                            />
+                            <p className="text-xs text-cream/40 mt-1">For Telegram bot notifications</p>
                           </div>
                           <button
                             onClick={handleUpdateProfile}

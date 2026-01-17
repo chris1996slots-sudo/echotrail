@@ -37,6 +37,10 @@ model User {
   referralCode  String?  @unique // User's personal referral code
   referredBy    String?  // ID of user who referred this user
 
+  // Contact information for notifications
+  phoneNumber      String?
+  telegramUsername String?
+
   // Session/Activity tracking
   lastLoginAt   DateTime?
   lastActiveAt  DateTime?

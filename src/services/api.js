@@ -95,6 +95,13 @@ class ApiService {
     });
   }
 
+  async updateProfile(profileData) {
+    return this.request('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // Persona
   async getPersona() {
     return this.request('/api/persona');
