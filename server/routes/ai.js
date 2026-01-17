@@ -2600,16 +2600,22 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     // Get audio as buffer
     const audioBuffer = await response.arrayBuffer();
 
+    // Remove WAV header (first 44 bytes) to get raw PCM data
+    // ElevenLabs may include a WAV header even with pcm_16000 format
+    const rawPCM = audioBuffer.byteLength > 44 ? audioBuffer.slice(44) : audioBuffer;
+
     // Log audio details for debugging
     console.log('TTS Audio Generated:', {
       voiceId,
       audioBytes: audioBuffer.byteLength,
+      rawPCMBytes: rawPCM.byteLength,
+      removedHeader: audioBuffer.byteLength > 44,
       format: 'pcm_16000',
       textLength: text.length
     });
 
     // Return as base64 for easy transmission to frontend
-    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+    const base64Audio = Buffer.from(rawPCM).toString('base64');
 
     res.json({
       audio: base64Audio,
