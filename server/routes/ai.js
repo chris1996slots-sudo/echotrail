@@ -2680,7 +2680,8 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
     if (response.status !== 200) {
       console.error('Simli face creation error:', {
         status: response.status,
-        data: response.data
+        statusText: response.statusText,
+        data: JSON.stringify(response.data, null, 2)
       });
       return res.status(response.status).json({
         error: 'Failed to create custom face',
