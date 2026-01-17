@@ -2642,8 +2642,10 @@ router.post('/simli/tts', authenticate, async (req, res) => {
         model_id: 'eleven_turbo_v2_5', // Fast model for real-time
         output_format: 'pcm_16000', // Request PCM 16kHz directly
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+          stability: 0.65,           // Higher stability = slower, more consistent speech (0-1)
+          similarity_boost: 0.75,    // Voice similarity to original
+          style: 0.0,                // Lower style = more neutral delivery
+          use_speaker_boost: true    // Enhance clarity
         }
       })
     });
