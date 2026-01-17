@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Sparkles,
   MessageCircle,
-  Send
+  Send,
+  Settings,
+  X
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -31,6 +33,15 @@ export function SimliAvatar({ onClose, persona, config }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [simliConfig, setSimliConfig] = useState(null);
   const [selectedConfig, setSelectedConfig] = useState(config); // User's face and voice selection
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Voice settings (adjustable by user)
+  const [voiceSettings, setVoiceSettings] = useState({
+    stability: 0.65,
+    similarity_boost: 0.75,
+    style: 0.0,
+    use_speaker_boost: true
+  });
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -169,8 +180,9 @@ export function SimliAvatar({ onClose, persona, config }) {
         // Use selected voice ID from config
         const voiceIdToUse = selectedConfig?.voice?.id;
         console.log('Using Voice ID for TTS:', voiceIdToUse, 'Selected Voice:', selectedConfig?.voice);
+        console.log('Using Voice Settings:', voiceSettings);
 
-        const ttsResponse = await api.getSimliTTS(responseText, voiceIdToUse);
+        const ttsResponse = await api.getSimliTTS(responseText, voiceIdToUse, voiceSettings);
 
         if (ttsResponse.audio) {
           // Convert base64 to Uint8Array (raw bytes)
@@ -458,6 +470,13 @@ export function SimliAvatar({ onClose, persona, config }) {
                 className="flex-1 px-4 py-3 bg-navy-light border border-gold/20 rounded-xl text-cream placeholder-cream/40 focus:outline-none focus:border-gold disabled:opacity-50"
               />
               <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-3 bg-navy-light border border-gold/20 rounded-xl text-cream hover:bg-gold/10 transition-colors"
+                title="Voice Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              <button
                 onClick={handleSendMessage}
                 disabled={!inputText.trim() || isProcessing || (status !== 'connected' && status !== 'speaking')}
                 className="p-3 bg-gold text-navy rounded-xl hover:bg-gold-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -496,6 +515,135 @@ export function SimliAvatar({ onClose, persona, config }) {
           </button>
         </div>
       </div>
+
+      {/* Voice Settings Panel */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            className="fixed right-0 top-0 h-full w-80 bg-navy-dark border-l border-gold/20 shadow-2xl z-50 overflow-y-auto"
+          >
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-serif text-cream flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-gold" />
+                  Voice Settings
+                </h3>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="p-2 rounded-full bg-cream/10 text-cream hover:bg-cream/20 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-cream/60 text-sm mb-6">
+                Adjust voice parameters in real-time. Changes apply to the next message.
+              </p>
+
+              {/* Stability */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-cream font-medium">Speech Speed</label>
+                  <span className="text-cream/60 text-sm">{voiceSettings.stability.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={voiceSettings.stability}
+                  onChange={(e) => setVoiceSettings({ ...voiceSettings, stability: parseFloat(e.target.value) })}
+                  className="w-full h-2 bg-navy-light rounded-lg appearance-none cursor-pointer accent-gold"
+                />
+                <div className="flex justify-between text-xs text-cream/40 mt-1">
+                  <span>Fast</span>
+                  <span>Slow</span>
+                </div>
+                <p className="text-cream/50 text-xs mt-2">Higher = slower, more measured speech</p>
+              </div>
+
+              {/* Similarity Boost */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-cream font-medium">Voice Similarity</label>
+                  <span className="text-cream/60 text-sm">{voiceSettings.similarity_boost.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={voiceSettings.similarity_boost}
+                  onChange={(e) => setVoiceSettings({ ...voiceSettings, similarity_boost: parseFloat(e.target.value) })}
+                  className="w-full h-2 bg-navy-light rounded-lg appearance-none cursor-pointer accent-gold"
+                />
+                <div className="flex justify-between text-xs text-cream/40 mt-1">
+                  <span>Generic</span>
+                  <span>Exact</span>
+                </div>
+                <p className="text-cream/50 text-xs mt-2">How closely to match original voice</p>
+              </div>
+
+              {/* Style */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-cream font-medium">Expressiveness</label>
+                  <span className="text-cream/60 text-sm">{voiceSettings.style.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={voiceSettings.style}
+                  onChange={(e) => setVoiceSettings({ ...voiceSettings, style: parseFloat(e.target.value) })}
+                  className="w-full h-2 bg-navy-light rounded-lg appearance-none cursor-pointer accent-gold"
+                />
+                <div className="flex justify-between text-xs text-cream/40 mt-1">
+                  <span>Neutral</span>
+                  <span>Expressive</span>
+                </div>
+                <p className="text-cream/50 text-xs mt-2">Emotional delivery style</p>
+              </div>
+
+              {/* Speaker Boost */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <label className="text-cream font-medium">Speaker Boost</label>
+                  <button
+                    onClick={() => setVoiceSettings({ ...voiceSettings, use_speaker_boost: !voiceSettings.use_speaker_boost })}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      voiceSettings.use_speaker_boost
+                        ? 'bg-gold text-navy'
+                        : 'bg-navy-light text-cream border border-gold/20'
+                    }`}
+                  >
+                    {voiceSettings.use_speaker_boost ? 'On' : 'Off'}
+                  </button>
+                </div>
+                <p className="text-cream/50 text-xs mt-2">Enhanced audio clarity</p>
+              </div>
+
+              {/* Reset Button */}
+              <button
+                onClick={() => setVoiceSettings({
+                  stability: 0.65,
+                  similarity_boost: 0.75,
+                  style: 0.0,
+                  use_speaker_boost: true
+                })}
+                className="w-full px-4 py-3 bg-navy-light border border-gold/20 text-cream rounded-xl hover:bg-gold/10 transition-colors"
+              >
+                Reset to Default
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

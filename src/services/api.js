@@ -572,10 +572,10 @@ class ApiService {
     return this.request('/api/ai/simli/status');
   }
 
-  async getSimliTTS(text, voiceId) {
+  async getSimliTTS(text, voiceId, voiceSettings = null) {
     return this.request('/api/ai/simli/tts', {
       method: 'POST',
-      body: JSON.stringify({ text, voiceId }),
+      body: JSON.stringify({ text, voiceId, voiceSettings }),
     });
   }
 

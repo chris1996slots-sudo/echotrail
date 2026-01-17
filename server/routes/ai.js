@@ -2598,7 +2598,7 @@ router.get('/simli/faces', authenticate, async (req, res) => {
 // Generate TTS audio for Simli (uses ElevenLabs with voice clone)
 router.post('/simli/tts', authenticate, async (req, res) => {
   try {
-    const { text, voiceId: requestedVoiceId } = req.body;
+    const { text, voiceId: requestedVoiceId, voiceSettings } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -2628,9 +2628,20 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     const voiceId = requestedVoiceId || persona?.elevenlabsVoiceId || '21m00Tcm4TlvDq8ikWAM'; // Default: Rachel
     console.log('Using voice ID for TTS:', voiceId);
 
+    // Use custom voice settings from frontend, or default values
+    const defaultSettings = {
+      stability: 0.65,           // Higher stability = slower, more consistent speech (0-1)
+      similarity_boost: 0.75,    // Voice similarity to original
+      style: 0.0,                // Lower style = more neutral delivery
+      use_speaker_boost: true    // Enhance clarity
+    };
+
+    const finalVoiceSettings = voiceSettings || defaultSettings;
+
+    console.log('Using voice settings:', finalVoiceSettings);
+
     // Call ElevenLabs TTS API
     // NOTE: We discovered that ElevenLabs wraps all formats in MP3/ID3 containers
-    // Let's try requesting PCM format directly from their WebSocket API or try a different parameter
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
       headers: {
@@ -2641,12 +2652,7 @@ router.post('/simli/tts', authenticate, async (req, res) => {
         text,
         model_id: 'eleven_turbo_v2_5', // Fast model for real-time
         output_format: 'pcm_16000', // Request PCM 16kHz directly
-        voice_settings: {
-          stability: 0.65,           // Higher stability = slower, more consistent speech (0-1)
-          similarity_boost: 0.75,    // Voice similarity to original
-          style: 0.0,                // Lower style = more neutral delivery
-          use_speaker_boost: true    // Enhance clarity
-        }
+        voice_settings: finalVoiceSettings
       })
     });
 
