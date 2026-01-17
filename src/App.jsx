@@ -9,7 +9,6 @@ import { PersonaPage } from './pages/PersonaPage';
 import { FamilyTreePage } from './pages/FamilyTreePage';
 import { EchoSimPage } from './pages/EchoSimPage';
 import { MemoryAnchorPage } from './pages/MemoryAnchorPage';
-import { WisdomGPTPage } from './pages/WisdomGPTPage';
 import { TimeCapsulePage } from './pages/TimeCapsulePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -77,7 +76,6 @@ function AppContent() {
       'echo-sim': '/echo-sim',
       'video-archive': '/video-archive',
       'memory-anchor': '/memories',
-      'wisdom-gpt': '/wisdom',
       'time-capsule': '/time-capsule',
       'settings': '/settings',
       'admin': '/admin',
@@ -106,7 +104,6 @@ function AppContent() {
       '/echo-sim': 'echo-sim',
       '/video-archive': 'video-archive',
       '/memories': 'memory-anchor',
-      '/wisdom': 'wisdom-gpt',
       '/time-capsule': 'time-capsule',
       '/settings': 'settings',
       '/admin': 'admin',
@@ -171,11 +168,6 @@ function AppContent() {
           <Route path="/memories" element={
             <UserRoute>
               <MemoryAnchorPage onNavigate={handleNavigate} />
-            </UserRoute>
-          } />
-          <Route path="/wisdom" element={
-            <UserRoute>
-              <WisdomGPTPage onNavigate={handleNavigate} />
             </UserRoute>
           } />
           <Route path="/time-capsule" element={
