@@ -2601,7 +2601,23 @@ router.post('/simli/tts', authenticate, async (req, res) => {
 
     // Get audio as buffer (μ-law 8kHz format)
     const audioBuffer = await response.arrayBuffer();
-    const ulawData = new Uint8Array(audioBuffer);
+    let ulawData = new Uint8Array(audioBuffer);
+
+    // CRITICAL: ElevenLabs sends ID3 tags even with ulaw_8000 format!
+    // Remove ID3 tag if present (49 44 33 = "ID3")
+    let headerSize = 0;
+    if (ulawData.length > 10 &&
+        ulawData[0] === 0x49 && ulawData[1] === 0x44 && ulawData[2] === 0x33) {
+      // ID3v2 tag - parse synchsafe integer for size
+      const size = ((ulawData[6] & 0x7F) << 21) |
+                   ((ulawData[7] & 0x7F) << 14) |
+                   ((ulawData[8] & 0x7F) << 7) |
+                   (ulawData[9] & 0x7F);
+      headerSize = 10 + size;
+      // Skip ID3 header
+      ulawData = ulawData.slice(headerSize);
+      console.log('Removed ID3 tag:', headerSize, 'bytes');
+    }
 
     // μ-law to PCM16 decoding table (standard ITU-T G.711)
     const ulawToPcm = (ulaw) => {
