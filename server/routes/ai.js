@@ -2692,20 +2692,34 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
     const result = response.data;
     console.log('Simli face creation result:', result);
 
+    // Extract face ID - Simli returns it as 'character_uid'
+    const faceId = result.character_uid || result.faceId || result.face_id;
+
+    if (!faceId) {
+      console.error('No face ID in Simli response:', result);
+      return res.status(500).json({
+        error: 'Failed to get face ID from Simli',
+        details: 'Simli did not return a face ID'
+      });
+    }
+
+    console.log('Saving face ID to persona:', faceId);
+
     // Save custom face ID to persona
     const persona = await req.prisma.persona.update({
       where: { userId: req.user.id },
       data: {
-        simliFaceId: result.faceId || result.face_id,
+        simliFaceId: faceId,
         simliFaceName: faceName || req.user.firstName + '_avatar'
       }
     });
 
     res.json({
       success: true,
-      faceId: result.faceId || result.face_id,
+      faceId: faceId,
       faceName: faceName || req.user.firstName + '_avatar',
-      message: 'Custom face created successfully'
+      message: 'Custom face created successfully',
+      warnings: result.warnings
     });
   } catch (error) {
     console.error('Simli create face error:', error);
