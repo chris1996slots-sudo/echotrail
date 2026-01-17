@@ -23,7 +23,7 @@ import api from '../services/api';
 // Simli SDK will be loaded dynamically
 let SimliClient = null;
 
-export function SimliAvatar({ onClose, persona, config }) {
+export function SimliAvatar({ onClose, persona, user, config }) {
   const [status, setStatus] = useState('initializing'); // initializing, connecting, connected, speaking, error, ended
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -105,10 +105,20 @@ export function SimliAvatar({ onClose, persona, config }) {
       client.Initialize(initConfig);
 
       // Set up event listeners
-      client.on('connected', () => {
+      client.on('connected', async () => {
         console.log('Simli connected');
         setStatus('connected');
-        addMessage('system', 'Connected! You can now have a conversation.');
+
+        // Send automatic greeting
+        const userName = user?.firstName || 'there';
+        const greetingText = `Hallo ${userName}! Ich freue mich dich zu sehen, wie geht es dir?`;
+
+        addMessage('assistant', greetingText);
+
+        // Send TTS for greeting
+        setTimeout(async () => {
+          await sendTTSToSimli(greetingText);
+        }, 500); // Small delay to ensure connection is stable
       });
 
       client.on('disconnected', () => {
@@ -160,6 +170,79 @@ export function SimliAvatar({ onClose, persona, config }) {
     setMessages(prev => [...prev, { role, content, timestamp: new Date() }]);
   };
 
+  // Helper function to send TTS audio to Simli
+  const sendTTSToSimli = async (text) => {
+    if (!simliClientRef.current || !simliConfig) return;
+
+    try {
+      const voiceIdToUse = selectedConfig?.voice?.id;
+      console.log('Sending TTS:', text, 'with voice:', voiceIdToUse);
+
+      const ttsResponse = await api.getSimliTTS(text, voiceIdToUse, voiceSettings);
+
+      if (ttsResponse.audio) {
+        // Convert base64 to Uint8Array (raw bytes)
+        const binaryString = atob(ttsResponse.audio);
+
+        // Ensure length is even for Int16Array (2 bytes per sample)
+        const evenLength = binaryString.length % 2 === 0 ? binaryString.length : binaryString.length - 1;
+
+        if (binaryString.length !== evenLength) {
+          console.warn('Audio buffer has odd length, truncating:', binaryString.length, '->', evenLength);
+        }
+
+        // Create Uint8Array with even length
+        const uint8Array = new Uint8Array(evenLength);
+        for (let i = 0; i < evenLength; i++) {
+          uint8Array[i] = binaryString.charCodeAt(i);
+        }
+
+        // Convert Uint8Array to Int16Array (PCM16 format - little endian)
+        const int16Array = new Int16Array(uint8Array.buffer);
+
+        console.log('Sending audio to Simli:', {
+          uint8Bytes: uint8Array.length,
+          int16Samples: int16Array.length,
+          sampleRate: ttsResponse.sampleRate,
+          format: ttsResponse.format
+        });
+
+        // Send audio in chunks with proper timing for better lip-sync
+        const CHUNK_SIZE = 6000;
+        const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples per chunk
+        const sampleRate = 16000; // 16kHz
+        const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000;
+
+        // Send chunks with timing to match audio playback
+        let chunkIndex = 0;
+        const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
+
+        const sendNextChunk = () => {
+          if (chunkIndex >= totalChunks) {
+            console.log(`All ${totalChunks} chunks sent to Simli`);
+            return;
+          }
+
+          const start = chunkIndex * samplesPerChunk;
+          const end = Math.min(start + samplesPerChunk, int16Array.length);
+          const chunk = int16Array.slice(start, end);
+
+          simliClientRef.current.sendAudioData(chunk);
+          chunkIndex++;
+
+          if (chunkIndex < totalChunks) {
+            setTimeout(sendNextChunk, chunkDurationMs);
+          }
+        };
+
+        // Start sending chunks
+        sendNextChunk();
+      }
+    } catch (err) {
+      console.error('Error sending TTS to Simli:', err);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim() || isProcessing) return;
 
@@ -175,82 +258,8 @@ export function SimliAvatar({ onClose, persona, config }) {
 
       addMessage('assistant', responseText);
 
-      // Generate TTS and send to Simli
-      if (simliClientRef.current && simliConfig) {
-        // Use selected voice ID from config
-        const voiceIdToUse = selectedConfig?.voice?.id;
-        console.log('Using Voice ID for TTS:', voiceIdToUse, 'Selected Voice:', selectedConfig?.voice);
-        console.log('Using Voice Settings:', voiceSettings);
-
-        const ttsResponse = await api.getSimliTTS(responseText, voiceIdToUse, voiceSettings);
-
-        if (ttsResponse.audio) {
-          // Convert base64 to Uint8Array (raw bytes)
-          const binaryString = atob(ttsResponse.audio);
-
-          // Ensure length is even for Int16Array (2 bytes per sample)
-          const evenLength = binaryString.length % 2 === 0 ? binaryString.length : binaryString.length - 1;
-
-          if (binaryString.length !== evenLength) {
-            console.warn('Audio buffer has odd length, truncating:', binaryString.length, '->', evenLength);
-          }
-
-          // Create Uint8Array with even length
-          const uint8Array = new Uint8Array(evenLength);
-          for (let i = 0; i < evenLength; i++) {
-            uint8Array[i] = binaryString.charCodeAt(i);
-          }
-
-          // Convert Uint8Array to Int16Array (PCM16 format - little endian)
-          // PCM16 uses 16-bit signed integers
-          const int16Array = new Int16Array(uint8Array.buffer);
-
-          console.log('Sending audio to Simli:', {
-            uint8Bytes: uint8Array.length,
-            int16Samples: int16Array.length,
-            sampleRate: ttsResponse.sampleRate,
-            format: ttsResponse.format
-          });
-
-          // Send audio in chunks with proper timing for better lip-sync
-          // Simli documentation specifies 6000 bytes as preferred chunk size
-          const CHUNK_SIZE = 6000;
-          const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples per chunk
-          const sampleRate = 16000; // 16kHz
-
-          // Calculate delay between chunks based on audio duration
-          // Each chunk represents (samplesPerChunk / sampleRate) seconds of audio
-          const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000;
-
-          console.log(`Chunk timing: ${samplesPerChunk} samples at ${sampleRate}Hz = ${chunkDurationMs.toFixed(2)}ms per chunk`);
-
-          // Send chunks with timing to match audio playback
-          let chunkIndex = 0;
-          const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
-
-          const sendNextChunk = () => {
-            if (chunkIndex >= totalChunks) {
-              console.log(`All ${totalChunks} chunks sent to Simli`);
-              return;
-            }
-
-            const start = chunkIndex * samplesPerChunk;
-            const end = Math.min(start + samplesPerChunk, int16Array.length);
-            const chunk = int16Array.slice(start, end);
-
-            simliClientRef.current.sendAudioData(chunk);
-            chunkIndex++;
-
-            // Schedule next chunk after the current one should finish playing
-            if (chunkIndex < totalChunks) {
-              setTimeout(sendNextChunk, chunkDurationMs);
-            }
-          };
-
-          // Start sending chunks
-          sendNextChunk();
-        }
-      }
+      // Send TTS to Simli
+      await sendTTSToSimli(responseText);
     } catch (err) {
       console.error('Error sending message:', err);
       addMessage('system', `Error: ${err.message}`);

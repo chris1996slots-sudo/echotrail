@@ -1158,6 +1158,7 @@ export function EchoSimPage({ onNavigate }) {
             setChatConfig(null);
           }}
           persona={persona}
+          user={user}
           config={chatConfig}
         />
       )}
