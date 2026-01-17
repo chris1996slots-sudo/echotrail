@@ -215,6 +215,13 @@ class ApiService {
     });
   }
 
+  async generateEchoResponse(message) {
+    return this.request('/api/ai/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: message }),
+    });
+  }
+
   async synthesizeVoice(text, voiceId) {
     return this.request('/api/ai/voice/synthesize', {
       method: 'POST',
