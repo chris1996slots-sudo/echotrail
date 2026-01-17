@@ -1540,14 +1540,55 @@ export function PersonaPage({ onNavigate }) {
                     )}
                   </div>
 
-                  {/* Voice Samples Info - Voice clone will be created when Create Avatar is clicked */}
-                  {hasVoiceSamples && (
-                    <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30 flex items-center gap-3">
-                      <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                      <div>
-                        <p className="text-emerald-400 font-medium">{voiceSamples.length} Voice Sample{voiceSamples.length !== 1 ? 's' : ''} Ready</p>
-                        <p className="text-emerald-300/60 text-sm">Voice clone will be created when you finish the avatar setup</p>
+                  {/* Voice Samples Info */}
+                  {hasVoiceSamples && !persona.elevenlabsVoiceId && (
+                    <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
+                      <div className="flex items-center gap-3 mb-3">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                        <div>
+                          <p className="text-emerald-400 font-medium">{voiceSamples.length} Voice Sample{voiceSamples.length !== 1 ? 's' : ''} Ready</p>
+                          <p className="text-emerald-300/60 text-sm">Ready to create your voice clone</p>
+                        </div>
                       </div>
+
+                      {/* Create Voice Clone Button */}
+                      <motion.button
+                        onClick={handleCreateVoiceClone}
+                        disabled={isCreatingVoiceClone}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isCreatingVoiceClone ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Creating Voice Clone...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5" />
+                            Create Voice Clone
+                          </>
+                        )}
+                      </motion.button>
+
+                      {voiceCloneError && (
+                        <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                          <p className="text-red-400 text-sm flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            {voiceCloneError}
+                          </p>
+                        </div>
+                      )}
+
+                      {voiceCloneSuccess && (
+                        <div className="mt-3 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                          <p className="text-green-400 text-sm flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Voice clone created successfully!
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
