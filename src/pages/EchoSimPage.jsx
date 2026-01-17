@@ -1,40 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Play,
   X,
-  Phone,
-  Video,
-  Mic,
-  MicOff,
-  VideoOff,
-  PhoneOff,
   Calendar,
   Gift,
   Heart,
   Sun,
   Moon,
   Star,
-  MessageCircle,
-  Volume2,
-  VolumeX,
   User,
   Loader2,
   RefreshCw,
   AlertCircle,
-  Send,
-  ChevronDown,
-  Image,
   Sparkles,
   Radio,
   Film,
   Wand2,
-  ArrowLeft,
-  ChevronRight,
-  Edit3
+  Edit3,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
+import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import SimliAvatar from '../components/SimliAvatar';
@@ -713,7 +700,6 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
 
 export function EchoSimPage({ onNavigate }) {
   const { user, persona } = useApp();
-  const [activeOption, setActiveOption] = useState(null); // 'video' or 'live'
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [customMessage, setCustomMessage] = useState('');
   const [hasVoiceClone, setHasVoiceClone] = useState(false);
@@ -811,182 +797,131 @@ export function EchoSimPage({ onNavigate }) {
         </FadeIn>
 
         {/* Two Main Sections - Always Visible */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Section 1: Video Generation */}
           <FadeIn delay={0.15}>
-            <div className="glass-card p-6 border-l-4 border-gold">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center flex-shrink-0">
+            <div className="glass-card p-6">
+              {/* Header */}
+              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-cream/10">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center">
                   <Film className="w-6 h-6 text-gold" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-serif text-cream mb-1">Create Talking Video</h3>
-                  <p className="text-cream/60 text-sm">
-                    Generate a video of your avatar speaking with lip-sync
-                  </p>
-                  {!hasPhotoAvatar && (
-                    <p className="mt-2 text-red-400 text-xs">
-                      ⚠ You need to create a Photo Avatar in My Persona first
-                    </p>
-                  )}
+                  <h3 className="text-xl font-medium text-cream">Create Talking Video</h3>
+                  <p className="text-cream/50 text-sm">Generate videos with lip-sync</p>
                 </div>
+                {!hasPhotoAvatar && (
+                  <span className="text-red-400 text-xs">⚠ Photo Avatar needed</span>
+                )}
               </div>
 
-        {/* Expanded Content for Option 1: Video Generation */}
-        <AnimatePresence>
-          {activeOption === 'video' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="glass-card p-6 mb-8">
-                <h4 className="text-lg font-serif text-cream mb-4 flex items-center gap-2">
-                  <Wand2 className="w-5 h-5 text-gold" />
-                  Custom Message
-                </h4>
+              {/* Custom Message */}
+              <div className="mb-6">
+                <label className="block text-cream/70 text-sm mb-2">Your Message</label>
                 <div className="flex gap-3">
                   <input
                     type="text"
                     value={customMessage}
                     onChange={(e) => setCustomMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleCustomMessage()}
-                    placeholder="Type your own message for the avatar to speak..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-navy/80 border border-gold/20 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50"
+                    placeholder="Type what your avatar should say..."
+                    disabled={!hasPhotoAvatar}
+                    className="flex-1 px-4 py-3 rounded-lg bg-navy/60 border border-cream/10 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50 disabled:opacity-50"
                   />
                   <motion.button
                     onClick={handleCustomMessage}
                     disabled={!customMessage.trim() || !hasPhotoAvatar}
-                    className="px-5 py-3 rounded-xl bg-gold text-navy font-medium disabled:opacity-50 flex items-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    className="px-5 py-3 rounded-lg bg-gold text-navy font-medium disabled:opacity-50 flex items-center gap-2"
+                    whileHover={customMessage.trim() && hasPhotoAvatar ? { scale: 1.02 } : {}}
+                    whileTap={customMessage.trim() && hasPhotoAvatar ? { scale: 0.98 } : {}}
                   >
-                    <Wand2 className="w-5 h-5" />
-                    Create Video
+                    <Wand2 className="w-4 h-4" />
+                    Create
                   </motion.button>
                 </div>
-                {!hasPhotoAvatar && (
-                  <p className="mt-2 text-red-400/70 text-xs">
-                    You need to create a Photo Avatar on the My Persona page first.
-                  </p>
-                )}
               </div>
 
               {/* Event Templates */}
-              <div className="mb-4">
-                <h4 className="text-lg font-serif text-cream mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-gold" />
-                  Or Choose a Template
-                </h4>
-              </div>
-
-              <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {eventTemplates.map((template) => {
-                  const Icon = template.icon;
-                  return (
-                    <StaggerItem key={template.id}>
+              <div>
+                <label className="block text-cream/70 text-sm mb-3">Or Choose a Template</label>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {eventTemplates.map((template) => {
+                    const Icon = template.icon;
+                    return (
                       <motion.button
+                        key={template.id}
                         onClick={() => handleTemplateSelect(template)}
                         disabled={!hasPhotoAvatar}
-                        className={`w-full glass-card-hover p-5 text-left transition-all ${
-                          !hasPhotoAvatar ? 'opacity-50 cursor-not-allowed' : ''
+                        className={`p-4 rounded-lg border text-left transition-all ${
+                          hasPhotoAvatar
+                            ? 'border-cream/20 bg-navy/40 hover:border-gold/40 hover:bg-gold/5'
+                            : 'border-cream/10 bg-navy/20 opacity-50 cursor-not-allowed'
                         }`}
-                        whileHover={hasPhotoAvatar ? { y: -3 } : {}}
+                        whileHover={hasPhotoAvatar ? { y: -2 } : {}}
                       >
-                        <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center mb-3">
-                          <Icon className="w-5 h-5 text-gold" />
-                        </div>
-                        <h3 className="text-base font-serif text-cream mb-1">{template.name}</h3>
-                        <p className="text-cream/50 text-xs mb-3">{template.description}</p>
-                        <div className="flex items-center text-gold text-xs">
-                          <Film className="w-3 h-3 mr-1" />
-                          Generate Video
-                          <ChevronRight className="w-3 h-3 ml-auto" />
-                        </div>
+                        <Icon className="w-5 h-5 text-gold mb-2" />
+                        <h4 className="text-cream font-medium text-sm mb-1">{template.name}</h4>
+                        <p className="text-cream/50 text-xs">{template.description}</p>
                       </motion.button>
-                    </StaggerItem>
-                  );
-                })}
-              </StaggerContainer>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </FadeIn>
 
-        {/* Expanded Content for Option 2: Live Streaming */}
-        <AnimatePresence>
-          {activeOption === 'live' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="glass-card p-6 mb-8 border border-purple-500/20">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Section 2: Live Conversation */}
+          <FadeIn delay={0.2}>
+            <div className="glass-card p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-cream/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                    <Radio className="w-6 h-6 text-purple-400" />
+                  </div>
                   <div>
-                    <h4 className="text-lg font-serif text-cream mb-2 flex items-center gap-2">
-                      <Radio className="w-5 h-5 text-purple-400" />
-                      Real-Time Video Chat (Simli)
-                    </h4>
-                    <p className="text-cream/60 text-sm">
-                      Start a live conversation with your digital echo. Powered by Simli with ElevenLabs voice clone support -
-                      your avatar responds in real-time with lip-synced video using your own cloned voice!
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <span className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300">
-                        WebRTC Powered
-                      </span>
-                      <span className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300">
-                        Low Latency
-                      </span>
-                      <span className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300">
-                        Up to 20 min sessions
-                      </span>
-                    </div>
+                    <h3 className="text-xl font-medium text-cream">Live Conversation</h3>
+                    <p className="text-cream/50 text-sm">Real-time chat with voice & video</p>
                   </div>
-                  <motion.button
-                    onClick={() => setShowChatConfig(true)}
-                    className="px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all flex-shrink-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-500/25"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Start Live Chat
-                  </motion.button>
                 </div>
+                <motion.button
+                  onClick={() => setShowChatConfig(true)}
+                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium flex items-center gap-2 hover:from-purple-500 hover:to-pink-500"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Start Chat
+                </motion.button>
               </div>
 
-              {/* How Live Chat Works */}
-              <div className="glass-card p-6">
-                <h4 className="text-cream font-medium mb-4">How Live Conversation Works</h4>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-xl bg-navy/30">
-                    <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
-                      <span className="text-purple-400 font-serif">1</span>
-                    </div>
-                    <h5 className="text-cream text-sm font-medium mb-1">Connect</h5>
-                    <p className="text-cream/50 text-xs">Session starts with WebRTC connection</p>
+              {/* Features */}
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-navy/40">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-2">
+                    <span className="text-purple-400 font-medium text-sm">1</span>
                   </div>
-                  <div className="text-center p-4 rounded-xl bg-navy/30">
-                    <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
-                      <span className="text-purple-400 font-serif">2</span>
-                    </div>
-                    <h5 className="text-cream text-sm font-medium mb-1">Chat</h5>
-                    <p className="text-cream/50 text-xs">Type messages to your Echo</p>
+                  <p className="text-cream text-xs font-medium mb-1">Connect</p>
+                  <p className="text-cream/50 text-xs">Instant WebRTC session</p>
+                </div>
+                <div className="p-3 rounded-lg bg-navy/40">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-2">
+                    <span className="text-purple-400 font-medium text-sm">2</span>
                   </div>
-                  <div className="text-center p-4 rounded-xl bg-navy/30">
-                    <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
-                      <span className="text-purple-400 font-serif">3</span>
-                    </div>
-                    <h5 className="text-cream text-sm font-medium mb-1">Watch</h5>
-                    <p className="text-cream/50 text-xs">Avatar responds with lip-synced video</p>
+                  <p className="text-cream text-xs font-medium mb-1">Chat</p>
+                  <p className="text-cream/50 text-xs">Type your messages</p>
+                </div>
+                <div className="p-3 rounded-lg bg-navy/40">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-2">
+                    <span className="text-purple-400 font-medium text-sm">3</span>
                   </div>
+                  <p className="text-cream text-xs font-medium mb-1">Watch</p>
+                  <p className="text-cream/50 text-xs">Avatar responds live</p>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </FadeIn>
+        </div>
 
         {/* Video Archive Card - moves down when options expanded */}
         <FadeIn delay={0.25}>
