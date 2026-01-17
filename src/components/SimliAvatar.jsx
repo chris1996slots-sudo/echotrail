@@ -174,9 +174,16 @@ export function SimliAvatar({ onClose, persona, config }) {
         if (ttsResponse.audio) {
           // Convert base64 to Uint8Array (raw bytes)
           const binaryString = atob(ttsResponse.audio);
-          const uint8Array = new Uint8Array(binaryString.length);
+          let uint8Array = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             uint8Array[i] = binaryString.charCodeAt(i);
+          }
+
+          // Ensure buffer length is even (multiple of 2) for Int16Array
+          // If odd, remove last byte
+          if (uint8Array.length % 2 !== 0) {
+            console.warn('Audio buffer has odd length, removing last byte:', uint8Array.length);
+            uint8Array = uint8Array.slice(0, uint8Array.length - 1);
           }
 
           // Convert Uint8Array to Int16Array (PCM16 format)
