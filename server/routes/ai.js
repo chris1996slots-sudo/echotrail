@@ -2642,6 +2642,7 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     }
 
     // Log audio details for debugging
+    const rawPCMView = new Uint8Array(rawPCM);
     console.log('TTS Audio Generated:', {
       voiceId,
       audioBytes: audioBuffer.byteLength,
@@ -2650,7 +2651,14 @@ router.post('/simli/tts', authenticate, async (req, res) => {
       rawPCMBytes: rawPCM.byteLength,
       format: 'pcm_16000',
       textLength: text.length,
-      firstBytes: Array.from(uint8View.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+      originalFirstBytes: Array.from(uint8View.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+      rawPCMFirstBytes: Array.from(rawPCMView.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+      // Check if raw PCM looks like valid audio (should have varying values, not all zeros or constant)
+      rawPCMStats: {
+        min: Math.min(...Array.from(rawPCMView.slice(0, 100))),
+        max: Math.max(...Array.from(rawPCMView.slice(0, 100))),
+        avg: Array.from(rawPCMView.slice(0, 100)).reduce((a, b) => a + b, 0) / 100
+      }
     });
 
     // Return as base64 for easy transmission to frontend
