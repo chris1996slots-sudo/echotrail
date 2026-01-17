@@ -65,6 +65,7 @@ const FAMILY_STRUCTURE = {
 export function FamilyTreePage({ onNavigate }) {
   const { user } = useApp();
   const [loading, setLoading] = useState(true);
+  const [persona, setPersona] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -86,18 +87,31 @@ export function FamilyTreePage({ onNavigate }) {
   });
 
   useEffect(() => {
-    loadFamilyMembers();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [membersResponse, personaResponse] = await Promise.all([
+        api.getFamilyMembers(),
+        api.getPersona()
+      ]);
+      setFamilyMembers(membersResponse.members || []);
+      setPersona(personaResponse);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadFamilyMembers = async () => {
     try {
-      setLoading(true);
       const response = await api.getFamilyMembers();
       setFamilyMembers(response.members || []);
     } catch (err) {
       console.error('Failed to load family members:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -366,17 +380,22 @@ export function FamilyTreePage({ onNavigate }) {
             <div className="relative glass-card p-6 w-full max-w-sm bg-gradient-to-br from-gold/10 to-gold/5 border-2 border-gold/30">
               <div className="flex flex-col items-center gap-4">
                 {/* User avatar */}
-                {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.firstName}
-                    className="w-20 h-20 rounded-full object-cover border-3 border-gold"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-3 border-gold">
-                    <UserIcon className="w-10 h-10 text-navy" />
-                  </div>
-                )}
+                {(() => {
+                  // Get active avatar or first avatar from persona
+                  const activeAvatar = persona?.avatarImages?.find(img => img.isActive) || persona?.avatarImages?.[0];
+
+                  return activeAvatar?.imageData ? (
+                    <img
+                      src={activeAvatar.imageData}
+                      alt={user?.firstName}
+                      className="w-20 h-20 rounded-full object-cover border-3 border-gold"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-3 border-gold">
+                      <UserIcon className="w-10 h-10 text-navy" />
+                    </div>
+                  );
+                })()}
 
                 {/* User name */}
                 <div className="text-center">
