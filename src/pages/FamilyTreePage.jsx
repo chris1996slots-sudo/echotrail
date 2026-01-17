@@ -39,26 +39,26 @@ const FAMILY_STRUCTURE = {
 
   // Parents (below user)
   parents: [
-    { relationship: 'Father', label: 'Papa', gender: 'male' },
-    { relationship: 'Mother', label: 'Mama', gender: 'female' },
+    { relationship: 'Father', label: 'Father', gender: 'male' },
+    { relationship: 'Mother', label: 'Mother', gender: 'female' },
   ],
 
   // Aunts & Uncles (siblings of parents)
   auntsUncles: [
-    { relationship: 'Uncle', label: 'Onkel', gender: 'male' },
-    { relationship: 'Aunt', label: 'Tante', gender: 'female' },
+    { relationship: 'Uncle', label: 'Uncle', gender: 'male' },
+    { relationship: 'Aunt', label: 'Aunt', gender: 'female' },
   ],
 
   // Grandparents (below parents)
   grandparents: [
-    { relationship: 'Grandfather', label: 'Opa', gender: 'male' },
-    { relationship: 'Grandmother', label: 'Oma', gender: 'female' },
+    { relationship: 'Grandfather', label: 'Grandfather', gender: 'male' },
+    { relationship: 'Grandmother', label: 'Grandmother', gender: 'female' },
   ],
 
   // Great-grandparents (below grandparents)
   greatGrandparents: [
-    { relationship: 'Great-Grandfather', label: 'Uropa', gender: 'male' },
-    { relationship: 'Great-Grandmother', label: 'Uroma', gender: 'female' },
+    { relationship: 'Great-Grandfather', label: 'Great-Grandfather', gender: 'male' },
+    { relationship: 'Great-Grandmother', label: 'Great-Grandmother', gender: 'female' },
   ],
 };
 
@@ -397,20 +397,18 @@ export function FamilyTreePage({ onNavigate }) {
             <div className="w-0.5 h-4 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
-          {/* LEVEL 3: Parents */}
+          {/* LEVEL 3: Parents & Aunts/Uncles - Side by Side */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center w-full"
           >
-            <h3 className="text-cream/50 text-sm mb-4">Parents</h3>
-            <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+            <h3 className="text-cream/50 text-sm mb-4">Parents & Aunts/Uncles</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
+              {/* Parents */}
               {FAMILY_STRUCTURE.parents.map(renderFamilySlot)}
-            </div>
-
-            {/* Aunts & Uncles (same level as Parents) */}
-            <div className="grid grid-cols-2 gap-4 w-full max-w-md mt-6">
+              {/* Aunts & Uncles */}
               {FAMILY_STRUCTURE.auntsUncles.map(renderFamilySlot)}
             </div>
           </motion.div>
@@ -420,33 +418,18 @@ export function FamilyTreePage({ onNavigate }) {
             <div className="w-0.5 h-6 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
-          {/* LEVEL 4: Grandparents */}
+          {/* LEVEL 4: Grandparents & Great-Grandparents - Side by Side */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center w-full"
           >
-            <h3 className="text-cream/50 text-sm mb-4">Grandparents</h3>
-            <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+            <h3 className="text-cream/50 text-sm mb-4">Grandparents & Great-Grandparents</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
+              {/* Grandparents */}
               {FAMILY_STRUCTURE.grandparents.map(renderFamilySlot)}
-            </div>
-          </motion.div>
-
-          {/* Connecting line */}
-          <div className="flex justify-center">
-            <div className="w-0.5 h-4 bg-gradient-to-b from-cream/20 to-transparent" />
-          </div>
-
-          {/* LEVEL 5: Great-Grandparents */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex flex-col items-center"
-          >
-            <h3 className="text-cream/50 text-sm mb-4">Great-Grandparents</h3>
-            <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+              {/* Great-Grandparents */}
               {FAMILY_STRUCTURE.greatGrandparents.map(renderFamilySlot)}
             </div>
           </motion.div>
