@@ -27,14 +27,17 @@ export function VideoArchivePage() {
   const [refreshing, setRefreshing] = useState({});
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [apiConfigured, setApiConfigured] = useState(true);
   const videoRef = useRef(null);
 
   useEffect(() => {
     loadVideos();
   }, []);
 
-  // Auto-refresh pending/processing videos every 10 seconds
+  // Auto-refresh pending/processing videos every 10 seconds (only if API is configured)
   useEffect(() => {
+    if (!apiConfigured) return;
+
     const interval = setInterval(() => {
       const pendingVideos = videos.filter(v => v.status === 'pending' || v.status === 'processing');
       if (pendingVideos.length > 0) {
@@ -45,7 +48,7 @@ export function VideoArchivePage() {
     }, 10000); // 10 seconds
 
     return () => clearInterval(interval);
-  }, [videos]);
+  }, [videos, apiConfigured]);
 
   const loadVideos = async () => {
     try {
@@ -66,7 +69,12 @@ export function VideoArchivePage() {
       const updated = await api.refreshVideoStatus(video.id);
       setVideos(prev => prev.map(v => v.id === updated.id ? updated : v));
     } catch (error) {
-      console.error('Failed to refresh video:', error);
+      // If API is not configured, disable auto-refresh
+      if (error.message === 'Avatar API not configured') {
+        setApiConfigured(false);
+      } else {
+        console.error('Failed to refresh video:', error);
+      }
     } finally {
       setRefreshing(prev => ({ ...prev, [video.id]: false }));
     }
