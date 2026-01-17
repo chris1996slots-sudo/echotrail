@@ -2543,7 +2543,7 @@ router.get('/simli/faces', authenticate, async (req, res) => {
 // Generate TTS audio for Simli (uses ElevenLabs with voice clone)
 router.post('/simli/tts', authenticate, async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, voiceId: requestedVoiceId } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -2569,8 +2569,9 @@ router.post('/simli/tts', authenticate, async (req, res) => {
       select: { elevenlabsVoiceId: true }
     });
 
-    // Use cloned voice or default
-    const voiceId = persona?.elevenlabsVoiceId || '21m00Tcm4TlvDq8ikWAM'; // Default: Rachel
+    // Use requested voice ID, or cloned voice, or default
+    const voiceId = requestedVoiceId || persona?.elevenlabsVoiceId || '21m00Tcm4TlvDq8ikWAM'; // Default: Rachel
+    console.log('Using voice ID for TTS:', voiceId);
 
     // Call ElevenLabs TTS API with PCM16 format for Simli
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {

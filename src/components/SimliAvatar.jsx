@@ -21,7 +21,7 @@ import api from '../services/api';
 // Simli SDK will be loaded dynamically
 let SimliClient = null;
 
-export function SimliAvatar({ onClose, persona }) {
+export function SimliAvatar({ onClose, persona, config }) {
   const [status, setStatus] = useState('initializing'); // initializing, connecting, connected, speaking, error, ended
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -30,6 +30,7 @@ export function SimliAvatar({ onClose, persona }) {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [simliConfig, setSimliConfig] = useState(null);
+  const [selectedConfig, setSelectedConfig] = useState(config); // User's face and voice selection
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -74,10 +75,13 @@ export function SimliAvatar({ onClose, persona }) {
       const client = new SimliClient();
       simliClientRef.current = client;
 
-      // Initialize with config
+      // Initialize with config - Use selected face ID from user's choice
+      const faceIdToUse = selectedConfig?.face?.id || config.defaultFaceId;
+      console.log('Using Face ID:', faceIdToUse, 'Selected Face:', selectedConfig?.face);
+
       const initConfig = {
         apiKey: config.simliApiKey,
-        faceID: config.defaultFaceId,
+        faceID: faceIdToUse,
         handleSilence: true,
         maxSessionLength: 3600,
         maxIdleTime: 600,
@@ -161,7 +165,11 @@ export function SimliAvatar({ onClose, persona }) {
 
       // Generate TTS and send to Simli
       if (simliClientRef.current && simliConfig) {
-        const ttsResponse = await api.getSimliTTS(responseText);
+        // Use selected voice ID from config
+        const voiceIdToUse = selectedConfig?.voice?.id;
+        console.log('Using Voice ID for TTS:', voiceIdToUse, 'Selected Voice:', selectedConfig?.voice);
+
+        const ttsResponse = await api.getSimliTTS(responseText, voiceIdToUse);
 
         if (ttsResponse.audio) {
           // Convert base64 to Uint8Array
@@ -257,9 +265,14 @@ export function SimliAvatar({ onClose, persona }) {
                 <CheckCircle2 className="w-3 h-3" />
               ) : null}
               {getStatusText()}
-              {simliConfig?.hasVoiceClone && (
+              {selectedConfig?.voice && (
                 <span className="ml-2 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
-                  Voice Clone Active
+                  {selectedConfig.voice.type === 'clone' ? 'Voice Clone' : selectedConfig.voice.name}
+                </span>
+              )}
+              {selectedConfig?.face && (
+                <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
+                  {selectedConfig.face.name}
                 </span>
               )}
             </div>
