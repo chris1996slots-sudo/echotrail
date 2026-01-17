@@ -888,6 +888,9 @@ export function EchoSimPage({ onNavigate }) {
                     <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
                       WebRTC Streaming
                     </span>
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-cream/10 text-cream/50">
+                      ✗ No Voice Clone (HeyGen Voice)
+                    </span>
                   </div>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-cream/50 transition-transform ${
