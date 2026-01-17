@@ -436,7 +436,7 @@ export function FamilyTreePage({ onNavigate }) {
           >
             <h3 className="text-cream/50 text-sm mb-4">Great-Grandparents</h3>
             <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-              {FAMILY_STRUCTURE.greatGrandParents.map(renderFamilySlot)}
+              {FAMILY_STRUCTURE.greatGrandparents.map(renderFamilySlot)}
             </div>
           </motion.div>
         </div>

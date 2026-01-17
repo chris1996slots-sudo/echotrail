@@ -952,36 +952,6 @@ export function EchoSimPage({ onNavigate }) {
           </Link>
         </FadeIn>
 
-        {/* Feature Overview (when no option selected) */}
-        {!activeOption && (
-          <FadeIn delay={0.25}>
-            <div className="glass-card p-6 text-center">
-              <h3 className="text-lg font-serif text-cream mb-4">Choose an Option Above</h3>
-              <p className="text-cream/60 text-sm mb-6">
-                Select either Video Generation for pre-recorded talking videos, or Live Conversation
-                for real-time interactive chat with your digital echo.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <div className="px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-cream/70 text-xs flex items-center gap-2">
-                  <Film className="w-4 h-4 text-gold" />
-                  Video Generation
-                </div>
-                <div className="px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs flex items-center gap-2">
-                  <Radio className="w-4 h-4 text-purple-400" />
-                  Live Streaming
-                </div>
-                <div className="px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-cream/70 text-xs flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-gold" />
-                  Voice Clone
-                </div>
-                <div className="px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-cream/70 text-xs flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-gold" />
-                  AI Personalization
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-        )}
       </div>
 
       {/* Video Generation Modal */}
