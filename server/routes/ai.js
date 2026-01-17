@@ -2639,6 +2639,12 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
     // Convert base64 to buffer
     const imageBuffer = Buffer.from(imageData.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 
+    console.log('Creating Simli face with:', {
+      faceName: faceName || req.user.firstName + '_avatar',
+      imageSize: imageBuffer.length,
+      apiKeyExists: !!simliConfig.apiKey
+    });
+
     // Create form data for Simli API
     const FormData = (await import('form-data')).default;
     const formData = new FormData();
@@ -2660,10 +2666,24 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
       }
     );
 
+    console.log('Simli API response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Simli face creation error:', errorText);
-      throw new Error(`Simli API error: ${response.status} ${errorText}`);
+      console.error('Simli face creation error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      return res.status(response.status).json({
+        error: 'Failed to create custom face',
+        details: `Simli API error: ${response.status} - ${errorText}`,
+        simliStatus: response.status
+      });
     }
 
     const result = await response.json();
