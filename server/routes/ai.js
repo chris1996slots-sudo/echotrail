@@ -2665,7 +2665,7 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
 
     const response = await axios.post(url, formData, {
       headers: {
-        'api-key': simliConfig.apiKey,
+        'x-simli-api-key': simliConfig.apiKey,
         ...formData.getHeaders()
       },
       validateStatus: () => true // Get response even for non-2xx status
