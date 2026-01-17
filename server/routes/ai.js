@@ -2574,7 +2574,9 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     console.log('Using voice ID for TTS:', voiceId);
 
     // Call ElevenLabs TTS API with PCM16 format for Simli
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
+    // CRITICAL: Use non-streaming endpoint to get true PCM data
+    // The /stream endpoint returns MP3 despite requesting pcm_16000
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
