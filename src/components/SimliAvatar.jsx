@@ -87,7 +87,16 @@ export function SimliAvatar({ onClose, persona, user, config }) {
       simliClientRef.current = client;
 
       // Initialize with config - Use selected face ID from user's choice
-      const faceIdToUse = selectedConfig?.face?.id || config.defaultFaceId;
+      // But ONLY if it's a real Simli face ID (not our custom avatar_ prefix)
+      let faceIdToUse = selectedConfig?.face?.id || config.defaultFaceId;
+
+      // Check if the selected face has a valid Simli face ID
+      if (faceIdToUse && faceIdToUse.startsWith('avatar_')) {
+        // This is not a real Simli face, use default instead
+        console.warn('Selected face does not have a Simli Face ID, using default:', config.defaultFaceId);
+        faceIdToUse = config.defaultFaceId;
+      }
+
       console.log('Using Face ID:', faceIdToUse, 'Selected Face:', selectedConfig?.face);
 
       const initConfig = {
