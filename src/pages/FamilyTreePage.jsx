@@ -43,6 +43,12 @@ const FAMILY_STRUCTURE = {
     { relationship: 'Mother', label: 'Mama', gender: 'female' },
   ],
 
+  // Aunts & Uncles (siblings of parents)
+  auntsUncles: [
+    { relationship: 'Uncle', label: 'Onkel', gender: 'male' },
+    { relationship: 'Aunt', label: 'Tante', gender: 'female' },
+  ],
+
   // Grandparents (below parents)
   grandparents: [
     { relationship: 'Grandfather', label: 'Opa', gender: 'male' },
@@ -336,7 +342,7 @@ export function FamilyTreePage({ onNavigate }) {
         </motion.div>
 
         {/* Family Tree Structure */}
-        <div className="space-y-8">
+        <div className="space-y-4">
           {/* LEVEL 1: Children (above user) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -388,7 +394,7 @@ export function FamilyTreePage({ onNavigate }) {
 
           {/* Connecting line */}
           <div className="flex justify-center">
-            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+            <div className="w-0.5 h-4 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
           {/* LEVEL 3: Parents */}
@@ -402,11 +408,16 @@ export function FamilyTreePage({ onNavigate }) {
             <div className="grid grid-cols-2 gap-4 w-full max-w-md">
               {FAMILY_STRUCTURE.parents.map(renderFamilySlot)}
             </div>
+
+            {/* Aunts & Uncles (same level as Parents) */}
+            <div className="grid grid-cols-2 gap-4 w-full max-w-md mt-6">
+              {FAMILY_STRUCTURE.auntsUncles.map(renderFamilySlot)}
+            </div>
           </motion.div>
 
           {/* Connecting line */}
           <div className="flex justify-center">
-            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+            <div className="w-0.5 h-6 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
           {/* LEVEL 4: Grandparents */}
@@ -424,7 +435,7 @@ export function FamilyTreePage({ onNavigate }) {
 
           {/* Connecting line */}
           <div className="flex justify-center">
-            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+            <div className="w-0.5 h-4 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
           {/* LEVEL 5: Great-Grandparents */}
