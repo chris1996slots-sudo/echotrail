@@ -82,6 +82,18 @@ export function SettingsPage({ onNavigate }) {
     }
   }, [user]);
 
+  // Load profile data when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phoneNumber: user.phoneNumber || '',
+        telegramUsername: user.telegramUsername || '',
+      });
+    }
+  }, [user]);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
