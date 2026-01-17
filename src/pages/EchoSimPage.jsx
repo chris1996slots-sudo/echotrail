@@ -18,7 +18,8 @@ import {
   Wand2,
   Edit3,
   Volume2,
-  VolumeX
+  VolumeX,
+  ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn } from '../components/PageTransition';
