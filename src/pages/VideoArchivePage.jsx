@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Film,
@@ -13,7 +14,8 @@ import {
   Download,
   X,
   AlertCircle,
-  Video
+  Video,
+  ArrowLeft
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -110,8 +112,19 @@ export function VideoArchivePage() {
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-b from-navy-dark via-navy to-navy-dark py-8 px-4">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
+          {/* Back Button */}
           <FadeIn>
+            <Link
+              to="/echo-sim"
+              className="inline-flex items-center gap-2 text-cream/60 hover:text-gold transition-colors mb-6"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Echo Simulator
+            </Link>
+          </FadeIn>
+
+          {/* Header */}
+          <FadeIn delay={0.05}>
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-gold/20 to-gold-light/20 mb-4">
                 <Film className="w-8 h-8 text-gold" />
