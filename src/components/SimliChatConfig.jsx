@@ -33,36 +33,43 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
       setLoading(true);
       setError(null);
 
-      // Load ALL avatar images from persona
       const customFacesList = [];
-      if (persona?.avatarImages && persona.avatarImages.length > 0) {
-        for (const avatarImage of persona.avatarImages) {
-          customFacesList.push({
-            id: avatarImage.simliFaceId || `avatar-${avatarImage.id}`,
-            name: avatarImage.label || 'Custom Avatar',
-            imageUrl: avatarImage.imageUrl,
-            type: 'custom',
-            avatarImageId: avatarImage.id,
-            hasSimliFace: !!avatarImage.simliFaceId
-          });
-        }
-      }
 
-      // Also check if persona itself has a Simli face ID
-      if (persona?.simliFaceId && !customFacesList.some(f => f.id === persona.simliFaceId)) {
+      // PRIORITY 1: Check if persona has a Simli face ID (from Real-Time Chat Face upload)
+      if (persona?.simliFaceId) {
         customFacesList.push({
           id: persona.simliFaceId,
           name: persona.simliFaceName || 'My Custom Face',
           type: 'custom',
-          hasSimliFace: true
+          hasSimliFace: true,
+          isPrimary: true
         });
+      }
+
+      // PRIORITY 2: Load avatar images that have simliFaceId
+      if (persona?.avatarImages && persona.avatarImages.length > 0) {
+        for (const avatarImage of persona.avatarImages) {
+          // Only add if it has a simliFaceId and it's not already in the list
+          if (avatarImage.simliFaceId && !customFacesList.some(f => f.id === avatarImage.simliFaceId)) {
+            customFacesList.push({
+              id: avatarImage.simliFaceId,
+              name: avatarImage.label || 'Custom Avatar',
+              imageUrl: avatarImage.imageUrl,
+              type: 'custom',
+              avatarImageId: avatarImage.id,
+              hasSimliFace: true
+            });
+          }
+        }
       }
 
       setCustomFaces(customFacesList);
 
-      // Auto-select first custom face if available
+      // Auto-select first custom face if available (prioritize persona.simliFaceId)
       if (customFacesList.length > 0) {
-        setSelectedFace(customFacesList[0]);
+        // Find the primary face (from persona) or use first
+        const primaryFace = customFacesList.find(f => f.isPrimary) || customFacesList[0];
+        setSelectedFace(primaryFace);
       }
 
       // Load standard Simli faces
