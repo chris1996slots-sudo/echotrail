@@ -6,6 +6,7 @@ import { Navigation } from './components/Navigation';
 import { LandingPage } from './pages/LandingPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { PersonaPage } from './pages/PersonaPage';
+import { FamilyTreePage } from './pages/FamilyTreePage';
 import { EchoSimPage } from './pages/EchoSimPage';
 import { MemoryAnchorPage } from './pages/MemoryAnchorPage';
 import { WisdomGPTPage } from './pages/WisdomGPTPage';
@@ -72,6 +73,7 @@ function AppContent() {
       'login': '/login',
       'onboarding': '/register',
       'persona': '/persona',
+      'family-tree': '/family-tree',
       'echo-sim': '/echo-sim',
       'video-archive': '/video-archive',
       'memory-anchor': '/memories',
@@ -100,6 +102,7 @@ function AppContent() {
       '/login': 'login',
       '/register': 'onboarding',
       '/persona': 'persona',
+      '/family-tree': 'family-tree',
       '/echo-sim': 'echo-sim',
       '/video-archive': 'video-archive',
       '/memories': 'memory-anchor',
@@ -148,6 +151,11 @@ function AppContent() {
           <Route path="/persona" element={
             <UserRoute>
               <PersonaPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/family-tree" element={
+            <UserRoute>
+              <FamilyTreePage onNavigate={handleNavigate} />
             </UserRoute>
           } />
           <Route path="/echo-sim" element={

@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   X,
-  Film
+  Film,
+  Users
 } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
@@ -21,6 +22,7 @@ import api from '../services/api';
 const navItems = [
   { id: 'landing', label: 'Home', icon: Home, requiresAuth: false, guestOnly: true },
   { id: 'persona', label: 'My Persona', icon: User, requiresAuth: true, userOnly: true },
+  { id: 'family-tree', label: 'Family Tree', icon: Users, requiresAuth: true, userOnly: true },
   { id: 'echo-sim', label: 'Echo Sim', icon: Sparkles, requiresAuth: true, userOnly: true },
   { id: 'memory-anchor', label: 'Memories', icon: Image, requiresAuth: true, userOnly: true },
   { id: 'wisdom-gpt', label: 'Wisdom GPT', icon: MessageCircle, requiresAuth: true, userOnly: true },

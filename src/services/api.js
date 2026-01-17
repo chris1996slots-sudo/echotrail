@@ -596,6 +596,38 @@ class ApiService {
   async getSimliFaceStatus() {
     return this.request('/api/ai/simli/face-status');
   }
+
+  // =====================
+  // Family Tree API
+  // =====================
+
+  async getFamilyMembers() {
+    return this.request('/api/family');
+  }
+
+  async getFamilyMember(id) {
+    return this.request(`/api/family/${id}`);
+  }
+
+  async createFamilyMember(data) {
+    return this.request('/api/family', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFamilyMember(id, data) {
+    return this.request(`/api/family/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFamilyMember(id) {
+    return this.request(`/api/family/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiService();

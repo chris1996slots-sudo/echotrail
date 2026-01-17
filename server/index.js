@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import supportRoutes from './routes/support.js';
 import referralRoutes from './routes/referral.js';
+import familyRoutes from './routes/family.js';
 
 dotenv.config();
 
@@ -79,6 +80,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/referral', referralRoutes);
+app.use('/api/family', familyRoutes);
 
 // Serve uploaded files (videos for LiveAvatar training)
 const uploadsPath = path.join(__dirname, '..', 'uploads');

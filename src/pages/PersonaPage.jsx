@@ -402,12 +402,10 @@ export function PersonaPage({ onNavigate }) {
     },
   ];
 
-  // Avatar creation step flow (5 steps - Create Avatar on last step sends to ElevenLabs + HeyGen)
+  // Avatar creation step flow (3 steps - Create Avatar on last step sends to ElevenLabs + HeyGen)
   const avatarSteps = [
     { id: 'photos', label: 'Photos', icon: Camera, description: 'Upload your photos' },
     { id: 'voice', label: 'Voice', icon: Mic, description: 'Record your voice' },
-    { id: 'background', label: 'Background', icon: ImageIcon, description: 'Choose a background' },
-    { id: 'style', label: 'Style', icon: Palette, description: 'Choose your avatar style' },
     { id: 'vibe', label: 'Vibe', icon: Heart, description: 'Choose your echo vibe' },
   ];
 
@@ -1713,102 +1711,6 @@ export function PersonaPage({ onNavigate }) {
                       </p>
                     </div>
                   )}
-                </div>
-              );
-
-            case 'background':
-              return (
-                <div className="space-y-6">
-                  <p className="text-cream/60 text-sm text-center">
-                    Choose a background for your talking avatar video
-                  </p>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {backgrounds.map((bg) => (
-                      <motion.button
-                        key={bg.id}
-                        onClick={() => bg.id === 'custom' ? null : selectBackground(bg.id)}
-                        className={`relative h-40 rounded-xl overflow-hidden border-2 transition-all ${
-                          persona.backgroundType === bg.id
-                            ? 'border-gold ring-2 ring-gold/30'
-                            : 'border-gold/20 hover:border-gold/40'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {bg.id === 'custom' ? (
-                          <label className="w-full h-full flex flex-col items-center justify-center bg-navy-light cursor-pointer">
-                            {persona.backgroundImage && persona.backgroundType === 'custom' ? (
-                              <img
-                                src={persona.backgroundImage}
-                                alt="Custom background"
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                            ) : (
-                              <>
-                                <Upload className="w-10 h-10 text-gold/50 mb-2" />
-                                <span className="text-cream/60 text-sm">Custom Image</span>
-                              </>
-                            )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleBackgroundUpload}
-                              className="hidden"
-                            />
-                          </label>
-                        ) : (
-                          <img
-                            src={bg.preview}
-                            alt={bg.label}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                          <span className="text-cream font-medium">{bg.label}</span>
-                        </div>
-                        {persona.backgroundType === bg.id && (
-                          <div className="absolute top-3 right-3 w-8 h-8 bg-gold rounded-full flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5 text-navy" />
-                          </div>
-                        )}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              );
-
-            case 'style':
-              return (
-                <div className="space-y-6">
-                  <p className="text-cream/60 text-sm text-center">
-                    Choose the style for your talking avatar
-                  </p>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {avatarStyles.map((style) => (
-                      <motion.button
-                        key={style.id}
-                        onClick={() => selectAvatarStyle(style.id)}
-                        className={`relative p-5 rounded-xl border-2 text-left transition-all ${
-                          persona.avatarStyle === style.id
-                            ? 'border-gold bg-gold/10'
-                            : 'border-gold/20 hover:border-gold/40 bg-navy-light/30'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <span className="text-4xl mb-3 block">{style.icon}</span>
-                        <h4 className="text-cream font-medium">{style.label}</h4>
-                        <p className="text-cream/50 text-sm mt-1">{style.description}</p>
-                        {persona.avatarStyle === style.id && (
-                          <div className="absolute top-3 right-3 w-6 h-6 bg-gold rounded-full flex items-center justify-center">
-                            <CheckCircle2 className="w-4 h-4 text-navy" />
-                          </div>
-                        )}
-                      </motion.button>
-                    ))}
-                  </div>
                 </div>
               );
 
