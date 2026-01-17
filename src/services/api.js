@@ -539,6 +539,38 @@ class ApiService {
   async refreshVideoStatus(id) {
     return this.request(`/api/ai/videos/${id}/refresh`, { method: 'POST' });
   }
+
+  // =====================
+  // Simli API (Real-Time Avatar with Voice Clone)
+  // =====================
+
+  async getSimliSession() {
+    return this.request('/api/ai/simli/session', {
+      method: 'POST',
+    });
+  }
+
+  async startSimliSession(faceId) {
+    return this.request('/api/ai/simli/start', {
+      method: 'POST',
+      body: JSON.stringify({ faceId }),
+    });
+  }
+
+  async getSimliFaces() {
+    return this.request('/api/ai/simli/faces');
+  }
+
+  async getSimliStatus() {
+    return this.request('/api/ai/simli/status');
+  }
+
+  async getSimliTTS(text) {
+    return this.request('/api/ai/simli/tts', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
 }
 
 export const api = new ApiService();

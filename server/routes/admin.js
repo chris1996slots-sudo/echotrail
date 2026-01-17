@@ -462,6 +462,9 @@ router.post('/api-config/:service/test', async (req, res) => {
       case 'liveavatar':
         testResult = await testLiveAvatarProvider(config?.apiKey);
         break;
+      case 'simli':
+        testResult = await testSimliProvider(config?.apiKey);
+        break;
       // Legacy service names
       case 'claude':
         testResult = await testClaudeApi(config.apiKey);
@@ -699,6 +702,54 @@ async function testLiveAvatarProvider(apiKey) {
 
     const errorData = await response.json().catch(() => ({}));
     return { success: false, message: errorData.message || `API error: ${response.status}` };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+// =====================
+// SIMLI PROVIDER TEST
+// =====================
+async function testSimliProvider(apiKey) {
+  if (!apiKey) {
+    return { success: false, message: 'No API key configured' };
+  }
+
+  try {
+    // Test Simli API by trying to start a session (then immediately cancel)
+    const response = await fetch('https://api.simli.ai/startAudioToVideoSession', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        faceId: '5514e24d-6086-46a3-ace4-6a7264e5cb7c', // Default test face
+        apiKey: apiKey,
+        apiVersion: 'v1',
+        audioInputFormat: 'pcm16',
+        handleSilence: true,
+        maxSessionLength: 60, // Short session for test
+        maxIdleTime: 10
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: `Simli connected successfully. Session test passed.`
+      };
+    }
+
+    const errorText = await response.text();
+    let errorMessage = 'API error';
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage = errorData.message || errorData.error || `Status: ${response.status}`;
+    } catch (e) {
+      errorMessage = errorText || `Status: ${response.status}`;
+    }
+    return { success: false, message: errorMessage };
   } catch (error) {
     return { success: false, message: error.message };
   }

@@ -42,6 +42,7 @@
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0",
     "recharts": "^3.6.0",
+    "simli-client": "^1.2.20",
     "tailwindcss": "^4.1.18",
     "vite": "^7.2.4"
   },

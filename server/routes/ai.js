@@ -2386,4 +2386,263 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
   }
 });
 
+// =====================
+// SIMLI API - Real-Time Avatar with ElevenLabs Voice Clone
+// =====================
+
+// Get Simli session for real-time avatar streaming
+router.post('/simli/session', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
+  try {
+    // Get Simli API config
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    if (!simliConfig?.isActive || !simliConfig?.apiKey) {
+      return res.status(503).json({
+        error: 'Simli API not configured. Please add API key in Admin Dashboard → APIs → Simli.'
+      });
+    }
+
+    // Get ElevenLabs config for voice clone
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    // Get user's persona for voice clone ID and avatar settings
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        elevenlabsVoiceId: true,
+        elevenlabsVoiceName: true,
+        heygenAvatarId: true,
+        avatarImages: {
+          where: { isActive: true },
+          take: 1,
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    // Return configuration for frontend
+    res.json({
+      simliApiKey: simliConfig.apiKey,
+      elevenlabsApiKey: voiceConfig?.apiKey || null,
+      voiceId: persona?.elevenlabsVoiceId || null,
+      voiceName: persona?.elevenlabsVoiceName || null,
+      hasVoiceClone: !!persona?.elevenlabsVoiceId,
+      // Simli face IDs - can be customized or use defaults
+      defaultFaceId: simliConfig.settings?.defaultFaceId || '5514e24d-6086-46a3-ace4-6a7264e5cb7c',
+      message: 'Simli configuration ready'
+    });
+  } catch (error) {
+    console.error('Simli session error:', error);
+    res.status(500).json({ error: 'Failed to get Simli configuration' });
+  }
+});
+
+// Start Simli WebRTC session (creates session token)
+router.post('/simli/start', authenticate, async (req, res) => {
+  try {
+    const { faceId } = req.body;
+
+    // Get Simli API config
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    if (!simliConfig?.isActive || !simliConfig?.apiKey) {
+      return res.status(503).json({ error: 'Simli API not configured' });
+    }
+
+    const selectedFaceId = faceId || simliConfig.settings?.defaultFaceId || '5514e24d-6086-46a3-ace4-6a7264e5cb7c';
+
+    // Call Simli API to start audio-to-video session
+    const response = await fetch('https://api.simli.ai/startAudioToVideoSession', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        faceId: selectedFaceId,
+        apiKey: simliConfig.apiKey,
+        apiVersion: 'v1',
+        audioInputFormat: 'pcm16',
+        handleSilence: true,
+        maxSessionLength: 3600,
+        maxIdleTime: 300,
+        syncAudio: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Simli start error:', errorText);
+      return res.status(response.status).json({
+        error: 'Failed to start Simli session',
+        debug: errorText
+      });
+    }
+
+    const data = await response.json();
+    console.log('Simli session started:', data);
+
+    res.json({
+      sessionToken: data.session_token || data.sessionToken,
+      sessionId: data.session_id || data.sessionId,
+      iceServers: data.iceServers,
+      faceId: selectedFaceId,
+      message: 'Simli session started successfully'
+    });
+  } catch (error) {
+    console.error('Simli start error:', error);
+    res.status(500).json({ error: 'Failed to start Simli session' });
+  }
+});
+
+// Get available Simli faces
+router.get('/simli/faces', authenticate, async (req, res) => {
+  try {
+    // Return some default Simli faces
+    // These are publicly available face IDs from Simli
+    const defaultFaces = [
+      { id: '5514e24d-6086-46a3-ace4-6a7264e5cb7c', name: 'Default Avatar', thumbnail: null },
+      { id: 'tmp9i8bbq7c', name: 'Professional Male', thumbnail: null },
+      { id: 'tmp3ub1smil', name: 'Professional Female', thumbnail: null },
+    ];
+
+    // Check if user has custom Simli face ID in settings
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    const customFaces = simliConfig?.settings?.customFaces || [];
+
+    res.json({
+      faces: [...defaultFaces, ...customFaces],
+      defaultFaceId: simliConfig?.settings?.defaultFaceId || defaultFaces[0].id
+    });
+  } catch (error) {
+    console.error('Simli faces error:', error);
+    res.status(500).json({ error: 'Failed to fetch Simli faces' });
+  }
+});
+
+// Generate TTS audio for Simli (uses ElevenLabs with voice clone)
+router.post('/simli/tts', authenticate, async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    // Get ElevenLabs config
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    if (!voiceConfig?.isActive || !voiceConfig?.apiKey) {
+      return res.status(503).json({ error: 'Voice API not configured' });
+    }
+
+    // Get user's voice clone ID
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: { elevenlabsVoiceId: true }
+    });
+
+    // Use cloned voice or default
+    const voiceId = persona?.elevenlabsVoiceId || '21m00Tcm4TlvDq8ikWAM'; // Default: Rachel
+
+    // Call ElevenLabs TTS API with PCM16 format for Simli
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': voiceConfig.apiKey,
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_turbo_v2_5', // Fast model for real-time
+        output_format: 'pcm_16000', // PCM16 at 16kHz for Simli
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('ElevenLabs TTS error:', errorText);
+      return res.status(response.status).json({ error: 'TTS generation failed' });
+    }
+
+    // Get audio as buffer
+    const audioBuffer = await response.arrayBuffer();
+
+    // Return as base64 for easy transmission to frontend
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+
+    res.json({
+      audio: base64Audio,
+      format: 'pcm16',
+      sampleRate: 16000,
+      voiceId,
+      hasVoiceClone: !!persona?.elevenlabsVoiceId
+    });
+  } catch (error) {
+    console.error('Simli TTS error:', error);
+    res.status(500).json({ error: 'Failed to generate TTS audio' });
+  }
+});
+
+// Get Simli configuration status
+router.get('/simli/status', authenticate, async (req, res) => {
+  try {
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        elevenlabsVoiceId: true,
+        elevenlabsVoiceName: true
+      }
+    });
+
+    res.json({
+      simliConfigured: !!simliConfig?.isActive && !!simliConfig?.apiKey,
+      voiceConfigured: !!voiceConfig?.isActive && !!voiceConfig?.apiKey,
+      hasVoiceClone: !!persona?.elevenlabsVoiceId,
+      voiceCloneName: persona?.elevenlabsVoiceName || null,
+      defaultFaceId: simliConfig?.settings?.defaultFaceId || '5514e24d-6086-46a3-ace4-6a7264e5cb7c'
+    });
+  } catch (error) {
+    console.error('Simli status error:', error);
+    res.status(500).json({ error: 'Failed to get Simli status' });
+  }
+});
+
 export default router;

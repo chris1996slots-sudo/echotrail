@@ -243,6 +243,26 @@ curl https://echotrail-qt41.onrender.com/api/auth/me
 - **Config Key**: `liveavatar`
 - **Training**: 2-minütiges Video (15s zuhören, 90s reden, 15s idle) → Training dauert 2-5 Tage
 
+### Simli - Real-Time Avatar mit Voice Clone (EMPFOHLEN für Live Chat)
+- **Provider**: Simli (simli-client SDK + WebRTC)
+- **Subscription**: **Legacy Tier** - Voller Zugang zu Real-Time Avatar Streaming
+- **Verwendung**: Echo Sim → Option 2: Live Conversation
+- **Endpoints**:
+  - `/api/ai/simli/session` - API Keys und Voice Clone Config holen
+  - `/api/ai/simli/start` - WebRTC Session starten
+  - `/api/ai/simli/faces` - Verfügbare Avatare auflisten
+  - `/api/ai/simli/tts` - TTS mit ElevenLabs Voice Clone (PCM16, 16kHz)
+  - `/api/ai/simli/status` - Konfigurationsstatus prüfen
+- **Config Key**: `simli`
+- **Vorteile**:
+  - ✅ Unterstützt ElevenLabs Voice Clone für Echtzeit-Streaming!
+  - ✅ Niedrige Latenz (~300ms)
+  - ✅ Kein eigenes Avatar-Training nötig (nutzt Simli Standard-Avatare)
+  - ✅ WebRTC-basiert mit STUN/TURN Fallback
+  - ✅ Bis zu 20 Minuten Sessions
+- **Frontend**: `SimliAvatar.jsx` Komponente mit simli-client SDK
+- **Dokumentation**: `/docs/SIMLI_API.md`
+
 ## Persona Schema (Wichtige Felder)
 
 ```prisma
@@ -282,6 +302,8 @@ model Persona {
 - [x] HeyGen Video Playback in Echo Sim
 - [x] LiveAvatar Real-Time Streaming (LiveKit WebRTC)
 - [x] LiveAvatar Custom Avatar Training (Video Upload)
+- [x] Simli Real-Time Avatar mit Voice Clone Support
+- [x] Video Archive für generierte Videos
 - [ ] Stripe Payment Integration
 - [ ] Email Verification
 - [ ] Password Reset
@@ -289,9 +311,29 @@ model Persona {
 ## Admin Dashboard - API Konfiguration
 
 API Keys werden in der Datenbank gespeichert via Admin Dashboard → APIs:
-- **AI Brain**: Groq API Key (category: `llm`)
-- **Voice**: ElevenLabs API Key (category: `voice`)
-- **Avatar**: HeyGen API Key (category: `avatar`)
 
-"Test Connection" Buttons verifizieren ob jede API funktioniert.
+### Aktive Services (In Verwendung)
+- **AI Brain (LLM)**: Groq API Key (category: `llm`)
+  - Provider: Groq (Free) - Llama 3.3 70B
+  - Purpose: Text Generation für WisdomGPT, Echo Sim Messages
+
+- **Voice (TTS)**: ElevenLabs API Key (category: `voice`)
+  - Provider: ElevenLabs
+  - Purpose: Voice Cloning & Text-to-Speech
+
+- **Avatar (Video)**: HeyGen API Key (category: `avatar`)
+  - Provider: HeyGen
+  - Purpose: Photo Avatars & Video Generation (Option 1)
+
+- **Real-Time Avatar (Simli)**: Simli API Key (category: `simli`) - **EMPFOHLEN für Live Chat!**
+  - Provider: Simli (Legacy Subscription)
+  - Purpose: Live Conversation in Echo Sim (Option 2)
+  - Features: WebRTC Streaming mit ElevenLabs Voice Clone Support
+
+### Legacy Services (Nicht mehr in Verwendung)
+- **LiveAvatar**: LiveAvatar API Key (category: `liveavatar`)
+  - Status: Ersetzt durch Simli
+  - Grund: Simli bietet bessere Voice Clone Integration
+
+**Test Connection Buttons** verifizieren ob jede API funktioniert.
 

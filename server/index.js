@@ -177,6 +177,7 @@ async function initializeServer() {
       { service: 'voice', envKey: 'ELEVENLABS_API_KEY', defaultProvider: 'elevenlabs' },
       { service: 'avatar', envKey: 'HEYGEN_API_KEY', defaultProvider: 'heygen' },
       { service: 'liveavatar', envKey: 'LIVEAVATAR_API_KEY', defaultProvider: 'liveavatar' },
+      { service: 'simli', envKey: 'SIMLI_API_KEY', defaultProvider: 'simli' },
     ];
     for (const { service, envKey, defaultProvider } of apiServicesNew) {
       const existing = await prisma.apiConfig.findUnique({

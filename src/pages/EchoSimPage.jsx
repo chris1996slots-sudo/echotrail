@@ -37,7 +37,7 @@ import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
-import LiveChat from '../components/LiveChat';
+import SimliAvatar from '../components/SimliAvatar';
 
 // Event templates for Option 1 (Video Generation)
 const eventTemplates = [
@@ -880,16 +880,14 @@ export function EchoSimPage({ onNavigate }) {
                     Real-time video chat with your Echo. Type messages and watch your avatar respond instantly.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      hasPhotoAvatar ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }`}>
-                      {hasPhotoAvatar ? '✓' : '✗'} Photo Avatar Required
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
+                      Simli + ElevenLabs
                     </span>
                     <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
                       WebRTC Streaming
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-cream/10 text-cream/50">
-                      ✗ No Voice Clone (HeyGen Voice)
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
+                      ✓ Voice Clone Support
                     </span>
                   </div>
                 </div>
@@ -1024,11 +1022,11 @@ export function EchoSimPage({ onNavigate }) {
                   <div>
                     <h4 className="text-lg font-serif text-cream mb-2 flex items-center gap-2">
                       <Radio className="w-5 h-5 text-purple-400" />
-                      Real-Time Video Chat
+                      Real-Time Video Chat (Simli)
                     </h4>
                     <p className="text-cream/60 text-sm">
-                      Start a live conversation with your digital echo. Your avatar will respond in real-time
-                      with lip-synced video and your cloned voice.
+                      Start a live conversation with your digital echo. Powered by Simli with ElevenLabs voice clone support -
+                      your avatar responds in real-time with lip-synced video using your own cloned voice!
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       <span className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300">
@@ -1044,24 +1042,14 @@ export function EchoSimPage({ onNavigate }) {
                   </div>
                   <motion.button
                     onClick={() => setShowLiveChat(true)}
-                    disabled={!hasPhotoAvatar}
-                    className={`px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all flex-shrink-0 ${
-                      hasPhotoAvatar
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-500/25'
-                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    }`}
-                    whileHover={hasPhotoAvatar ? { scale: 1.05 } : {}}
-                    whileTap={hasPhotoAvatar ? { scale: 0.95 } : {}}
+                    className="px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all flex-shrink-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-500/25"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <Sparkles className="w-5 h-5" />
                     Start Live Chat
                   </motion.button>
                 </div>
-                {!hasPhotoAvatar && (
-                  <p className="mt-4 text-red-400/70 text-xs text-center sm:text-left">
-                    You need to create a Photo Avatar on the My Persona page to use Live Conversation.
-                  </p>
-                )}
               </div>
 
               {/* How Live Chat Works */}
@@ -1143,11 +1131,11 @@ export function EchoSimPage({ onNavigate }) {
         )}
       </AnimatePresence>
 
-      {/* Live Chat Modal */}
+      {/* Live Chat Modal - Simli Avatar */}
       {showLiveChat && (
-        <LiveChat
+        <SimliAvatar
           onClose={() => setShowLiveChat(false)}
-          userName={user?.firstName}
+          persona={persona}
         />
       )}
     </PageTransition>
