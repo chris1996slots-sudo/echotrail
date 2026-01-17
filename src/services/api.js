@@ -571,6 +571,17 @@ class ApiService {
       body: JSON.stringify({ text }),
     });
   }
+
+  async createSimliFace(imageData, faceName) {
+    return this.request('/api/ai/simli/create-face', {
+      method: 'POST',
+      body: JSON.stringify({ imageData, faceName }),
+    });
+  }
+
+  async getSimliFaceStatus() {
+    return this.request('/api/ai/simli/face-status');
+  }
 }
 
 export const api = new ApiService();

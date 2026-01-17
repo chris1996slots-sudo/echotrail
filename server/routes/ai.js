@@ -2421,6 +2421,8 @@ router.post('/simli/session', authenticate, async (req, res) => {
         elevenlabsVoiceId: true,
         elevenlabsVoiceName: true,
         heygenAvatarId: true,
+        simliFaceId: true,
+        simliFaceName: true,
         avatarImages: {
           where: { isActive: true },
           take: 1,
@@ -2429,6 +2431,9 @@ router.post('/simli/session', authenticate, async (req, res) => {
       }
     });
 
+    // Determine which face ID to use: custom face > default from config > hardcoded default
+    const faceId = persona?.simliFaceId || simliConfig.settings?.defaultFaceId || '5514e24d-6086-46a3-ace4-6a7264e5cb7c';
+
     // Return configuration for frontend
     res.json({
       simliApiKey: simliConfig.apiKey,
@@ -2436,8 +2441,10 @@ router.post('/simli/session', authenticate, async (req, res) => {
       voiceId: persona?.elevenlabsVoiceId || null,
       voiceName: persona?.elevenlabsVoiceName || null,
       hasVoiceClone: !!persona?.elevenlabsVoiceId,
-      // Simli face IDs - can be customized or use defaults
-      defaultFaceId: simliConfig.settings?.defaultFaceId || '5514e24d-6086-46a3-ace4-6a7264e5cb7c',
+      // Simli face IDs - use custom face if available
+      defaultFaceId: faceId,
+      hasCustomFace: !!persona?.simliFaceId,
+      customFaceName: persona?.simliFaceName || null,
       message: 'Simli configuration ready'
     });
   } catch (error) {
@@ -2605,6 +2612,105 @@ router.post('/simli/tts', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Simli TTS error:', error);
     res.status(500).json({ error: 'Failed to generate TTS audio' });
+  }
+});
+
+// Create custom Simli face from uploaded image
+router.post('/simli/create-face', authenticate, async (req, res) => {
+  try {
+    const { imageData, faceName } = req.body;
+
+    if (!imageData) {
+      return res.status(400).json({ error: 'Image data is required' });
+    }
+
+    // Get Simli API config
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    if (!simliConfig?.isActive || !simliConfig?.apiKey) {
+      return res.status(503).json({
+        error: 'Simli API not configured. Please add API key in Admin Dashboard.'
+      });
+    }
+
+    // Convert base64 to buffer
+    const imageBuffer = Buffer.from(imageData.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+
+    // Create form data for Simli API
+    const FormData = (await import('form-data')).default;
+    const formData = new FormData();
+    formData.append('image', imageBuffer, {
+      filename: 'avatar.jpg',
+      contentType: 'image/jpeg'
+    });
+
+    // Call Simli generateFaceID API
+    const response = await fetch(
+      `https://api.simli.ai/generateFaceID?face_name=${encodeURIComponent(faceName || req.user.firstName + '_avatar')}`,
+      {
+        method: 'POST',
+        headers: {
+          'api-key': simliConfig.apiKey,
+          ...formData.getHeaders()
+        },
+        body: formData
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Simli face creation error:', errorText);
+      throw new Error(`Simli API error: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Simli face creation result:', result);
+
+    // Save custom face ID to persona
+    const persona = await req.prisma.persona.update({
+      where: { userId: req.user.id },
+      data: {
+        simliFaceId: result.faceId || result.face_id,
+        simliFaceName: faceName || req.user.firstName + '_avatar'
+      }
+    });
+
+    res.json({
+      success: true,
+      faceId: result.faceId || result.face_id,
+      faceName: faceName || req.user.firstName + '_avatar',
+      message: 'Custom face created successfully'
+    });
+  } catch (error) {
+    console.error('Simli create face error:', error);
+    res.status(500).json({
+      error: 'Failed to create custom face',
+      details: error.message
+    });
+  }
+});
+
+// Get status of custom face creation
+router.get('/simli/face-status', authenticate, async (req, res) => {
+  try {
+    const persona = await req.prisma.persona.findUnique({
+      where: { userId: req.user.id },
+      select: {
+        simliFaceId: true,
+        simliFaceName: true
+      }
+    });
+
+    res.json({
+      hasCustomFace: !!persona?.simliFaceId,
+      faceId: persona?.simliFaceId || null,
+      faceName: persona?.simliFaceName || null
+    });
+  } catch (error) {
+    console.error('Simli face status error:', error);
+    res.status(500).json({ error: 'Failed to get face status' });
   }
 });
 

@@ -104,6 +104,10 @@ model Persona {
   liveavatarName      String?  // Name of the custom avatar
   liveavatarStatus    String?  // pending, training, ready, failed
 
+  // Simli Custom Face for Real-Time Avatar
+  simliFaceId         String?  // Custom face ID from Simli
+  simliFaceName       String?  // Name of the custom face
+
   lifeStories    LifeStory[]
   avatarImages   AvatarImage[]
   voiceSamples   VoiceSample[]
