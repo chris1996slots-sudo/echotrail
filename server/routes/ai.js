@@ -6,6 +6,7 @@ import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -62,6 +63,60 @@ async function convertAudioToMp3(inputBuffer, inputFormat = 'webm') {
       await unlink(inputPath).catch(() => {});
       await unlink(outputPath).catch(() => {});
       // Note: temp directory cleanup is optional, OS will handle it
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+}
+
+// Helper function to convert MP3 to PCM16 16kHz (for Simli)
+async function convertMp3ToPcm16(mp3Buffer) {
+  const tempDir = await mkdtemp(join(tmpdir(), 'echotrail-mp3-'));
+  const inputPath = join(tempDir, 'input.mp3');
+  const outputPath = join(tempDir, 'output.pcm');
+
+  try {
+    // Write MP3 buffer to temp file
+    await writeFile(inputPath, mp3Buffer);
+
+    // Convert to PCM16 16kHz using ffmpeg
+    await new Promise((resolve, reject) => {
+      const ffmpeg = spawn(ffmpegPath.path, [
+        '-i', inputPath,
+        '-f', 's16le',           // PCM signed 16-bit little-endian
+        '-acodec', 'pcm_s16le',  // PCM codec
+        '-ar', '16000',          // 16kHz sample rate
+        '-ac', '1',              // Mono (1 channel)
+        '-y',                    // Overwrite output
+        outputPath
+      ]);
+
+      let stderr = '';
+      ffmpeg.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      ffmpeg.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`FFmpeg MP3→PCM conversion failed with code ${code}: ${stderr}`));
+        }
+      });
+
+      ffmpeg.on('error', (err) => {
+        reject(new Error(`FFmpeg spawn error: ${err.message}`));
+      });
+    });
+
+    // Read the converted PCM file
+    const pcmBuffer = await readFile(outputPath);
+    return pcmBuffer;
+  } finally {
+    // Cleanup temp files
+    try {
+      await unlink(inputPath).catch(() => {});
+      await unlink(outputPath).catch(() => {});
     } catch (e) {
       // Ignore cleanup errors
     }
@@ -2599,61 +2654,28 @@ router.post('/simli/tts', authenticate, async (req, res) => {
       return res.status(response.status).json({ error: 'TTS generation failed' });
     }
 
-    // Get audio as buffer
+    // Get audio as buffer (will be MP3 from ElevenLabs)
     const audioBuffer = await response.arrayBuffer();
-    let pcmData = new Uint8Array(audioBuffer);
+    const mp3Data = Buffer.from(audioBuffer);
 
-    console.log('Raw audio received:', {
-      totalBytes: pcmData.length,
-      firstBytes: Array.from(pcmData.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+    console.log('Raw MP3 audio received from ElevenLabs:', {
+      totalBytes: mp3Data.length,
+      firstBytes: Array.from(mp3Data.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')
     });
 
-    // Strip ALL headers/metadata that ElevenLabs might include
-    let dataStart = 0;
+    // Decode MP3 to PCM16 16kHz using ffmpeg
+    console.log('Converting MP3 to PCM16 16kHz for Simli...');
+    const rawPCM = await convertMp3ToPcm16(mp3Data);
 
-    // Check for ID3v2 tag (49 44 33 = "ID3")
-    if (pcmData.length > 10 &&
-        pcmData[0] === 0x49 && pcmData[1] === 0x44 && pcmData[2] === 0x33) {
-      const size = ((pcmData[6] & 0x7F) << 21) |
-                   ((pcmData[7] & 0x7F) << 14) |
-                   ((pcmData[8] & 0x7F) << 7) |
-                   (pcmData[9] & 0x7F);
-      dataStart = 10 + size;
-      console.log('Found ID3v2 tag, skipping', dataStart, 'bytes');
-    }
-
-    // Check for MP3 frame header (ff fb or ff fa)
-    if (pcmData.length > dataStart + 2 &&
-        pcmData[dataStart] === 0xFF &&
-        (pcmData[dataStart + 1] === 0xFB || pcmData[dataStart + 1] === 0xFA)) {
-      console.error('ERROR: ElevenLabs returned MP3 data despite requesting pcm_16000!');
-      console.error('This indicates the API does not support raw PCM output.');
-      console.error('We need to implement MP3 decoding or use a different TTS provider.');
-
-      // For now, return an error
-      return res.status(500).json({
-        error: 'TTS provider returned compressed audio (MP3) instead of raw PCM. Server-side MP3 decoding is required.',
-        debug: {
-          format: 'MP3',
-          firstBytes: Array.from(pcmData.slice(dataStart, dataStart + 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')
-        }
-      });
-    }
-
-    // Extract the actual PCM data
-    pcmData = pcmData.slice(dataStart);
-
-    // Convert to Buffer for base64 encoding
-    const rawPCM = Buffer.from(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength);
-
-    // Log audio details for debugging
-    console.log('TTS Audio Processed:', {
+    console.log('TTS Audio Converted:', {
       voiceId,
-      pcmBytes: rawPCM.length,
+      mp3InputBytes: mp3Data.length,
+      pcm16OutputBytes: rawPCM.length,
       sampleRate: '16000Hz',
-      format: 'PCM Int16 Little Endian (if valid)',
+      format: 'PCM Int16 Little Endian',
+      channels: 'Mono',
       textLength: text.length,
-      firstValues: Array.from(new Int16Array(rawPCM.buffer, rawPCM.byteOffset, Math.min(8, rawPCM.length / 2))).join(', ')
+      firstPcmValues: Array.from(new Int16Array(rawPCM.buffer, rawPCM.byteOffset, Math.min(8, rawPCM.length / 2))).join(', ')
     });
 
     // Return as base64 for easy transmission to frontend
