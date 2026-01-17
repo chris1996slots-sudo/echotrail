@@ -57,19 +57,23 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
         }
       }
 
-      // PRIORITY 2: Load avatar images that have simliFaceId
+      // PRIORITY 2: Load all avatar images (with or without simliFaceId)
       if (persona?.avatarImages && persona.avatarImages.length > 0) {
         for (const avatarImage of persona.avatarImages) {
-          // Only add if it has a simliFaceId and it's not already in the list
-          if (avatarImage.simliFaceId && !customFacesList.some(f => f.id === avatarImage.simliFaceId)) {
+          // Check if it's not already in the list (avoid duplicates)
+          const existingFace = customFacesList.find(f =>
+            f.id === avatarImage.simliFaceId || f.avatarImageId === avatarImage.id
+          );
+
+          if (!existingFace) {
             customFacesList.push({
-              id: avatarImage.simliFaceId,
+              id: avatarImage.simliFaceId || `avatar_${avatarImage.id}`, // Use avatar ID if no Simli face
               name: avatarImage.label || 'Custom Avatar',
-              imageUrl: avatarImage.imageUrl,
+              imageUrl: avatarImage.imageData, // Use imageData from AvatarImage
               type: 'custom',
               avatarImageId: avatarImage.id,
-              hasSimliFace: true,
-              status: 'unknown' // We don't check status for avatar images
+              hasSimliFace: !!avatarImage.simliFaceId, // true if has Simli face, false otherwise
+              status: avatarImage.simliFaceId ? 'unknown' : 'no_face' // Indicate if Simli face exists
             });
           }
         }
@@ -220,17 +224,28 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
                     : 'border-cream/20 bg-navy-light/30 hover:border-cream/40'
                 }`}
               >
+                {/* Image Preview if available */}
+                {face.imageUrl && (
+                  <div className="w-full aspect-square rounded-lg overflow-hidden mb-3 bg-navy-dark">
+                    <img
+                      src={face.imageUrl}
+                      alt={face.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-gold" />
-                    <span className="font-medium text-cream">{face.name}</span>
+                    <span className="font-medium text-cream text-sm">{face.name}</span>
                   </div>
                   {selectedFace?.id === face.id && (
                     <CheckCircle2 className="w-5 h-5 text-gold" />
                   )}
                 </div>
                 <p className="text-cream/50 text-xs">
-                  {face.hasSimliFace ? 'Your custom face' : 'Upload pending'}
+                  {face.hasSimliFace ? 'Your custom face' : 'Standard avatar (no training needed)'}
                 </p>
               </button>
             ))}
