@@ -124,10 +124,72 @@ export function SimliAvatar({ onClose, persona, user, config }) {
 
         addMessage('assistant', greetingText);
 
-        // Send TTS for greeting
+        // Send TTS for greeting - use config directly instead of waiting for state update
         setTimeout(async () => {
-          await sendTTSToSimli(greetingText);
-        }, 500); // Small delay to ensure connection is stable
+          try {
+            const voiceIdToUse = selectedConfig?.voice?.id;
+            console.log('Sending greeting TTS:', greetingText, 'with voice:', voiceIdToUse);
+
+            const ttsResponse = await api.getSimliTTS(greetingText, voiceIdToUse, voiceSettings);
+
+            if (ttsResponse.audio && simliClientRef.current) {
+              // Convert base64 to Uint8Array (raw bytes)
+              const binaryString = atob(ttsResponse.audio);
+
+              // Ensure length is even for Int16Array (2 bytes per sample)
+              const evenLength = binaryString.length % 2 === 0 ? binaryString.length : binaryString.length - 1;
+
+              // Create Uint8Array with even length
+              const uint8Array = new Uint8Array(evenLength);
+              for (let i = 0; i < evenLength; i++) {
+                uint8Array[i] = binaryString.charCodeAt(i);
+              }
+
+              // Convert Uint8Array to Int16Array (PCM16 format - little endian)
+              const int16Array = new Int16Array(uint8Array.buffer);
+
+              console.log('Sending greeting audio to Simli:', {
+                uint8Bytes: uint8Array.length,
+                int16Samples: int16Array.length,
+                sampleRate: ttsResponse.sampleRate,
+                format: ttsResponse.format
+              });
+
+              // Send audio in chunks with proper timing for better lip-sync
+              const CHUNK_SIZE = 6000;
+              const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples per chunk
+              const sampleRate = 16000; // 16kHz
+              const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000;
+
+              // Send chunks with timing to match audio playback
+              let chunkIndex = 0;
+              const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
+
+              const sendNextChunk = () => {
+                if (chunkIndex >= totalChunks) {
+                  console.log(`All ${totalChunks} greeting chunks sent to Simli`);
+                  return;
+                }
+
+                const start = chunkIndex * samplesPerChunk;
+                const end = Math.min(start + samplesPerChunk, int16Array.length);
+                const chunk = int16Array.slice(start, end);
+
+                simliClientRef.current.sendAudioData(chunk);
+                chunkIndex++;
+
+                if (chunkIndex < totalChunks) {
+                  setTimeout(sendNextChunk, chunkDurationMs);
+                }
+              };
+
+              // Start sending chunks
+              sendNextChunk();
+            }
+          } catch (err) {
+            console.error('Error sending greeting TTS to Simli:', err);
+          }
+        }, 1000); // Increased delay to 1 second to ensure Simli is fully ready
       });
 
       client.on('disconnected', () => {
