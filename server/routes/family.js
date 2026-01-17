@@ -53,7 +53,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const prisma = req.prisma;
   const userId = req.user.id;
-  const { name, relationship, birthYear, birthplace, bio, imageData } = req.body;
+  const { name, relationship, birthYear, birthplace, bio, imageData, voiceData, isDeceased, deathYear } = req.body;
 
   // Validation
   if (!name || !name.trim()) {
@@ -62,10 +62,6 @@ router.post('/', async (req, res) => {
 
   if (!relationship || !relationship.trim()) {
     return res.status(400).json({ error: 'Relationship is required' });
-  }
-
-  if (!imageData) {
-    return res.status(400).json({ error: 'Photo is required' });
   }
 
   try {
@@ -77,7 +73,10 @@ router.post('/', async (req, res) => {
         birthYear: birthYear?.trim() || null,
         birthplace: birthplace?.trim() || null,
         bio: bio?.trim() || null,
-        imageData
+        imageData: imageData || null,
+        voiceData: voiceData || null,
+        isDeceased: isDeceased || false,
+        deathYear: deathYear?.trim() || null
       }
     });
 
@@ -93,7 +92,7 @@ router.put('/:id', async (req, res) => {
   const prisma = req.prisma;
   const userId = req.user.id;
   const { id } = req.params;
-  const { name, relationship, birthYear, birthplace, bio, imageData } = req.body;
+  const { name, relationship, birthYear, birthplace, bio, imageData, voiceData, isDeceased, deathYear } = req.body;
 
   // Validation
   if (!name || !name.trim()) {
@@ -102,10 +101,6 @@ router.put('/:id', async (req, res) => {
 
   if (!relationship || !relationship.trim()) {
     return res.status(400).json({ error: 'Relationship is required' });
-  }
-
-  if (!imageData) {
-    return res.status(400).json({ error: 'Photo is required' });
   }
 
   try {
@@ -129,7 +124,10 @@ router.put('/:id', async (req, res) => {
         birthYear: birthYear?.trim() || null,
         birthplace: birthplace?.trim() || null,
         bio: bio?.trim() || null,
-        imageData
+        imageData: imageData || null,
+        voiceData: voiceData || null,
+        isDeceased: isDeceased || false,
+        deathYear: deathYear?.trim() || null
       }
     });
 

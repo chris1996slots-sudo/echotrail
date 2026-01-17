@@ -1,5 +1,9 @@
 import jwt from 'jsonwebtoken';
 
+// Track last activity update times to avoid too frequent DB writes
+const lastActivityUpdates = new Map();
+const ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
 export const authenticate = async (req, res, next) => {
   try {
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -26,6 +30,24 @@ export const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
+
+    // Update lastActiveAt in background (non-blocking)
+    // Only update if more than 5 minutes have passed since last update
+    const now = Date.now();
+    const lastUpdate = lastActivityUpdates.get(user.id);
+
+    if (!lastUpdate || (now - lastUpdate) > ACTIVITY_UPDATE_INTERVAL) {
+      lastActivityUpdates.set(user.id, now);
+
+      // Update in background without blocking the request
+      req.prisma.user.update({
+        where: { id: user.id },
+        data: { lastActiveAt: new Date() }
+      }).catch(err => {
+        console.error('Failed to update lastActiveAt:', err);
+      });
+    }
+
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {

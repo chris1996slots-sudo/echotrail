@@ -150,6 +150,86 @@ router.get('/stats', async (req, res) => {
 // =====================
 // USER MANAGEMENT
 // =====================
+
+// Helper function to calculate legacy journey progress
+const calculateLegacyProgress = async (userId, prisma) => {
+  try {
+    const [persona, counts] = await Promise.all([
+      prisma.persona.findUnique({
+        where: { userId },
+        select: {
+          avatarImages: true,
+          voiceSamples: true,
+          lifeStories: true,
+          elevenlabsVoiceId: true,
+          heygenAvatarId: true,
+          echoVibe: true
+        }
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          _count: {
+            select: {
+              memories: true,
+              timeCapsules: true,
+              familyMembers: true
+            }
+          }
+        }
+      })
+    ]);
+
+    // Calculate progress (each category is worth points)
+    let completed = 0;
+    let total = 100;
+
+    if (persona) {
+      // Avatar photos (10 points)
+      if (persona.avatarImages?.length > 0) completed += 10;
+
+      // Voice samples (10 points)
+      if (persona.voiceSamples?.length >= 3) completed += 10;
+
+      // Voice clone (15 points)
+      if (persona.elevenlabsVoiceId) completed += 15;
+
+      // Talking avatar (15 points)
+      if (persona.heygenAvatarId) completed += 15;
+
+      // Echo vibe (5 points)
+      if (persona.echoVibe) completed += 5;
+
+      // Life stories (20 points max, 2 points per story)
+      if (persona.lifeStories?.length > 0) {
+        completed += Math.min(20, persona.lifeStories.length * 2);
+      }
+    }
+
+    if (counts?._count) {
+      // Memories (10 points max, 2 points per memory)
+      if (counts._count.memories > 0) {
+        completed += Math.min(10, counts._count.memories * 2);
+      }
+
+      // Time capsules (10 points max, 5 points per capsule)
+      if (counts._count.timeCapsules > 0) {
+        completed += Math.min(10, counts._count.timeCapsules * 5);
+      }
+
+      // Family members (5 points max, 1 point per member)
+      if (counts._count.familyMembers > 0) {
+        completed += Math.min(5, counts._count.familyMembers * 1);
+      }
+    }
+
+    return Math.min(100, Math.round(completed));
+  } catch (error) {
+    console.error('Error calculating legacy progress:', error);
+    return 0;
+  }
+};
+
 router.get('/users', async (req, res) => {
   try {
     const { page = 1, limit = 20, search } = req.query;
@@ -190,11 +270,15 @@ router.get('/users', async (req, res) => {
       req.prisma.user.count({ where })
     ]);
 
-    // Add online status (active within last 5 minutes)
+    // Add online status and legacy progress
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const usersWithStatus = users.map(user => ({
-      ...user,
-      isOnline: user.lastActiveAt && new Date(user.lastActiveAt) > fiveMinutesAgo
+    const usersWithStatus = await Promise.all(users.map(async user => {
+      const legacyProgress = await calculateLegacyProgress(user.id, req.prisma);
+      return {
+        ...user,
+        isOnline: user.lastActiveAt && new Date(user.lastActiveAt) > fiveMinutesAgo,
+        legacyProgress
+      };
     }));
 
     res.json({
@@ -207,6 +291,7 @@ router.get('/users', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });

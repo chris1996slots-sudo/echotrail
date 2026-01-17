@@ -764,17 +764,17 @@ export function EchoSimPage({ onNavigate }) {
               Echo Simulator
             </h1>
             <p className="text-cream/60 max-w-2xl mx-auto text-sm sm:text-base">
-              Create talking avatar videos or have real-time conversations with your digital echo.
+              Interact with your digital echo - create videos or chat in real-time
             </p>
           </div>
         </FadeIn>
 
-        {/* Status Card */}
+        {/* Status Overview */}
         <FadeIn delay={0.1}>
-          <div className="glass-card p-4 sm:p-5 mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full overflow-hidden pulse-glow">
+          <div className="glass-card p-4 sm:p-5 mb-10">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full overflow-hidden">
                   {persona?.avatarImages?.find(a => a.isActive)?.imageData ? (
                     <img
                       src={persona.avatarImages.find(a => a.isActive).imageData}
@@ -783,124 +783,54 @@ export function EchoSimPage({ onNavigate }) {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center">
-                      <User className="w-7 h-7 text-navy" />
+                      <User className="w-6 h-6 text-navy" />
                     </div>
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-serif text-cream">{user?.firstName}'s Echo</h3>
-                  <p className="text-cream/50 text-xs capitalize">
-                    {persona?.echoVibe || 'Compassionate'} Mode • {persona?.lifeStories?.length || 0} stories
+                  <h3 className="text-base font-medium text-cream">{user?.firstName}'s Echo</h3>
+                  <p className="text-cream/50 text-xs">
+                    {persona?.lifeStories?.length || 0} stories • {persona?.echoVibe || 'Compassionate'} vibe
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs ${
-                  hasPhotoAvatar ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                <span className={`px-2.5 py-1 rounded-lg text-xs ${
+                  hasPhotoAvatar ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                 }`}>
-                  {hasPhotoAvatar ? '✓ Photo Avatar' : '✗ No Photo Avatar'}
+                  {hasPhotoAvatar ? '✓' : '✗'} Photo Avatar
                 </span>
-                <span className={`px-3 py-1 rounded-full text-xs ${
+                <span className={`px-2.5 py-1 rounded-lg text-xs ${
                   hasVoiceClone ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                 }`}>
-                  {hasVoiceClone ? '✓ Voice Clone' : '○ No Voice Clone'}
+                  {hasVoiceClone ? '✓' : '○'} Voice Clone
                 </span>
               </div>
             </div>
           </div>
         </FadeIn>
 
-        {/* Two Main Options */}
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
-          {/* Option 1: Video Generation */}
+        {/* Two Main Sections - Always Visible */}
+        <div className="space-y-8">
+          {/* Section 1: Video Generation */}
           <FadeIn delay={0.15}>
-            <motion.div
-              className={`glass-card p-6 border-2 transition-all cursor-pointer ${
-                activeOption === 'video'
-                  ? 'border-gold bg-gold/5'
-                  : 'border-transparent hover:border-gold/30'
-              }`}
-              onClick={() => setActiveOption(activeOption === 'video' ? null : 'video')}
-              whileHover={{ y: -2 }}
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center flex-shrink-0">
-                  <Film className="w-7 h-7 text-gold" />
+            <div className="glass-card p-6 border-l-4 border-gold">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center flex-shrink-0">
+                  <Film className="w-6 h-6 text-gold" />
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-serif text-cream">Video Generation</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-gold/20 text-gold text-xs">
-                      Option 1
-                    </span>
-                  </div>
-                  <p className="text-cream/60 text-sm mb-3">
-                    Create talking avatar videos with lip-sync. Choose a template or write your own message.
+                  <h3 className="text-xl font-serif text-cream mb-1">Create Talking Video</h3>
+                  <p className="text-cream/60 text-sm">
+                    Generate a video of your avatar speaking with lip-sync
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      hasPhotoAvatar ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }`}>
-                      {hasPhotoAvatar ? '✓' : '✗'} Photo Avatar Required
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      hasVoiceClone ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {hasVoiceClone ? '✓' : '○'} Voice Clone
-                    </span>
-                  </div>
+                  {!hasPhotoAvatar && (
+                    <p className="mt-2 text-red-400 text-xs">
+                      ⚠ You need to create a Photo Avatar in My Persona first
+                    </p>
+                  )}
                 </div>
-                <ChevronDown className={`w-5 h-5 text-cream/50 transition-transform ${
-                  activeOption === 'video' ? 'rotate-180' : ''
-                }`} />
               </div>
-            </motion.div>
-          </FadeIn>
-
-          {/* Option 2: Live Streaming */}
-          <FadeIn delay={0.2}>
-            <motion.div
-              className={`glass-card p-6 border-2 transition-all cursor-pointer ${
-                activeOption === 'live'
-                  ? 'border-purple-500 bg-purple-500/5'
-                  : 'border-transparent hover:border-purple-500/30'
-              }`}
-              onClick={() => setActiveOption(activeOption === 'live' ? null : 'live')}
-              whileHover={{ y: -2 }}
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0">
-                  <Radio className="w-7 h-7 text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-serif text-cream">Live Conversation</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs">
-                      Option 2
-                    </span>
-                  </div>
-                  <p className="text-cream/60 text-sm mb-3">
-                    Real-time video chat with your Echo. Type messages and watch your avatar respond instantly.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
-                      Simli + ElevenLabs
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
-                      WebRTC Streaming
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
-                      ✓ Voice Clone Support
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-cream/50 transition-transform ${
-                  activeOption === 'live' ? 'rotate-180' : ''
-                }`} />
-              </div>
-            </motion.div>
-          </FadeIn>
-        </div>
 
         {/* Expanded Content for Option 1: Video Generation */}
         <AnimatePresence>

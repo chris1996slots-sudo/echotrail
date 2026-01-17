@@ -427,7 +427,8 @@ model FamilyMember {
   // Basic info
   name         String
   relationship String   // Father, Mother, Grandfather, Grandmother, Son, Daughter, etc.
-  imageData    String   @db.Text  // Base64 encoded photo
+  imageData    String?  @db.Text  // Base64 encoded photo (optional)
+  voiceData    String?  @db.Text  // Base64 encoded audio (optional)
 
   // Optional details
   birthYear    String?
