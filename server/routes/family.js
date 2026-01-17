@@ -8,7 +8,7 @@ router.use(authenticate);
 
 // Get all family members for the current user
 router.get('/', async (req, res) => {
-  const prisma = req.app.get('prisma');
+  const prisma = req.prisma;
   const userId = req.user.id;
 
   try {
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 
 // Get a single family member
 router.get('/:id', async (req, res) => {
-  const prisma = req.app.get('prisma');
+  const prisma = req.prisma;
   const userId = req.user.id;
   const { id } = req.params;
 
@@ -51,7 +51,7 @@ router.get('/:id', async (req, res) => {
 
 // Create a new family member
 router.post('/', async (req, res) => {
-  const prisma = req.app.get('prisma');
+  const prisma = req.prisma;
   const userId = req.user.id;
   const { name, relationship, birthYear, birthplace, bio, imageData } = req.body;
 
@@ -90,7 +90,7 @@ router.post('/', async (req, res) => {
 
 // Update a family member
 router.put('/:id', async (req, res) => {
-  const prisma = req.app.get('prisma');
+  const prisma = req.prisma;
   const userId = req.user.id;
   const { id } = req.params;
   const { name, relationship, birthYear, birthplace, bio, imageData } = req.body;
@@ -142,7 +142,7 @@ router.put('/:id', async (req, res) => {
 
 // Delete a family member
 router.delete('/:id', async (req, res) => {
-  const prisma = req.app.get('prisma');
+  const prisma = req.prisma;
   const userId = req.user.id;
   const { id } = req.params;
 
