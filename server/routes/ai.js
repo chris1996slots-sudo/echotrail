@@ -2583,7 +2583,7 @@ router.post('/simli/tts', authenticate, async (req, res) => {
       body: JSON.stringify({
         text,
         model_id: 'eleven_turbo_v2_5', // Fast model for real-time
-        output_format: 'ulaw_8000', // μ-law encoding at 8kHz for Simli (better compatibility)
+        output_format: 'pcm_16000', // PCM16 at 16kHz for Simli
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
@@ -2604,7 +2604,7 @@ router.post('/simli/tts', authenticate, async (req, res) => {
     console.log('TTS Audio Generated:', {
       voiceId,
       audioBytes: audioBuffer.byteLength,
-      format: 'ulaw_8000',
+      format: 'pcm_16000',
       textLength: text.length
     });
 
@@ -2613,8 +2613,8 @@ router.post('/simli/tts', authenticate, async (req, res) => {
 
     res.json({
       audio: base64Audio,
-      format: 'ulaw',
-      sampleRate: 8000,
+      format: 'pcm16',
+      sampleRate: 16000,
       voiceId,
       hasVoiceClone: !!persona?.elevenlabsVoiceId
     });

@@ -185,15 +185,17 @@ export function SimliAvatar({ onClose, persona, config }) {
             format: ttsResponse.format
           });
 
-          // Send audio in chunks of 6000 bytes (Simli recommendation)
-          const CHUNK_SIZE = 6000;
+          // Send audio in smaller chunks for smoother streaming
+          // PCM16 at 16kHz = 32000 bytes/sec (16000 samples * 2 bytes)
+          // 1024 bytes = ~32ms of audio per chunk
+          const CHUNK_SIZE = 1024;
           for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
             const chunk = bytes.slice(i, Math.min(i + CHUNK_SIZE, bytes.length));
             simliClientRef.current.sendAudioData(chunk);
 
-            // Small delay between chunks to avoid overwhelming the buffer
+            // Delay matches chunk duration (~32ms) for natural pacing
             if (i + CHUNK_SIZE < bytes.length) {
-              await new Promise(resolve => setTimeout(resolve, 10));
+              await new Promise(resolve => setTimeout(resolve, 32));
             }
           }
 
