@@ -54,6 +54,20 @@ export function VideoArchivePage() {
     try {
       const data = await api.getVideos();
       setVideos(data);
+
+      // Check if any videos are pending/processing and try to refresh one to test API
+      const pendingVideo = data.find(v => v.status === 'pending' || v.status === 'processing');
+      if (pendingVideo) {
+        // Test if API is configured by trying to refresh
+        try {
+          await api.refreshVideoStatus(pendingVideo.id);
+        } catch (error) {
+          // If API not configured, disable auto-refresh immediately
+          if (error.message?.includes('API not configured') || error.status === 503) {
+            setApiConfigured(false);
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to load videos:', error);
     } finally {
@@ -69,9 +83,10 @@ export function VideoArchivePage() {
       const updated = await api.refreshVideoStatus(video.id);
       setVideos(prev => prev.map(v => v.id === updated.id ? updated : v));
     } catch (error) {
-      // If API is not configured, disable auto-refresh
-      if (error.message === 'Avatar API not configured') {
+      // If API is not configured, disable auto-refresh silently
+      if (error.message?.includes('API not configured') || error.status === 503) {
         setApiConfigured(false);
+        // Don't log this error - it's expected when API key is missing
       } else {
         console.error('Failed to refresh video:', error);
       }
