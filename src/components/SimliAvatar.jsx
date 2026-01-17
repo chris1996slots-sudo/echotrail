@@ -174,20 +174,22 @@ export function SimliAvatar({ onClose, persona, config }) {
         if (ttsResponse.audio) {
           // Convert base64 to Uint8Array (raw bytes)
           const binaryString = atob(ttsResponse.audio);
-          let uint8Array = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
+
+          // Ensure length is even for Int16Array (2 bytes per sample)
+          const evenLength = binaryString.length % 2 === 0 ? binaryString.length : binaryString.length - 1;
+
+          if (binaryString.length !== evenLength) {
+            console.warn('Audio buffer has odd length, truncating:', binaryString.length, '->', evenLength);
+          }
+
+          // Create Uint8Array with even length
+          const uint8Array = new Uint8Array(evenLength);
+          for (let i = 0; i < evenLength; i++) {
             uint8Array[i] = binaryString.charCodeAt(i);
           }
 
-          // Ensure buffer length is even (multiple of 2) for Int16Array
-          // If odd, remove last byte
-          if (uint8Array.length % 2 !== 0) {
-            console.warn('Audio buffer has odd length, removing last byte:', uint8Array.length);
-            uint8Array = uint8Array.slice(0, uint8Array.length - 1);
-          }
-
-          // Convert Uint8Array to Int16Array (PCM16 format)
-          // PCM16 uses 16-bit signed integers, not 8-bit unsigned
+          // Convert Uint8Array to Int16Array (PCM16 format - little endian)
+          // PCM16 uses 16-bit signed integers
           const int16Array = new Int16Array(uint8Array.buffer);
 
           console.log('Sending audio to Simli:', {
