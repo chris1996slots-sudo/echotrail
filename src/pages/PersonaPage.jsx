@@ -423,6 +423,13 @@ export function PersonaPage({ onNavigate }) {
 
   const [avatarStep, setAvatarStep] = useState(0);
 
+  // Initialize selectedVibe from persona when it loads
+  useEffect(() => {
+    if (persona?.echoVibe) {
+      setSelectedVibe(persona.echoVibe);
+    }
+  }, [persona?.echoVibe]);
+
   // Handle step navigation with automatic processing
   const handleNextStep = async () => {
     const currentStepId = avatarSteps[avatarStep].id;
@@ -455,19 +462,25 @@ export function PersonaPage({ onNavigate }) {
               setProcessingComplete(false);
               setIsProcessingAvatar(false);
               setProcessingStep('');
+              // Move to next step after successful creation
+              setAvatarStep(prev => prev + 1);
             }, 2000);
           } else {
             setIsProcessingAvatar(false);
             setProcessingStep('');
             showToast('Avatar creation failed. You can continue anyway.');
+            // Move to next step anyway
+            setAvatarStep(prev => prev + 1);
           }
         } catch (err) {
           console.error('HeyGen avatar creation failed:', err);
           setIsProcessingAvatar(false);
           setProcessingStep('');
           showToast('Avatar creation failed. You can continue anyway.');
+          // Move to next step anyway
+          setAvatarStep(prev => prev + 1);
         }
-        return; // Wait for processing to complete before moving to next step
+        return; // Exit early, step transition handled above
       }
     }
 
@@ -498,23 +511,29 @@ export function PersonaPage({ onNavigate }) {
               setProcessingComplete(false);
               setIsProcessingAvatar(false);
               setProcessingStep('');
+              // Move to next step after successful creation
+              setAvatarStep(prev => prev + 1);
             }, 2000);
           } else {
             setIsProcessingAvatar(false);
             setProcessingStep('');
             showToast('Voice clone creation failed. You can continue anyway.');
+            // Move to next step anyway
+            setAvatarStep(prev => prev + 1);
           }
         } catch (err) {
           console.error('Voice clone creation failed:', err);
           setIsProcessingAvatar(false);
           setProcessingStep('');
           showToast('Voice clone creation failed. You can continue anyway.');
+          // Move to next step anyway
+          setAvatarStep(prev => prev + 1);
         }
-        return; // Wait for processing to complete before moving to next step
+        return; // Exit early, step transition handled above
       }
     }
 
-    // Move to next step
+    // Move to next step (if no processing was needed)
     setAvatarStep(prev => prev + 1);
   };
 
@@ -1291,105 +1310,43 @@ export function PersonaPage({ onNavigate }) {
     }
   };
 
-  // Handle avatar creation completion (Step 6 - Preview)
+  // Handle avatar creation completion (Final step - just save vibe and complete)
   const handleAvatarCreation = async () => {
     setIsProcessingAvatar(true);
     setProcessingError(null);
     setProcessingComplete(false);
 
-    const voiceSamples = persona.voiceSamples || [];
-    const hasVoiceSamples = voiceSamples.length > 0;
-    const avatarImages = persona.avatarImages || [];
-    const activeImage = avatarImages.find(img => img.isActive || img.id === persona.activeAvatarId);
-
     try {
-      // Step 1: Create voice clone if samples exist and not already created
-      if (hasVoiceSamples && !persona.elevenlabsVoiceId) {
-        setProcessingStep('Creating your voice clone...');
-        try {
-          const voiceResult = await api.createVoiceClone(
-            `${user.firstName}'s Voice`,
-            `Voice clone for ${user.firstName} ${user.lastName}`
-          );
-          if (voiceResult.success) {
-            // Update persona with voice clone info
-            setPersona(prev => ({
-              ...prev,
-              elevenlabsVoiceId: voiceResult.voiceId,
-              elevenlabsVoiceName: voiceResult.voiceName,
-            }));
-          }
-        } catch (voiceError) {
-          console.error('Voice clone error:', voiceError);
-          // Log debug info if available
-          if (voiceError.debug) {
-            console.error('Voice clone debug info:', voiceError.debug);
-          }
-          // Continue even if voice clone fails - don't block the whole process
-        }
-      }
+      // Save vibe and mark setup as complete
+      setProcessingStep('Saving your preferences...');
+      await api.updatePersona({
+        echoVibe: selectedVibe,
+      });
 
-      // Step 2: Create HeyGen Photo Avatar if image exists and not already created
-      let avatarCreationWarning = null;
-      if (activeImage && !persona.heygenAvatarId) {
-        setProcessingStep('Creating talking avatar with lip sync...');
-        try {
-          const avatarResult = await api.createPhotoAvatar(
-            activeImage.imageData,
-            `${user.firstName}'s Avatar`
-          );
-          if (avatarResult.success) {
-            // Update persona with HeyGen avatar info
-            setPersona(prev => ({
-              ...prev,
-              heygenAvatarId: avatarResult.avatarId,
-              heygenAvatarName: avatarResult.avatarName,
-            }));
-          } else {
-            avatarCreationWarning = avatarResult.error || 'Failed to create talking avatar';
-          }
-        } catch (avatarError) {
-          console.error('HeyGen avatar error:', avatarError);
-          if (avatarError.debug) {
-            console.error('HeyGen avatar debug info:', avatarError.debug);
-          }
-          avatarCreationWarning = avatarError.message || 'Failed to create talking avatar. You can try again later on My Persona page.';
-        }
-      }
-
-      // Step 3: Save avatar settings and mark setup as complete
-      setProcessingStep('Saving avatar settings...');
       await api.updateAvatarSettings({
-        avatarStyle: persona.avatarStyle,
-        backgroundType: persona.backgroundType,
         avatarSetupComplete: true,
       });
 
       // Update local state
       setPersona(prev => ({
         ...prev,
+        echoVibe: selectedVibe,
         avatarSetupComplete: true,
       }));
 
-      // Step 4: Complete
       setProcessingStep('Finalizing your digital avatar...');
       await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause for UX
 
       setProcessingComplete(true);
       setProcessingStep('');
 
-      // Show warning if avatar creation failed but rest succeeded
-      if (avatarCreationWarning) {
-        setProcessingError(`Note: ${avatarCreationWarning}`);
-      }
-
       // Auto-close after success - stay on My Persona page
       setTimeout(() => {
         setIsProcessingAvatar(false);
         setProcessingComplete(false);
         setProcessingError(null);
-        setAvatarStep(0); // Reset to first step for creating another avatar
-      }, avatarCreationWarning ? 5000 : 2000); // Longer delay if there's a warning
+        setAvatarStep(0); // Reset to first step
+      }, 2000)
 
     } catch (error) {
       console.error('Avatar creation error:', error);
