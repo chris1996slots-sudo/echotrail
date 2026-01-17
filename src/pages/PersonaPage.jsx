@@ -323,6 +323,14 @@ export function PersonaPage({ onNavigate }) {
   const videoPreviewRef = useRef(null);
   const recordedVideoRef = useRef(null);
 
+  // Simli Face Upload state
+  const [simliFaceImage, setSimliFaceImage] = useState(null);
+  const [simliFacePreview, setSimliFacePreview] = useState(null);
+  const [isUploadingSimliFace, setIsUploadingSimliFace] = useState(false);
+  const [simliFaceStatus, setSimliFaceStatus] = useState(null);
+  const [simliFaceError, setSimliFaceError] = useState(null);
+  const simliFaceInputRef = useRef(null);
+
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -346,6 +354,7 @@ export function PersonaPage({ onNavigate }) {
 
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
+    { id: 'simliface', label: 'Real-Time Chat Face' },
     { id: 'liveavatar', label: 'Live Avatar' },
     { id: 'stories', label: 'Life Stories' },
     { id: 'interview', label: 'Deep Interview' },
@@ -646,6 +655,13 @@ export function PersonaPage({ onNavigate }) {
     fetchLiveAvatarStatus();
   }, []);
 
+  // Fetch Simli Face status on mount
+  useEffect(() => {
+    if (activeTab === 'simliface') {
+      fetchSimliFaceStatus();
+    }
+  }, [activeTab]);
+
   // LiveAvatar video functions
   const handleVideoFileSelect = (e, videoType) => {
     const file = e.target.files?.[0];
@@ -933,6 +949,78 @@ export function PersonaPage({ onNavigate }) {
     await deleteAvatar(imageId);
     setDeletingAvatar(null);
     setSaving(false);
+  };
+
+  // Simli Face Upload Handlers
+  const fetchSimliFaceStatus = async () => {
+    try {
+      const status = await api.getSimliFaceStatus();
+      setSimliFaceStatus(status);
+    } catch (error) {
+      console.error('Failed to fetch Simli face status:', error);
+    }
+  };
+
+  const handleSimliFaceSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setSimliFaceError('Please select an image file (JPG, PNG, etc.)');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setSimliFaceError('Image file is too large. Maximum size is 10MB.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSimliFaceImage(reader.result);
+        setSimliFacePreview(reader.result);
+        setSimliFaceError(null);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset file input
+    if (e.target) e.target.value = '';
+  };
+
+  const handleSimliFaceUpload = async () => {
+    if (!simliFaceImage) {
+      setSimliFaceError('Please select an image first');
+      return;
+    }
+
+    setIsUploadingSimliFace(true);
+    setSimliFaceError(null);
+
+    try {
+      const faceName = `${user.firstName}_face`;
+      const result = await api.createSimliFace(simliFaceImage, faceName);
+
+      if (result.success) {
+        showToast('Custom face created successfully! It will be used in your next live chat.', 'success');
+        await fetchSimliFaceStatus();
+        setSimliFaceImage(null);
+        setSimliFacePreview(null);
+      } else {
+        throw new Error(result.error || 'Failed to create custom face');
+      }
+    } catch (error) {
+      console.error('Simli face upload error:', error);
+      setSimliFaceError(error.message || 'Failed to upload face. Please try again.');
+    } finally {
+      setIsUploadingSimliFace(false);
+    }
+  };
+
+  const resetSimliFace = () => {
+    setSimliFaceImage(null);
+    setSimliFacePreview(null);
+    setSimliFaceError(null);
   };
 
   const updateAvatarLabel = async (imageId, newLabel) => {
@@ -2465,6 +2553,165 @@ export function PersonaPage({ onNavigate }) {
                   </>
                 )}
               </motion.button>
+            </div>
+          </div>
+        );
+
+      case 'simliface':
+        return (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 mb-4">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-serif text-cream mb-2">Real-Time Chat Face</h3>
+              <p className="text-cream/60 text-sm max-w-lg mx-auto">
+                Upload a clear photo of your face for real-time video conversations. This face will be used with your cloned voice for live chat in Echo Sim.
+              </p>
+            </div>
+
+            {/* Current Status Card */}
+            {simliFaceStatus && (
+              <div className="bg-navy-dark/30 rounded-xl p-5 border border-gold/20">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-cream font-medium flex items-center gap-2">
+                    <Info className="w-4 h-4 text-gold" />
+                    Face Status
+                  </h4>
+                  <button
+                    onClick={fetchSimliFaceStatus}
+                    className="text-cream/50 hover:text-gold transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {simliFaceStatus.hasCustomFace ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Face Name:</span>
+                      <span className="text-cream">{simliFaceStatus.faceName}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cream/60 text-sm">Face ID:</span>
+                      <span className="text-cream/50 text-xs font-mono">{simliFaceStatus.faceId}</span>
+                    </div>
+                    <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                      <p className="text-green-400 text-sm flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Your custom face is ready! It will be used in Echo Sim → Live Conversation.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-cream/50 text-sm">No custom face yet. Upload one below!</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error Message */}
+            {simliFaceError && (
+              <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/30">
+                <p className="text-red-400 text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  {simliFaceError}
+                </p>
+              </div>
+            )}
+
+            {/* Upload Section */}
+            <div className="bg-navy-dark/30 rounded-xl p-6 border border-gold/20">
+              <h4 className="text-cream font-medium mb-4 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-gold" />
+                Upload Face Photo
+              </h4>
+
+              {simliFacePreview ? (
+                <div className="space-y-4">
+                  <div className="relative aspect-square max-w-sm mx-auto rounded-xl overflow-hidden border-2 border-gold/30">
+                    <img
+                      src={simliFacePreview}
+                      alt="Face preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      onClick={resetSimliFace}
+                      className="absolute top-2 right-2 w-8 h-8 bg-red-500/80 rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <motion.button
+                      onClick={handleSimliFaceUpload}
+                      disabled={isUploadingSimliFace}
+                      className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-medium flex items-center gap-2 hover:from-cyan-400 hover:to-blue-500 transition-all disabled:opacity-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {isUploadingSimliFace ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Creating Custom Face...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5" />
+                          Create Custom Face
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="flex flex-col items-center justify-center p-8 bg-navy-light/30 rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 cursor-pointer transition-all">
+                    <Upload className="w-12 h-12 text-gold/50 mb-3" />
+                    <span className="text-cream text-base font-medium mb-1">Choose Photo</span>
+                    <span className="text-cream/50 text-sm">JPG, PNG (max 10MB)</span>
+                    <input
+                      ref={simliFaceInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleSimliFaceSelect}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Photo Tips */}
+                  <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                    <h5 className="text-blue-400 font-medium mb-2 flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      Photo Tips
+                    </h5>
+                    <ul className="text-cream/60 text-sm space-y-1">
+                      <li>• Use a clear, front-facing photo</li>
+                      <li>• Good lighting is essential</li>
+                      <li>• Neutral expression works best</li>
+                      <li>• Avoid sunglasses or face coverings</li>
+                      <li>• Photo will be used for lip-sync video</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Info Card */}
+            <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-xl p-5 border border-cyan-500/30">
+              <h4 className="text-cyan-400 font-medium mb-3 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                How It Works
+              </h4>
+              <div className="space-y-2 text-cream/70 text-sm">
+                <p>1. Upload a clear photo of your face</p>
+                <p>2. Simli creates a custom face ID for real-time streaming</p>
+                <p>3. Your face is automatically used in Echo Sim → Live Conversation</p>
+                <p>4. Combined with your cloned voice, creates a complete digital twin</p>
+              </div>
             </div>
           </div>
         );
