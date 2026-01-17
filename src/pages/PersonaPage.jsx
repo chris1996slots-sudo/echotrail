@@ -423,6 +423,101 @@ export function PersonaPage({ onNavigate }) {
 
   const [avatarStep, setAvatarStep] = useState(0);
 
+  // Handle step navigation with automatic processing
+  const handleNextStep = async () => {
+    const currentStepId = avatarSteps[avatarStep].id;
+
+    // Step 0 (Photos): Check if we should create HeyGen Photo Avatar
+    if (currentStepId === 'photos') {
+      const avatarImages = persona.avatarImages || [];
+      const activeImage = avatarImages.find(img => img.isActive || img.id === persona.activeAvatarId);
+      const hasHeyGenAvatar = persona.heygenAvatarId;
+
+      // If user has an active image but no HeyGen avatar yet, create it
+      if (activeImage && !hasHeyGenAvatar) {
+        try {
+          setIsProcessingAvatar(true);
+          setProcessingStep('Creating talking avatar with lip sync...');
+
+          const avatarResult = await api.createPhotoAvatar(
+            activeImage.imageData,
+            `${user.firstName}'s Avatar`
+          );
+
+          if (avatarResult.success) {
+            setPersona(prev => ({
+              ...prev,
+              heygenAvatarId: avatarResult.avatarId,
+              heygenAvatarName: avatarResult.avatarName,
+            }));
+            setProcessingComplete(true);
+            setTimeout(() => {
+              setProcessingComplete(false);
+              setIsProcessingAvatar(false);
+              setProcessingStep('');
+            }, 2000);
+          } else {
+            setIsProcessingAvatar(false);
+            setProcessingStep('');
+            showToast('Avatar creation failed. You can continue anyway.');
+          }
+        } catch (err) {
+          console.error('HeyGen avatar creation failed:', err);
+          setIsProcessingAvatar(false);
+          setProcessingStep('');
+          showToast('Avatar creation failed. You can continue anyway.');
+        }
+        return; // Wait for processing to complete before moving to next step
+      }
+    }
+
+    // Step 1 (Voice): Check if we should create voice clone
+    if (currentStepId === 'voice') {
+      const hasVoiceSamples = persona.voiceSamples && persona.voiceSamples.length >= 3;
+      const hasVoiceClone = persona.elevenlabsVoiceId;
+
+      // If user has voice samples but no voice clone yet, create it
+      if (hasVoiceSamples && !hasVoiceClone) {
+        try {
+          setIsProcessingAvatar(true);
+          setProcessingStep('Creating voice clone...');
+
+          const voiceResult = await api.createVoiceClone(
+            `${user.firstName}'s Voice`,
+            `Voice clone for ${user.firstName} ${user.lastName}`
+          );
+
+          if (voiceResult.success) {
+            setPersona(prev => ({
+              ...prev,
+              elevenlabsVoiceId: voiceResult.voiceId,
+              elevenlabsVoiceName: voiceResult.voiceName,
+            }));
+            setProcessingComplete(true);
+            setTimeout(() => {
+              setProcessingComplete(false);
+              setIsProcessingAvatar(false);
+              setProcessingStep('');
+            }, 2000);
+          } else {
+            setIsProcessingAvatar(false);
+            setProcessingStep('');
+            showToast('Voice clone creation failed. You can continue anyway.');
+          }
+        } catch (err) {
+          console.error('Voice clone creation failed:', err);
+          setIsProcessingAvatar(false);
+          setProcessingStep('');
+          showToast('Voice clone creation failed. You can continue anyway.');
+        }
+        return; // Wait for processing to complete before moving to next step
+      }
+    }
+
+    // Move to next step
+    setAvatarStep(prev => prev + 1);
+  };
+
   const avatarStyles = [
     { id: 'realistic', label: 'Realistic', description: 'Lifelike digital twin', icon: '🎭' },
     { id: 'enhanced', label: 'Enhanced', description: 'Polished & refined look', icon: '✨' },
@@ -1961,7 +2056,7 @@ export function PersonaPage({ onNavigate }) {
 
               {avatarStep < avatarSteps.length - 1 ? (
                 <motion.button
-                  onClick={() => setAvatarStep(prev => prev + 1)}
+                  onClick={handleNextStep}
                   disabled={avatarStep === 0 && !hasImages}
                   className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: 1.05 }}
@@ -1978,7 +2073,7 @@ export function PersonaPage({ onNavigate }) {
                   whileTap={{ scale: 0.95 }}
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Create Avatar
+                  Complete Setup
                 </motion.button>
               )}
             </div>
