@@ -33,6 +33,20 @@ export function VideoArchivePage() {
     loadVideos();
   }, []);
 
+  // Auto-refresh pending/processing videos every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const pendingVideos = videos.filter(v => v.status === 'pending' || v.status === 'processing');
+      if (pendingVideos.length > 0) {
+        pendingVideos.forEach(video => {
+          handleRefresh(video);
+        });
+      }
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [videos]);
+
   const loadVideos = async () => {
     try {
       const data = await api.getVideos();

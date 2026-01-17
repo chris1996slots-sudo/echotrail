@@ -19,7 +19,9 @@ import {
   Edit3,
   Volume2,
   VolumeX,
-  ChevronRight
+  ChevronRight,
+  MessageCircle,
+  Send
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn } from '../components/PageTransition';
