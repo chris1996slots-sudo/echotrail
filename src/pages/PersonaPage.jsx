@@ -954,7 +954,12 @@ export function PersonaPage({ onNavigate }) {
       canvas.height = video.videoHeight;
 
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
+
+      // Flip the image horizontally to un-mirror it
+      // (video preview is mirrored for selfie mode, but capture should be normal)
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const photoData = canvas.toDataURL('image/jpeg', 0.9);
       setCapturedPhoto(photoData);
