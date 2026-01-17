@@ -597,8 +597,14 @@ export function FamilyTreePage({ onNavigate }) {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <motion.button
                     onClick={() => {
-                      // TODO: Implement live conversation with this family member
-                      alert('Live conversation feature coming soon!');
+                      if (!selectedMember.imageData && !selectedMember.voiceData) {
+                        alert('Please add a photo and voice recording to enable live chat with this family member.');
+                        return;
+                      }
+                      // For now, redirect to Echo Sim page
+                      setShowProfileModal(false);
+                      onNavigate('echo-sim');
+                      alert(`Live Chat with ${selectedMember.name} will use their uploaded photo and voice. This feature is coming soon!`);
                     }}
                     className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-medium flex items-center justify-center gap-2 hover:from-purple-500 hover:to-pink-500"
                     whileHover={{ scale: 1.02 }}
@@ -609,8 +615,14 @@ export function FamilyTreePage({ onNavigate }) {
                   </motion.button>
                   <motion.button
                     onClick={() => {
-                      // TODO: Implement video generation for this family member
-                      alert('Video generation feature coming soon!');
+                      if (!selectedMember.imageData) {
+                        alert('Please add a photo to generate videos with this family member.');
+                        return;
+                      }
+                      // For now, redirect to Echo Sim page
+                      setShowProfileModal(false);
+                      onNavigate('echo-sim');
+                      alert(`Video Generation with ${selectedMember.name} will use their uploaded photo. This feature is coming soon!`);
                     }}
                     className="px-4 py-3 rounded-xl bg-gold/20 text-gold text-sm font-medium flex items-center justify-center gap-2 hover:bg-gold/30"
                     whileHover={{ scale: 1.02 }}
