@@ -179,8 +179,25 @@ export function SimliAvatar({ onClose, persona, config }) {
             bytes[i] = binaryString.charCodeAt(i);
           }
 
-          // Send audio to Simli
-          simliClientRef.current.sendAudioData(bytes);
+          console.log('Sending audio to Simli:', {
+            totalBytes: bytes.length,
+            sampleRate: ttsResponse.sampleRate,
+            format: ttsResponse.format
+          });
+
+          // Send audio in chunks of 6000 bytes (Simli recommendation)
+          const CHUNK_SIZE = 6000;
+          for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+            const chunk = bytes.slice(i, Math.min(i + CHUNK_SIZE, bytes.length));
+            simliClientRef.current.sendAudioData(chunk);
+
+            // Small delay between chunks to avoid overwhelming the buffer
+            if (i + CHUNK_SIZE < bytes.length) {
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+          }
+
+          console.log('Audio chunks sent successfully');
         }
       }
     } catch (err) {
