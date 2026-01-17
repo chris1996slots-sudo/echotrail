@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -238,8 +239,9 @@ const voicePrompts = [
 ];
 
 export function PersonaPage({ onNavigate }) {
+  const location = useLocation();
   const { persona, setPersona, user, addStory, updateStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, deleteVoiceSample, isLoading } = useApp();
-  const [activeTab, setActiveTab] = useState('avatar');
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'avatar');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentStory, setCurrentStory] = useState('');
   const [customStoryTitle, setCustomStoryTitle] = useState('');
@@ -661,6 +663,13 @@ export function PersonaPage({ onNavigate }) {
       fetchSimliFaceStatus();
     }
   }, [activeTab]);
+
+  // Handle tab navigation from location state
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
 
   // LiveAvatar video functions
   const handleVideoFileSelect = (e, videoType) => {

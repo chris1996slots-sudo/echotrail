@@ -1145,6 +1145,7 @@ export function EchoSimPage({ onNavigate }) {
             }}
             onClose={() => setShowChatConfig(false)}
             persona={persona}
+            onNavigate={onNavigate}
           />
         )}
       </AnimatePresence>

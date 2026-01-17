@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-export function SimliChatConfig({ onStart, onClose, persona }) {
+export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
   const [selectedFace, setSelectedFace] = useState(null);
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Available faces and voices
-  const [customFace, setCustomFace] = useState(null);
+  const [customFaces, setCustomFaces] = useState([]); // Changed to array for multiple faces
   const [standardFaces, setStandardFaces] = useState([]);
   const [voiceClone, setVoiceClone] = useState(null);
   const [standardVoices, setStandardVoices] = useState([]);
@@ -33,28 +33,44 @@ export function SimliChatConfig({ onStart, onClose, persona }) {
       setLoading(true);
       setError(null);
 
-      // Load Simli face status
-      const faceStatus = await api.getSimliFaceStatus();
-      if (faceStatus.hasCustomFace) {
-        setCustomFace({
-          id: faceStatus.faceId,
-          name: faceStatus.faceName,
-          type: 'custom'
+      // Load ALL avatar images from persona
+      const customFacesList = [];
+      if (persona?.avatarImages && persona.avatarImages.length > 0) {
+        for (const avatarImage of persona.avatarImages) {
+          customFacesList.push({
+            id: avatarImage.simliFaceId || `avatar-${avatarImage.id}`,
+            name: avatarImage.label || 'Custom Avatar',
+            imageUrl: avatarImage.imageUrl,
+            type: 'custom',
+            avatarImageId: avatarImage.id,
+            hasSimliFace: !!avatarImage.simliFaceId
+          });
+        }
+      }
+
+      // Also check if persona itself has a Simli face ID
+      if (persona?.simliFaceId && !customFacesList.some(f => f.id === persona.simliFaceId)) {
+        customFacesList.push({
+          id: persona.simliFaceId,
+          name: persona.simliFaceName || 'My Custom Face',
+          type: 'custom',
+          hasSimliFace: true
         });
-        // Auto-select custom face if available
-        setSelectedFace({
-          id: faceStatus.faceId,
-          name: faceStatus.faceName,
-          type: 'custom'
-        });
+      }
+
+      setCustomFaces(customFacesList);
+
+      // Auto-select first custom face if available
+      if (customFacesList.length > 0) {
+        setSelectedFace(customFacesList[0]);
       }
 
       // Load standard Simli faces
       const faces = await api.getSimliFaces();
       setStandardFaces(faces.faces || []);
 
-      // If no custom face, auto-select first standard face
-      if (!faceStatus.hasCustomFace && faces.faces?.length > 0) {
+      // If no custom faces, auto-select first standard face
+      if (customFacesList.length === 0 && faces.faces?.length > 0) {
         setSelectedFace({
           id: faces.faces[0].id,
           name: faces.faces[0].name,
@@ -174,12 +190,13 @@ export function SimliChatConfig({ onStart, onClose, persona }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Custom Face */}
-            {customFace && (
+            {/* Custom Faces - Show ALL uploaded avatar images */}
+            {customFaces.map((face) => (
               <button
-                onClick={() => setSelectedFace(customFace)}
+                key={face.id}
+                onClick={() => setSelectedFace(face)}
                 className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  selectedFace?.id === customFace.id
+                  selectedFace?.id === face.id
                     ? 'border-gold bg-gold/10'
                     : 'border-cream/20 bg-navy-light/30 hover:border-cream/40'
                 }`}
@@ -187,15 +204,17 @@ export function SimliChatConfig({ onStart, onClose, persona }) {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-gold" />
-                    <span className="font-medium text-cream">{customFace.name}</span>
+                    <span className="font-medium text-cream">{face.name}</span>
                   </div>
-                  {selectedFace?.id === customFace.id && (
+                  {selectedFace?.id === face.id && (
                     <CheckCircle2 className="w-5 h-5 text-gold" />
                   )}
                 </div>
-                <p className="text-cream/50 text-xs">Your custom face</p>
+                <p className="text-cream/50 text-xs">
+                  {face.hasSimliFace ? 'Your custom face' : 'Upload pending'}
+                </p>
               </button>
-            )}
+            ))}
 
             {/* Standard Faces */}
             {standardFaces.map((face) => (
@@ -219,10 +238,18 @@ export function SimliChatConfig({ onStart, onClose, persona }) {
             ))}
           </div>
 
-          {!customFace && (
-            <p className="mt-3 text-cream/50 text-sm">
-              💡 Upload your own face in <span className="text-gold">My Persona → Real-Time Chat Face</span>
-            </p>
+          {customFaces.length === 0 && (
+            <button
+              onClick={() => {
+                onClose();
+                setTimeout(() => {
+                  onNavigate('persona', 'avatar');
+                }, 100);
+              }}
+              className="mt-3 text-cream/50 text-sm hover:text-gold transition-colors text-left"
+            >
+              💡 Upload your own face in <span className="text-gold underline">My Persona → Avatar</span>
+            </button>
           )}
         </div>
 
@@ -280,9 +307,17 @@ export function SimliChatConfig({ onStart, onClose, persona }) {
           </div>
 
           {!voiceClone && (
-            <p className="mt-3 text-cream/50 text-sm">
-              💡 Create your voice clone in <span className="text-gold">My Persona → Voice</span>
-            </p>
+            <button
+              onClick={() => {
+                onClose();
+                setTimeout(() => {
+                  onNavigate('persona', 'voice');
+                }, 100);
+              }}
+              className="mt-3 text-cream/50 text-sm hover:text-gold transition-colors text-left"
+            >
+              💡 Create your voice clone in <span className="text-gold underline">My Persona → Voice</span>
+            </button>
           )}
         </div>
 

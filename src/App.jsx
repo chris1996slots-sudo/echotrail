@@ -66,7 +66,7 @@ function AppContent() {
   const location = useLocation();
 
   // Navigation handler for components that still use onNavigate
-  const handleNavigate = (page) => {
+  const handleNavigate = (page, tab) => {
     const routes = {
       'landing': '/',
       'login': '/login',
@@ -82,7 +82,14 @@ function AppContent() {
     };
 
     const route = routes[page] || '/';
-    navigate(route);
+
+    // If tab is provided, navigate with state
+    if (tab) {
+      navigate(route, { state: { tab } });
+    } else {
+      navigate(route);
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
