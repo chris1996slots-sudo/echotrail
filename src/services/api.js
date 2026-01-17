@@ -88,6 +88,13 @@ class ApiService {
     return this.request('/api/auth/me');
   }
 
+  async updateLanguage(language) {
+    return this.request('/api/auth/language', {
+      method: 'PUT',
+      body: JSON.stringify({ language }),
+    });
+  }
+
   // Persona
   async getPersona() {
     return this.request('/api/persona');

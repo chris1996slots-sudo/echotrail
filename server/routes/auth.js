@@ -304,4 +304,41 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// Update user language preference
+router.put('/language', async (req, res) => {
+  const prisma = req.app.get('prisma');
+  const userId = req.userId;
+
+  const { language } = req.body;
+
+  // Validate language
+  const validLanguages = ['en', 'de', 'es'];
+  if (!language || !validLanguages.includes(language)) {
+    return res.status(400).json({ error: 'Invalid language. Must be one of: en, de, es' });
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { language },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        language: true,
+        subscription: true,
+        tokenBalance: true,
+        createdAt: true,
+      }
+    });
+
+    res.json({ user });
+  } catch (error) {
+    console.error('Failed to update language:', error);
+    res.status(500).json({ error: 'Failed to update language preference' });
+  }
+});
+
 export default router;

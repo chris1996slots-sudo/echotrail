@@ -27,6 +27,7 @@ model User {
   role          Role     @default(USER)
   purposes      String[] @default([])
   avatarUrl     String?
+  language      String   @default("en") // User's preferred language (en, de, es)
 
   subscription  SubscriptionPlan @default(FREE)
   subscribedAt  DateTime?

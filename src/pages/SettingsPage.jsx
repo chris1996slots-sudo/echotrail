@@ -66,12 +66,19 @@ export function SettingsPage({ onNavigate }) {
   });
 
   // Language state
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [selectedLanguage, setSelectedLanguage] = useState(user?.language || 'en');
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
     { code: 'es', name: 'Español', flag: '🇪🇸' },
   ];
+
+  // Load language from user when available
+  useEffect(() => {
+    if (user?.language) {
+      setSelectedLanguage(user.language);
+    }
+  }, [user]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -166,6 +173,25 @@ export function SettingsPage({ onNavigate }) {
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy:', error);
+    }
+  };
+
+  const handleLanguageChange = async (languageCode) => {
+    try {
+      setIsLoading(true);
+      setMessage(null);
+
+      const response = await api.updateLanguage(languageCode);
+      setSelectedLanguage(languageCode);
+      setUser(response.user);
+
+      setMessage({ type: 'success', text: 'Language updated successfully' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error('Failed to update language:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to update language' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -862,18 +888,20 @@ export function SettingsPage({ onNavigate }) {
                           <div className="p-4 rounded-xl bg-gold/10 border border-gold/20 flex items-center gap-3">
                             <Languages className="w-5 h-5 text-gold" />
                             <p className="text-cream/70 text-sm">
-                              Multi-language support is coming soon! You'll be able to use EchoTrail in your preferred language.
+                              Select your preferred language for the app interface and AI conversations.
                             </p>
                           </div>
                           <div className="space-y-2">
                             {languages.map((lang) => (
-                              <div
+                              <button
                                 key={lang.code}
-                                className={`p-3 rounded-xl border-2 flex items-center justify-between ${
+                                onClick={() => handleLanguageChange(lang.code)}
+                                disabled={isLoading || selectedLanguage === lang.code}
+                                className={`w-full p-3 rounded-xl border-2 flex items-center justify-between transition-all ${
                                   selectedLanguage === lang.code
                                     ? 'border-gold bg-gold/10'
-                                    : 'border-gold/20 opacity-50'
-                                }`}
+                                    : 'border-gold/20 hover:border-gold/40 hover:bg-gold/5'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
                               >
                                 <div className="flex items-center gap-3">
                                   <span className="text-xl">{lang.flag}</span>
@@ -882,7 +910,7 @@ export function SettingsPage({ onNavigate }) {
                                 {selectedLanguage === lang.code && (
                                   <Check className="w-5 h-5 text-gold" />
                                 )}
-                              </div>
+                              </button>
                             ))}
                           </div>
                         </div>

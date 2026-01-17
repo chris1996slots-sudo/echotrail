@@ -109,9 +109,18 @@ export function SimliAvatar({ onClose, persona, user, config }) {
         console.log('Simli connected');
         setStatus('connected');
 
-        // Send automatic greeting
+        // Send automatic greeting in user's language
         const userName = user?.firstName || 'there';
-        const greetingText = `Hallo ${userName}! Ich freue mich dich zu sehen, wie geht es dir?`;
+        const userLanguage = user?.language || 'en';
+
+        // Multilingual greeting templates
+        const greetings = {
+          en: `Hello ${userName}! I'm so glad to see you, how are you doing?`,
+          de: `Hallo ${userName}! Ich freue mich dich zu sehen, wie geht es dir?`,
+          es: `¡Hola ${userName}! Me alegra mucho verte, ¿cómo estás?`
+        };
+
+        const greetingText = greetings[userLanguage] || greetings.en;
 
         addMessage('assistant', greetingText);
 
