@@ -262,6 +262,8 @@ export function PersonaPage({ onNavigate }) {
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const fileInputRef = useRef(null);
+  const cameraVideoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Voice recording state
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -289,6 +291,11 @@ export function PersonaPage({ onNavigate }) {
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [processingError, setProcessingError] = useState(null);
+
+  // Camera states
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [isCreatingVoiceClone, setIsCreatingVoiceClone] = useState(false);
   const [voiceCloneError, setVoiceCloneError] = useState(null);
   const [voiceCloneSuccess, setVoiceCloneSuccess] = useState(false);
@@ -669,6 +676,15 @@ export function PersonaPage({ onNavigate }) {
     }
   }, [location.state]);
 
+  // Cleanup camera stream when component unmounts or modal closes
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
   // LiveAvatar video functions
   const handleVideoFileSelect = (e, videoType) => {
     const file = e.target.files?.[0];
@@ -893,6 +909,68 @@ export function PersonaPage({ onNavigate }) {
     }
     // Reset file input
     if (e.target) e.target.value = '';
+  };
+
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      setCameraStream(stream);
+      setShowCameraModal(true);
+
+      // Set video source after modal opens
+      setTimeout(() => {
+        if (cameraVideoRef.current) {
+          cameraVideoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error('Failed to access camera:', err);
+      alert('Failed to access camera. Please make sure you have granted camera permissions.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCameraModal(false);
+    setCapturedPhoto(null);
+  };
+
+  const capturePhoto = () => {
+    if (cameraVideoRef.current && canvasRef.current) {
+      const video = cameraVideoRef.current;
+      const canvas = canvasRef.current;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+
+      const photoData = canvas.toDataURL('image/jpeg', 0.9);
+      setCapturedPhoto(photoData);
+    }
+  };
+
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+  };
+
+  const usePhoto = () => {
+    setPendingImage(capturedPhoto);
+    setUploadForm({ name: '', age: '', occasion: '' });
+    setUploadErrors({});
+    stopCamera();
+    setShowUploadModal(true);
   };
 
   // Validate and submit the avatar upload
@@ -1420,11 +1498,11 @@ export function PersonaPage({ onNavigate }) {
                         </motion.div>
                       ))}
 
-                      {/* Add New Photo Button */}
+                      {/* Add New Photo - Upload Button */}
                       {avatarImages.length < 10 && (
                         <label className="aspect-square rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-navy-light/50">
-                          <Plus className="w-10 h-10 text-gold/50 mb-2" />
-                          <span className="text-cream/50 text-sm">Add Photo</span>
+                          <Upload className="w-8 h-8 text-gold/50 mb-2" />
+                          <span className="text-cream/50 text-sm">Upload</span>
                           <input
                             type="file"
                             accept="image/*"
@@ -1433,6 +1511,17 @@ export function PersonaPage({ onNavigate }) {
                             ref={fileInputRef}
                           />
                         </label>
+                      )}
+
+                      {/* Add New Photo - Camera Button */}
+                      {avatarImages.length < 10 && (
+                        <button
+                          onClick={startCamera}
+                          className="aspect-square rounded-xl border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 bg-purple-500/10 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-purple-500/20"
+                        >
+                          <Camera className="w-8 h-8 text-purple-400/70 mb-2" />
+                          <span className="text-purple-300/70 text-sm">Camera</span>
+                        </button>
                       )}
                     </div>
 
@@ -3726,6 +3815,99 @@ export function PersonaPage({ onNavigate }) {
                     </>
                   )}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Camera Modal */}
+      <AnimatePresence>
+        {showCameraModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-navy-dark/95 backdrop-blur-lg flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-navy-dark border border-gold/20 rounded-2xl p-6 max-w-2xl w-full"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Camera className="w-6 h-6 text-purple-400" />
+                  <h2 className="text-2xl font-serif text-cream">Take Photo</h2>
+                </div>
+                <button
+                  onClick={stopCamera}
+                  className="p-2 rounded-full bg-cream/10 text-cream hover:bg-cream/20 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Camera Preview */}
+              <div className="relative aspect-[4/3] bg-black rounded-xl overflow-hidden mb-4">
+                {capturedPhoto ? (
+                  <img
+                    src={capturedPhoto}
+                    alt="Captured"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <video
+                    ref={cameraVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain scale-x-[-1]"
+                  />
+                )}
+
+                {/* Hidden canvas for capturing */}
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center justify-center gap-3">
+                {capturedPhoto ? (
+                  <>
+                    <button
+                      onClick={retakePhoto}
+                      className="px-6 py-3 bg-navy-light border border-gold/20 text-cream rounded-xl hover:bg-gold/10 transition-colors flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      Retake
+                    </button>
+                    <button
+                      onClick={usePhoto}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-500 hover:to-pink-500 transition-colors flex items-center gap-2"
+                    >
+                      <CheckCircle2 className="w-5 h-5" />
+                      Use Photo
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={capturePhoto}
+                    className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all flex items-center justify-center shadow-lg shadow-purple-500/50"
+                  >
+                    <Camera className="w-8 h-8" />
+                  </button>
+                )}
+              </div>
+
+              {/* Tip */}
+              <div className="mt-4 p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                <p className="text-purple-300/70 text-sm text-center">
+                  {capturedPhoto
+                    ? 'Review your photo and use it or retake if needed'
+                    : 'Position yourself in the frame and click the camera button to capture'}
+                </p>
               </div>
             </motion.div>
           </motion.div>
