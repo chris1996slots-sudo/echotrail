@@ -433,6 +433,8 @@ model FamilyMember {
   birthYear    String?
   birthplace   String?
   bio          String?  @db.Text  // Story, memories, important details
+  isDeceased   Boolean  @default(false)
+  deathYear    String?
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

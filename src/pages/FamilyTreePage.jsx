@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   Heart,
   MapPin,
-  Calendar
+  Calendar,
+  User
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
@@ -29,6 +30,7 @@ export function FamilyTreePage({ onNavigate }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null); // Which slot is being filled
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
@@ -40,14 +42,16 @@ export function FamilyTreePage({ onNavigate }) {
     birthYear: '',
     birthplace: '',
     bio: '',
-    imageData: null
+    imageData: null,
+    isDeceased: false,
+    deathYear: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   // Refs for camera
-  const cameraVideoRef = useState(null);
-  const canvasRef = useState(null);
+  const [cameraVideoRef, setCameraVideoRef] = useState(null);
+  const [canvasRef, setCanvasRef] = useState(null);
 
   useEffect(() => {
     loadFamilyMembers();
@@ -65,14 +69,42 @@ export function FamilyTreePage({ onNavigate }) {
     }
   };
 
-  const handleAddMember = () => {
+  // Organize family members by relationship
+  const organizeFamily = () => {
+    const organized = {
+      grandparents: {
+        paternal: {
+          grandfather: familyMembers.find(m => m.relationship === 'Paternal Grandfather'),
+          grandmother: familyMembers.find(m => m.relationship === 'Paternal Grandmother')
+        },
+        maternal: {
+          grandfather: familyMembers.find(m => m.relationship === 'Maternal Grandfather'),
+          grandmother: familyMembers.find(m => m.relationship === 'Maternal Grandmother')
+        }
+      },
+      parents: {
+        father: familyMembers.find(m => m.relationship === 'Father'),
+        mother: familyMembers.find(m => m.relationship === 'Mother')
+      },
+      self: user,
+      spouse: familyMembers.find(m => m.relationship === 'Spouse' || m.relationship === 'Partner'),
+      children: familyMembers.filter(m => m.relationship === 'Son' || m.relationship === 'Daughter'),
+      siblings: familyMembers.filter(m => m.relationship === 'Brother' || m.relationship === 'Sister')
+    };
+    return organized;
+  };
+
+  const handleAddMemberToSlot = (slot) => {
+    setSelectedSlot(slot);
     setFormData({
       name: '',
-      relationship: '',
+      relationship: slot.relationship,
       birthYear: '',
       birthplace: '',
       bio: '',
-      imageData: null
+      imageData: null,
+      isDeceased: false,
+      deathYear: ''
     });
     setFormErrors({});
     setShowAddModal(true);
@@ -85,9 +117,12 @@ export function FamilyTreePage({ onNavigate }) {
       birthYear: member.birthYear || '',
       birthplace: member.birthplace || '',
       bio: member.bio || '',
-      imageData: member.imageData
+      imageData: member.imageData,
+      isDeceased: member.isDeceased || false,
+      deathYear: member.deathYear || ''
     });
     setSelectedMember(member);
+    setSelectedSlot(null);
     setShowAddModal(true);
   };
 
@@ -100,88 +135,43 @@ export function FamilyTreePage({ onNavigate }) {
       setShowProfileModal(false);
     } catch (err) {
       console.error('Failed to delete family member:', err);
-      alert('Failed to delete family member. Please try again.');
+      alert('Failed to delete family member');
     }
   };
 
-  const handleSubmitForm = async (e) => {
-    e.preventDefault();
-
-    // Validation
-    const errors = {};
-    if (!formData.name.trim()) errors.name = 'Name is required';
-    if (!formData.relationship.trim()) errors.relationship = 'Relationship is required';
-    if (!formData.imageData) errors.imageData = 'Photo is required';
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-
-      if (selectedMember) {
-        // Update existing member
-        const updated = await api.updateFamilyMember(selectedMember.id, formData);
-        setFamilyMembers(familyMembers.map(m => m.id === selectedMember.id ? updated.member : m));
-      } else {
-        // Create new member
-        const response = await api.createFamilyMember(formData);
-        setFamilyMembers([...familyMembers, response.member]);
-      }
-
-      setShowAddModal(false);
-      setSelectedMember(null);
-      setFormData({
-        name: '',
-        relationship: '',
-        birthYear: '',
-        birthplace: '',
-        bio: '',
-        imageData: null
-      });
-    } catch (err) {
-      console.error('Failed to save family member:', err);
-      alert('Failed to save family member. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+  const viewProfile = (member) => {
+    setSelectedMember(member);
+    setShowProfileModal(true);
   };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, imageData: reader.result });
-        setFormErrors({ ...formErrors, imageData: undefined });
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFormData({ ...formData, imageData: event.target.result });
+    };
+    reader.readAsDataURL(file);
   };
 
-  // Camera functions
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { facingMode: 'user', width: 1280, height: 720 }
       });
       setCameraStream(stream);
       setShowCameraModal(true);
 
       setTimeout(() => {
-        if (cameraVideoRef.current) {
-          cameraVideoRef.current.srcObject = stream;
+        if (cameraVideoRef) {
+          cameraVideoRef.srcObject = stream;
+          cameraVideoRef.play();
         }
       }, 100);
     } catch (err) {
-      console.error('Failed to access camera:', err);
-      alert('Failed to access camera. Please make sure you have granted camera permissions.');
+      console.error('Camera error:', err);
+      alert('Could not access camera. Please check permissions.');
     }
   };
 
@@ -195,22 +185,27 @@ export function FamilyTreePage({ onNavigate }) {
   };
 
   const capturePhoto = () => {
-    if (cameraVideoRef.current && canvasRef.current) {
-      const video = cameraVideoRef.current;
-      const canvas = canvasRef.current;
+    if (!cameraVideoRef || !canvasRef) return;
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+    const video = cameraVideoRef;
+    const canvas = canvasRef;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-      const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
 
-      // Flip the image horizontally to un-mirror it
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    setCapturedPhoto(imageData);
+  };
 
-      const photoData = canvas.toDataURL('image/jpeg', 0.9);
-      setCapturedPhoto(photoData);
+  const usePhoto = () => {
+    if (capturedPhoto) {
+      setFormData({ ...formData, imageData: capturedPhoto });
+      stopCamera();
     }
   };
 
@@ -218,42 +213,108 @@ export function FamilyTreePage({ onNavigate }) {
     setCapturedPhoto(null);
   };
 
-  const usePhoto = () => {
-    setFormData({ ...formData, imageData: capturedPhoto });
-    setFormErrors({ ...formErrors, imageData: undefined });
-    stopCamera();
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Name is required';
+    if (!formData.relationship.trim()) errors.relationship = 'Relationship is required';
+    if (!formData.imageData) errors.imageData = 'Photo is required';
+    return errors;
   };
 
-  const viewProfile = (member) => {
-    setSelectedMember(member);
-    setShowProfileModal(true);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const startLiveConversation = (member) => {
-    // Navigate to Echo Sim with member context
-    onNavigate('echo-sim');
-    // TODO: Pass member context to Echo Sim
-  };
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
-  const generateVideo = (member) => {
-    // Navigate to Echo Sim video generation with member context
-    onNavigate('echo-sim');
-    // TODO: Pass member context to Echo Sim
-  };
-
-  // Cleanup camera stream
-  useEffect(() => {
-    return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
+    setSubmitting(true);
+    try {
+      if (selectedMember) {
+        // Update existing member
+        await api.updateFamilyMember(selectedMember.id, formData);
+        setFamilyMembers(familyMembers.map(m =>
+          m.id === selectedMember.id ? { ...m, ...formData } : m
+        ));
+      } else {
+        // Create new member
+        const response = await api.createFamilyMember(formData);
+        setFamilyMembers([...familyMembers, response.member]);
       }
-    };
-  }, [cameraStream]);
+      setShowAddModal(false);
+      setSelectedMember(null);
+      setSelectedSlot(null);
+    } catch (err) {
+      console.error('Failed to save family member:', err);
+      alert('Failed to save family member');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Render a tree node (person slot)
+  const renderTreeNode = (member, slot) => {
+    const isEmpty = !member;
+
+    return (
+      <motion.div
+        whileHover={{ scale: isEmpty ? 1.05 : 1.02 }}
+        onClick={() => isEmpty ? handleAddMemberToSlot(slot) : viewProfile(member)}
+        className={`relative cursor-pointer ${isEmpty ? 'opacity-70' : ''}`}
+      >
+        <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-2xl border-2 overflow-hidden transition-all ${
+          isEmpty
+            ? 'border-dashed border-gold/30 bg-navy-light/30 hover:border-gold/60 hover:bg-navy-light/50'
+            : 'border-gold/40 bg-navy-light hover:border-gold/70'
+        }`}>
+          {isEmpty ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <Plus className="w-8 h-8 text-gold/50" />
+            </div>
+          ) : (
+            <img
+              src={member.imageData}
+              alt={member.name}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+
+        {/* Name and info */}
+        <div className="mt-2 text-center">
+          {isEmpty ? (
+            <p className="text-xs text-cream/50">{slot.label}</p>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-cream truncate max-w-[120px] mx-auto">
+                {member.name}
+              </p>
+              {member.birthYear && (
+                <p className="text-xs text-cream/50">
+                  {member.isDeceased && member.deathYear
+                    ? `${member.birthYear} - ${member.deathYear}`
+                    : member.birthYear
+                  }
+                </p>
+              )}
+              {member.isDeceased && (
+                <span className="text-xs text-red-400">✝</span>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const family = organizeFamily();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-navy flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-gold animate-spin" />
+        <Loader2 className="w-12 h-12 text-gold animate-spin" />
       </div>
     );
   }
@@ -269,82 +330,151 @@ export function FamilyTreePage({ onNavigate }) {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-serif text-cream mb-2">Family Tree</h1>
-            <p className="text-cream/60">Build your legacy with your loved ones</p>
+            <p className="text-cream/60">Your family legacy, visualized</p>
           </div>
+        </div>
+
+        {/* Visual Family Tree */}
+        <div className="bg-navy-light/30 rounded-3xl p-8 border border-gold/10 overflow-x-auto">
+          <div className="min-w-max">
+            {/* Grandparents Level */}
+            <div className="flex justify-center gap-8 sm:gap-16 mb-12">
+              {/* Paternal Grandparents */}
+              <div className="flex gap-6">
+                {renderTreeNode(family.grandparents.paternal.grandfather, {
+                  relationship: 'Paternal Grandfather',
+                  label: 'Add Grandfather'
+                })}
+                {renderTreeNode(family.grandparents.paternal.grandmother, {
+                  relationship: 'Paternal Grandmother',
+                  label: 'Add Grandmother'
+                })}
+              </div>
+
+              {/* Maternal Grandparents */}
+              <div className="flex gap-6">
+                {renderTreeNode(family.grandparents.maternal.grandfather, {
+                  relationship: 'Maternal Grandfather',
+                  label: 'Add Grandfather'
+                })}
+                {renderTreeNode(family.grandparents.maternal.grandmother, {
+                  relationship: 'Maternal Grandmother',
+                  label: 'Add Grandmother'
+                })}
+              </div>
+            </div>
+
+            {/* Connecting lines to parents */}
+            <div className="flex justify-center mb-4">
+              <div className="w-px h-8 bg-gradient-to-b from-gold/30 to-transparent"></div>
+            </div>
+
+            {/* Parents Level */}
+            <div className="flex justify-center gap-12 mb-12">
+              {renderTreeNode(family.parents.father, {
+                relationship: 'Father',
+                label: 'Add Father'
+              })}
+              {renderTreeNode(family.parents.mother, {
+                relationship: 'Mother',
+                label: 'Add Mother'
+              })}
+            </div>
+
+            {/* Connecting lines to self */}
+            <div className="flex justify-center mb-4">
+              <div className="w-px h-8 bg-gradient-to-b from-gold/30 to-transparent"></div>
+            </div>
+
+            {/* Self + Spouse Level */}
+            <div className="flex justify-center gap-12 mb-12">
+              {/* Self */}
+              <div className="relative">
+                <div className="w-32 h-32 rounded-2xl border-4 border-gold/70 bg-gradient-to-br from-purple-600/20 to-pink-600/20 overflow-hidden">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt="You"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User className="w-16 h-16 text-gold" />
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 text-center">
+                  <p className="text-sm font-medium text-cream">You</p>
+                  <p className="text-xs text-gold">{user.firstName} {user.lastName}</p>
+                </div>
+              </div>
+
+              {/* Spouse/Partner */}
+              {renderTreeNode(family.spouse, {
+                relationship: 'Spouse',
+                label: 'Add Partner'
+              })}
+            </div>
+
+            {/* Connecting lines to children */}
+            {family.children.length > 0 && (
+              <div className="flex justify-center mb-4">
+                <div className="w-px h-8 bg-gradient-to-b from-gold/30 to-transparent"></div>
+              </div>
+            )}
+
+            {/* Children Level */}
+            {family.children.length > 0 && (
+              <div className="flex justify-center gap-6 flex-wrap">
+                {family.children.map(child => (
+                  <div key={child.id}>
+                    {renderTreeNode(child, null)}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add child button */}
+            <div className="flex justify-center mt-6">
+              <motion.button
+                onClick={() => handleAddMemberToSlot({ relationship: 'Son', label: 'Add Child' })}
+                className="px-4 py-2 bg-navy-light/50 border border-gold/20 rounded-xl text-cream/70 text-sm hover:border-gold/40 hover:text-cream transition-all flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Plus className="w-4 h-4" />
+                Add Child
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* Siblings Section (Below tree) */}
+        {family.siblings.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-serif text-cream mb-4">Siblings</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+              {family.siblings.map(sibling => (
+                <div key={sibling.id}>
+                  {renderTreeNode(sibling, null)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add sibling button */}
+        <div className="flex justify-center mt-6">
           <motion.button
-            onClick={handleAddMember}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium flex items-center gap-2 hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/30"
+            onClick={() => handleAddMemberToSlot({ relationship: 'Brother', label: 'Add Sibling' })}
+            className="px-4 py-2 bg-navy-light/50 border border-gold/20 rounded-xl text-cream/70 text-sm hover:border-gold/40 hover:text-cream transition-all flex items-center gap-2"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Plus className="w-5 h-5" />
-            Add Family Member
+            <Plus className="w-4 h-4" />
+            Add Sibling
           </motion.button>
         </div>
-
-        {/* Family Tree Visualization */}
-        {familyMembers.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <Users className="w-20 h-20 text-gold/30 mx-auto mb-6" />
-            <h2 className="text-2xl font-serif text-cream mb-3">Start Your Family Tree</h2>
-            <p className="text-cream/60 mb-6 max-w-md mx-auto">
-              Add your family members to build a visual family tree. You can have conversations with them and generate personalized videos.
-            </p>
-            <motion.button
-              onClick={handleAddMember}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium inline-flex items-center gap-2 hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/30"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Plus className="w-5 h-5" />
-              Add Your First Family Member
-            </motion.button>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {familyMembers.map((member) => (
-              <motion.div
-                key={member.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                onClick={() => viewProfile(member)}
-                className="bg-navy-light border border-gold/20 rounded-2xl p-6 cursor-pointer hover:border-gold/40 transition-all"
-              >
-                {/* Photo */}
-                <div className="aspect-square rounded-xl overflow-hidden mb-4 bg-navy-dark">
-                  <img
-                    src={member.imageData}
-                    alt={member.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-
-                {/* Info */}
-                <h3 className="text-xl font-serif text-cream mb-1">{member.name}</h3>
-                <p className="text-gold/70 text-sm mb-3">{member.relationship}</p>
-
-                {member.birthYear && (
-                  <div className="flex items-center gap-2 text-cream/50 text-xs mb-2">
-                    <Calendar className="w-3 h-3" />
-                    <span>Born {member.birthYear}</span>
-                  </div>
-                )}
-
-                {member.birthplace && (
-                  <div className="flex items-center gap-2 text-cream/50 text-xs">
-                    <MapPin className="w-3 h-3" />
-                    <span>{member.birthplace}</span>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        )}
       </motion.div>
 
       {/* Add/Edit Member Modal */}
@@ -354,26 +484,23 @@ export function FamilyTreePage({ onNavigate }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-navy-dark/95 backdrop-blur-lg flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-navy-dark/95 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-navy-dark border border-gold/20 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-navy-light border border-gold/20 rounded-2xl p-6 max-w-lg w-full my-8"
             >
-              {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-serif text-cream mb-1">
-                    {selectedMember ? 'Edit' : 'Add'} Family Member
-                  </h2>
-                  <p className="text-cream/60 text-sm">Fill in the details about your family member</p>
-                </div>
+                <h2 className="text-2xl font-serif text-cream">
+                  {selectedMember ? 'Edit Family Member' : 'Add Family Member'}
+                </h2>
                 <button
                   onClick={() => {
                     setShowAddModal(false);
                     setSelectedMember(null);
+                    setSelectedSlot(null);
                   }}
                   className="p-2 rounded-full bg-cream/10 text-cream hover:bg-cream/20 transition-colors"
                 >
@@ -381,159 +508,212 @@ export function FamilyTreePage({ onNavigate }) {
                 </button>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmitForm}>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Photo Upload */}
-                <div className="mb-6">
-                  <label className="block text-cream/70 text-sm mb-3">Photo *</label>
-
+                <div>
+                  <label className="block text-sm font-medium text-cream mb-2">
+                    Photo *
+                  </label>
                   {formData.imageData ? (
-                    <div className="relative aspect-square w-48 mx-auto rounded-xl overflow-hidden border-2 border-gold/20">
+                    <div className="relative">
                       <img
                         src={formData.imageData}
                         alt="Preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-48 object-cover rounded-xl"
                       />
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, imageData: null })}
-                        className="absolute top-2 right-2 p-2 bg-red-500/80 rounded-full text-white hover:bg-red-500 transition-colors"
+                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <div className="flex gap-3 justify-center">
-                      <label className="flex-1 max-w-xs cursor-pointer">
-                        <div className="aspect-square rounded-xl border-2 border-dashed border-gold/30 hover:border-gold/50 bg-navy-light/30 flex flex-col items-center justify-center transition-all hover:bg-navy-light/50">
-                          <Upload className="w-8 h-8 text-gold/50 mb-2" />
-                          <span className="text-cream/50 text-sm">Upload Photo</span>
-                        </div>
+                    <div className="flex gap-2">
+                      <label className="flex-1 px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream/70 text-center cursor-pointer hover:border-gold/40 transition-all">
+                        <Upload className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-sm">Upload Photo</span>
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleFileSelect}
+                          onChange={handleImageUpload}
                           className="hidden"
                         />
                       </label>
-
                       <button
                         type="button"
                         onClick={startCamera}
-                        className="flex-1 max-w-xs"
+                        className="px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream/70 hover:border-gold/40 transition-all"
                       >
-                        <div className="aspect-square rounded-xl border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 bg-purple-500/10 flex flex-col items-center justify-center transition-all hover:bg-purple-500/20">
-                          <Camera className="w-8 h-8 text-purple-400/70 mb-2" />
-                          <span className="text-purple-300/70 text-sm">Take Photo</span>
-                        </div>
+                        <Camera className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-sm">Camera</span>
                       </button>
                     </div>
                   )}
-
                   {formErrors.imageData && (
-                    <p className="text-red-400 text-sm mt-2 text-center">{formErrors.imageData}</p>
+                    <p className="text-red-400 text-xs mt-1">{formErrors.imageData}</p>
                   )}
                 </div>
 
                 {/* Name */}
-                <div className="mb-4">
-                  <label className="block text-cream/70 text-sm mb-2">Name *</label>
+                <div>
+                  <label className="block text-sm font-medium text-cream mb-2">
+                    Name *
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-navy-light border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 transition-colors"
-                    placeholder="John Doe"
+                    className="w-full px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/40 focus:outline-none"
+                    placeholder="Enter name"
                   />
                   {formErrors.name && (
-                    <p className="text-red-400 text-sm mt-1">{formErrors.name}</p>
+                    <p className="text-red-400 text-xs mt-1">{formErrors.name}</p>
                   )}
                 </div>
 
                 {/* Relationship */}
-                <div className="mb-4">
-                  <label className="block text-cream/70 text-sm mb-2">Relationship *</label>
+                <div>
+                  <label className="block text-sm font-medium text-cream mb-2">
+                    Relationship *
+                  </label>
                   <select
                     value={formData.relationship}
                     onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
-                    className="w-full px-4 py-3 bg-navy-light border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 transition-colors"
+                    className="w-full px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream focus:border-gold/40 focus:outline-none"
                   >
-                    <option value="">Select relationship...</option>
-                    <option value="Father">Father</option>
-                    <option value="Mother">Mother</option>
-                    <option value="Grandfather">Grandfather</option>
-                    <option value="Grandmother">Grandmother</option>
-                    <option value="Son">Son</option>
-                    <option value="Daughter">Daughter</option>
-                    <option value="Brother">Brother</option>
-                    <option value="Sister">Sister</option>
-                    <option value="Uncle">Uncle</option>
-                    <option value="Aunt">Aunt</option>
-                    <option value="Cousin">Cousin</option>
-                    <option value="Spouse">Spouse</option>
-                    <option value="Other">Other</option>
+                    <option value="">Select relationship</option>
+                    <optgroup label="Grandparents">
+                      <option value="Paternal Grandfather">Paternal Grandfather</option>
+                      <option value="Paternal Grandmother">Paternal Grandmother</option>
+                      <option value="Maternal Grandfather">Maternal Grandfather</option>
+                      <option value="Maternal Grandmother">Maternal Grandmother</option>
+                    </optgroup>
+                    <optgroup label="Parents">
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                    </optgroup>
+                    <optgroup label="Siblings">
+                      <option value="Brother">Brother</option>
+                      <option value="Sister">Sister</option>
+                    </optgroup>
+                    <optgroup label="Partner">
+                      <option value="Spouse">Spouse</option>
+                      <option value="Partner">Partner</option>
+                    </optgroup>
+                    <optgroup label="Children">
+                      <option value="Son">Son</option>
+                      <option value="Daughter">Daughter</option>
+                    </optgroup>
                   </select>
                   {formErrors.relationship && (
-                    <p className="text-red-400 text-sm mt-1">{formErrors.relationship}</p>
+                    <p className="text-red-400 text-xs mt-1">{formErrors.relationship}</p>
                   )}
                 </div>
 
                 {/* Birth Year */}
-                <div className="mb-4">
-                  <label className="block text-cream/70 text-sm mb-2">Birth Year</label>
+                <div>
+                  <label className="block text-sm font-medium text-cream mb-2">
+                    Birth Year
+                  </label>
                   <input
                     type="text"
                     value={formData.birthYear}
                     onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                    className="w-full px-4 py-3 bg-navy-light border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 transition-colors"
-                    placeholder="1950"
+                    className="w-full px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/40 focus:outline-none"
+                    placeholder="e.g. 1950"
                   />
                 </div>
 
+                {/* Deceased */}
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isDeceased}
+                      onChange={(e) => setFormData({ ...formData, isDeceased: e.target.checked })}
+                      className="w-4 h-4 rounded border-gold/20 bg-navy-dark text-gold focus:ring-gold/40"
+                    />
+                    <span className="text-sm text-cream">Deceased</span>
+                  </label>
+                </div>
+
+                {/* Death Year (if deceased) */}
+                {formData.isDeceased && (
+                  <div>
+                    <label className="block text-sm font-medium text-cream mb-2">
+                      Death Year
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.deathYear}
+                      onChange={(e) => setFormData({ ...formData, deathYear: e.target.value })}
+                      className="w-full px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/40 focus:outline-none"
+                      placeholder="e.g. 2020"
+                    />
+                  </div>
+                )}
+
                 {/* Birthplace */}
-                <div className="mb-4">
-                  <label className="block text-cream/70 text-sm mb-2">Birthplace</label>
+                <div>
+                  <label className="block text-sm font-medium text-cream mb-2">
+                    Birthplace
+                  </label>
                   <input
                     type="text"
                     value={formData.birthplace}
                     onChange={(e) => setFormData({ ...formData, birthplace: e.target.value })}
-                    className="w-full px-4 py-3 bg-navy-light border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 transition-colors"
-                    placeholder="New York, USA"
+                    className="w-full px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/40 focus:outline-none"
+                    placeholder="City, Country"
                   />
                 </div>
 
                 {/* Bio */}
-                <div className="mb-6">
-                  <label className="block text-cream/70 text-sm mb-2">Bio / Story</label>
+                <div>
+                  <label className="block text-sm font-medium text-cream mb-2">
+                    Story / Bio
+                  </label>
                   <textarea
                     value={formData.bio}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-3 bg-navy-light border border-gold/20 rounded-xl text-cream focus:outline-none focus:border-gold/50 transition-colors resize-none"
+                    className="w-full px-4 py-3 bg-navy-dark border border-gold/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/40 focus:outline-none resize-none"
                     placeholder="Share their story, memories, or important details..."
                   />
                 </div>
 
-                {/* Submit Button */}
-                <motion.button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ scale: submitting ? 1 : 1.02 }}
-                  whileTap={{ scale: submitting ? 1 : 0.98 }}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-5 h-5" />
-                      {selectedMember ? 'Update' : 'Add'} Family Member
-                    </>
-                  )}
-                </motion.button>
+                {/* Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setSelectedMember(null);
+                      setSelectedSlot(null);
+                    }}
+                    className="flex-1 px-6 py-3 bg-navy-dark border border-gold/20 text-cream rounded-xl hover:border-gold/40 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" />
+                        {selectedMember ? 'Update' : 'Add'} Member
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </motion.div>
@@ -553,14 +733,10 @@ export function FamilyTreePage({ onNavigate }) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-navy-dark border border-gold/20 rounded-2xl p-6 max-w-2xl w-full"
+              className="bg-navy-light border border-gold/20 rounded-2xl p-6 max-w-2xl w-full"
             >
-              {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <Camera className="w-6 h-6 text-purple-400" />
-                  <h2 className="text-2xl font-serif text-cream">Take Photo</h2>
-                </div>
+                <h2 className="text-2xl font-serif text-cream">Take Photo</h2>
                 <button
                   onClick={stopCamera}
                   className="p-2 rounded-full bg-cream/10 text-cream hover:bg-cream/20 transition-colors"
@@ -569,64 +745,47 @@ export function FamilyTreePage({ onNavigate }) {
                 </button>
               </div>
 
-              {/* Camera Preview */}
-              <div className="relative aspect-[4/3] bg-black rounded-xl overflow-hidden mb-4">
+              <div className="relative aspect-video bg-navy-dark rounded-xl overflow-hidden mb-4">
                 {capturedPhoto ? (
-                  <img
-                    src={capturedPhoto}
-                    alt="Captured"
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
                 ) : (
                   <video
-                    ref={cameraVideoRef}
+                    ref={(el) => setCameraVideoRef(el)}
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-contain scale-x-[-1]"
+                    className="w-full h-full object-cover scale-x-[-1]"
                   />
                 )}
-
-                {/* Hidden canvas for capturing */}
-                <canvas ref={canvasRef} className="hidden" />
               </div>
 
-              {/* Controls */}
-              <div className="flex items-center justify-center gap-3">
+              <canvas ref={(el) => setCanvasRef(el)} className="hidden" />
+
+              <div className="flex gap-3">
                 {capturedPhoto ? (
                   <>
                     <button
                       onClick={retakePhoto}
-                      className="px-6 py-3 bg-navy-light border border-gold/20 text-cream rounded-xl hover:bg-gold/10 transition-colors flex items-center gap-2"
+                      className="flex-1 px-6 py-3 bg-navy-dark border border-gold/20 text-cream rounded-xl hover:border-gold/40 transition-all"
                     >
-                      <RefreshCw className="w-5 h-5" />
                       Retake
                     </button>
                     <button
                       onClick={usePhoto}
-                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-500 hover:to-pink-500 transition-colors flex items-center gap-2"
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
                     >
-                      <CheckCircle2 className="w-5 h-5" />
                       Use Photo
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={capturePhoto}
-                    className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all flex items-center justify-center shadow-lg shadow-purple-500/50"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-pink-500 transition-all flex items-center justify-center gap-2"
                   >
-                    <Camera className="w-8 h-8" />
+                    <Camera className="w-5 h-5" />
+                    Capture Photo
                   </button>
                 )}
-              </div>
-
-              {/* Tip */}
-              <div className="mt-4 p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
-                <p className="text-purple-300/70 text-sm text-center">
-                  {capturedPhoto
-                    ? 'Review your photo and use it or retake if needed'
-                    : 'Position yourself in the frame and click the camera button to capture'}
-                </p>
               </div>
             </motion.div>
           </motion.div>
@@ -646,11 +805,10 @@ export function FamilyTreePage({ onNavigate }) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-navy-dark border border-gold/20 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-navy-light border border-gold/20 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
-              {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-serif text-cream">Family Member Profile</h2>
+                <h2 className="text-2xl font-serif text-cream">{selectedMember.name}</h2>
                 <button
                   onClick={() => setShowProfileModal(false)}
                   className="p-2 rounded-full bg-cream/10 text-cream hover:bg-cream/20 transition-colors"
@@ -660,7 +818,7 @@ export function FamilyTreePage({ onNavigate }) {
               </div>
 
               {/* Photo */}
-              <div className="aspect-square w-64 mx-auto rounded-2xl overflow-hidden mb-6 border-2 border-gold/20">
+              <div className="aspect-square rounded-2xl overflow-hidden mb-6 bg-navy-dark">
                 <img
                   src={selectedMember.imageData}
                   alt={selectedMember.name}
@@ -669,73 +827,61 @@ export function FamilyTreePage({ onNavigate }) {
               </div>
 
               {/* Info */}
-              <div className="text-center mb-6">
-                <h3 className="text-3xl font-serif text-cream mb-2">{selectedMember.name}</h3>
-                <p className="text-gold text-lg mb-4">{selectedMember.relationship}</p>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-sm text-cream/50 mb-1">Relationship</p>
+                  <p className="text-cream font-medium">{selectedMember.relationship}</p>
+                </div>
 
                 {selectedMember.birthYear && (
-                  <div className="flex items-center justify-center gap-2 text-cream/70 mb-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>Born {selectedMember.birthYear}</span>
+                  <div>
+                    <p className="text-sm text-cream/50 mb-1">
+                      {selectedMember.isDeceased ? 'Lifespan' : 'Birth Year'}
+                    </p>
+                    <p className="text-cream font-medium">
+                      {selectedMember.isDeceased && selectedMember.deathYear
+                        ? `${selectedMember.birthYear} - ${selectedMember.deathYear}`
+                        : selectedMember.birthYear}
+                      {selectedMember.isDeceased && ' ✝'}
+                    </p>
                   </div>
                 )}
 
                 {selectedMember.birthplace && (
-                  <div className="flex items-center justify-center gap-2 text-cream/70">
-                    <MapPin className="w-4 h-4" />
-                    <span>{selectedMember.birthplace}</span>
+                  <div>
+                    <p className="text-sm text-cream/50 mb-1">Birthplace</p>
+                    <p className="text-cream font-medium flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {selectedMember.birthplace}
+                    </p>
+                  </div>
+                )}
+
+                {selectedMember.bio && (
+                  <div>
+                    <p className="text-sm text-cream/50 mb-1">Story</p>
+                    <p className="text-cream/80 leading-relaxed">{selectedMember.bio}</p>
                   </div>
                 )}
               </div>
 
-              {/* Bio */}
-              {selectedMember.bio && (
-                <div className="mb-6 p-4 bg-navy-light/50 rounded-xl border border-gold/10">
-                  <h4 className="text-cream/70 text-sm mb-2">Story</h4>
-                  <p className="text-cream/90 leading-relaxed">{selectedMember.bio}</p>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                <motion.button
-                  onClick={() => startLiveConversation(selectedMember)}
-                  className="px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/30"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Live Conversation
-                </motion.button>
-
-                <motion.button
-                  onClick={() => generateVideo(selectedMember)}
-                  className="px-6 py-4 bg-gradient-to-r from-gold to-gold-light text-navy rounded-xl font-medium flex items-center justify-center gap-2 hover:from-gold-light hover:to-gold transition-all shadow-lg shadow-gold/30"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Film className="w-5 h-5" />
-                  Generate Video
-                </motion.button>
-              </div>
-
-              {/* Edit/Delete Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gold/10">
+              {/* Actions */}
+              <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setShowProfileModal(false);
                     handleEditMember(selectedMember);
                   }}
-                  className="flex-1 px-4 py-3 bg-navy-light border border-gold/20 text-cream rounded-xl hover:bg-gold/10 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-3 bg-navy-dark border border-gold/20 text-cream rounded-xl hover:border-gold/40 transition-all flex items-center justify-center gap-2"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-5 h-5" />
                   Edit
                 </button>
                 <button
                   onClick={() => handleDeleteMember(selectedMember.id)}
-                  className="flex-1 px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:border-red-500/40 transition-all flex items-center justify-center gap-2"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5" />
                   Delete
                 </button>
               </div>
