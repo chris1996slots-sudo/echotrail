@@ -83,6 +83,7 @@ export function SimliAvatar({ onClose, persona, config }) {
         apiKey: config.simliApiKey,
         faceID: faceIdToUse,
         handleSilence: true,
+        syncAudio: true,          // Enable audio synchronization for better lip-sync
         maxSessionLength: 3600,
         maxIdleTime: 600,
         videoRef: videoRef.current,
@@ -199,21 +200,43 @@ export function SimliAvatar({ onClose, persona, config }) {
             format: ttsResponse.format
           });
 
-          // Send audio in chunks of 6000 bytes (Simli requirement)
+          // Send audio in chunks with proper timing for better lip-sync
           // Simli documentation specifies 6000 bytes as preferred chunk size
           const CHUNK_SIZE = 6000;
-          let bytesSent = 0;
-
-          // Convert bytes to Int16 samples (2 bytes per sample)
           const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples per chunk
+          const sampleRate = 16000; // 16kHz
 
-          for (let i = 0; i < int16Array.length; i += samplesPerChunk) {
-            const chunk = int16Array.slice(i, Math.min(i + samplesPerChunk, int16Array.length));
+          // Calculate delay between chunks based on audio duration
+          // Each chunk represents (samplesPerChunk / sampleRate) seconds of audio
+          const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000;
+
+          console.log(`Chunk timing: ${samplesPerChunk} samples at ${sampleRate}Hz = ${chunkDurationMs.toFixed(2)}ms per chunk`);
+
+          // Send chunks with timing to match audio playback
+          let chunkIndex = 0;
+          const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
+
+          const sendNextChunk = () => {
+            if (chunkIndex >= totalChunks) {
+              console.log(`All ${totalChunks} chunks sent to Simli`);
+              return;
+            }
+
+            const start = chunkIndex * samplesPerChunk;
+            const end = Math.min(start + samplesPerChunk, int16Array.length);
+            const chunk = int16Array.slice(start, end);
+
             simliClientRef.current.sendAudioData(chunk);
-            bytesSent += chunk.length * 2; // 2 bytes per Int16 sample
-          }
+            chunkIndex++;
 
-          console.log(`Audio sent to Simli in ${Math.ceil(int16Array.length / samplesPerChunk)} chunks (${bytesSent} bytes total)`);
+            // Schedule next chunk after the current one should finish playing
+            if (chunkIndex < totalChunks) {
+              setTimeout(sendNextChunk, chunkDurationMs);
+            }
+          };
+
+          // Start sending chunks
+          sendNextChunk();
         }
       }
     } catch (err) {
