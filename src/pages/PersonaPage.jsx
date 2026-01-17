@@ -355,7 +355,7 @@ export function PersonaPage({ onNavigate }) {
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
     { id: 'simliface', label: 'Real-Time Chat Face' },
-    { id: 'liveavatar', label: 'Live Avatar' },
+    { id: 'voice', label: 'Voice' },
     { id: 'stories', label: 'Life Stories' },
     { id: 'interview', label: 'Deep Interview' },
     { id: 'values', label: 'Value Store' },
