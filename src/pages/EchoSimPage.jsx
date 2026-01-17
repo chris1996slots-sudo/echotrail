@@ -711,6 +711,10 @@ export function EchoSimPage({ onNavigate }) {
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [chatConfig, setChatConfig] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showTextChat, setShowTextChat] = useState(false);
+  const [textChatMessages, setTextChatMessages] = useState([]);
+  const [textChatInput, setTextChatInput] = useState('');
+  const [isLoadingTextChat, setIsLoadingTextChat] = useState(false);
 
   // Check status on mount
   useEffect(() => {
@@ -741,6 +745,45 @@ export function EchoSimPage({ onNavigate }) {
     if (!customMessage.trim()) return;
     setSelectedTemplate(null);
     setShowVideoModal(true);
+  };
+
+  // Handle text chat send
+  const handleSendTextMessage = async () => {
+    if (!textChatInput.trim() || isLoadingTextChat) return;
+
+    const userMessage = textChatInput.trim();
+    setTextChatInput('');
+
+    // Add user message to chat
+    setTextChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoadingTextChat(true);
+
+    try {
+      // Use wisdom chat API
+      const response = await api.sendWisdomMessage(userMessage);
+      setTextChatMessages(prev => [...prev, { role: 'assistant', content: response.response }]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setTextChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.'
+      }]);
+    } finally {
+      setIsLoadingTextChat(false);
+    }
+  };
+
+  // Load text chat history when opening
+  const handleOpenTextChat = async () => {
+    setShowTextChat(true);
+    try {
+      const history = await api.getWisdomChats();
+      if (history?.messages) {
+        setTextChatMessages(history.messages);
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
   };
 
   return (
@@ -924,10 +967,62 @@ export function EchoSimPage({ onNavigate }) {
               </div>
             </div>
           </FadeIn>
+
+          {/* Section 3: Text Chat */}
+          <FadeIn delay={0.25}>
+            <div className="glass-card p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-cream/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-medium text-cream">Text Chat</h3>
+                    <p className="text-cream/50 text-sm">Chat with your Echo via text only</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={handleOpenTextChat}
+                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium flex items-center gap-2 hover:from-blue-500 hover:to-cyan-500"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Start Chat
+                </motion.button>
+              </div>
+
+              {/* Features */}
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-navy/40">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
+                    <span className="text-blue-400 font-medium text-sm">1</span>
+                  </div>
+                  <p className="text-cream text-xs font-medium mb-1">Simple</p>
+                  <p className="text-cream/50 text-xs">Text-only conversation</p>
+                </div>
+                <div className="p-3 rounded-lg bg-navy/40">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
+                    <span className="text-blue-400 font-medium text-sm">2</span>
+                  </div>
+                  <p className="text-cream text-xs font-medium mb-1">Fast</p>
+                  <p className="text-cream/50 text-xs">Instant responses</p>
+                </div>
+                <div className="p-3 rounded-lg bg-navy/40">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
+                    <span className="text-blue-400 font-medium text-sm">3</span>
+                  </div>
+                  <p className="text-cream text-xs font-medium mb-1">Personal</p>
+                  <p className="text-cream/50 text-xs">Based on your persona</p>
+                </div>
+              </div>
+            </div>
+          </FadeIn>
         </div>
 
         {/* Video Archive Card - moves down when options expanded */}
-        <FadeIn delay={0.25}>
+        <FadeIn delay={0.3}>
           <Link to="/video-archive" className="block mb-10">
             <motion.div
               className="glass-card p-6 border-2 border-transparent hover:border-blue-500/30 transition-all cursor-pointer"
@@ -1000,6 +1095,110 @@ export function EchoSimPage({ onNavigate }) {
           config={chatConfig}
         />
       )}
+
+      {/* Text Chat Modal */}
+      <AnimatePresence>
+        {showTextChat && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowTextChat(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl h-[600px] glass-card flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-cream/10">
+                <div className="flex items-center gap-3">
+                  {/* Avatar Image */}
+                  {persona?.avatarImages?.[0] && (
+                    <img
+                      src={persona.avatarImages.find(a => a.isActive)?.imageData || persona.avatarImages[0].imageData}
+                      alt="Echo Avatar"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-blue-400"
+                    />
+                  )}
+                  <div>
+                    <h3 className="text-lg font-medium text-cream">Chat with Your Echo</h3>
+                    <p className="text-cream/50 text-xs">Text conversation</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowTextChat(false)}
+                  className="text-cream/50 hover:text-cream transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {textChatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <MessageCircle className="w-12 h-12 text-cream/20 mx-auto mb-3" />
+                      <p className="text-cream/50">Start a conversation with your Echo</p>
+                    </div>
+                  </div>
+                ) : (
+                  textChatMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] p-3 rounded-lg ${
+                          msg.role === 'user'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-navy-light text-cream'
+                        }`}
+                      >
+                        <p className="text-sm">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {isLoadingTextChat && (
+                  <div className="flex justify-start">
+                    <div className="bg-navy-light text-cream p-3 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div className="p-4 border-t border-cream/10">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={textChatInput}
+                    onChange={(e) => setTextChatInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendTextMessage()}
+                    placeholder="Type your message..."
+                    className="flex-1 px-4 py-3 rounded-lg bg-navy/60 border border-cream/10 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-blue-500/50"
+                  />
+                  <motion.button
+                    onClick={handleSendTextMessage}
+                    disabled={!textChatInput.trim() || isLoadingTextChat}
+                    className="px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white disabled:opacity-50"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Send className="w-5 h-5" />
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 }
