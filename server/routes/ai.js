@@ -2390,13 +2390,16 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
       return res.json(video);
     }
 
-    // Get HeyGen API key
+    // Get HeyGen API key - Try 'avatar' first (new format), fall back to 'heygen' (legacy)
     console.log('Fetching HeyGen API config...');
-    const config = await req.prisma.apiConfig.findFirst({
-      where: {
-        OR: [{ service: 'avatar' }, { service: 'heygen' }]
-      }
+    let config = await req.prisma.apiConfig.findUnique({
+      where: { service: 'avatar' }
     });
+    if (!config?.apiKey) {
+      config = await req.prisma.apiConfig.findUnique({
+        where: { service: 'heygen' }
+      });
+    }
 
     console.log('Config found:', config ? {
       service: config.service,
@@ -2404,9 +2407,9 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
       isActive: config.isActive
     } : 'NO CONFIG');
 
-    if (!config?.apiKey) {
+    if (!config?.isActive || !config?.apiKey) {
       console.log('ERROR: Avatar API not configured');
-      return res.status(500).json({ error: 'Avatar API not configured' });
+      return res.status(500).json({ error: 'Avatar API not configured. Please add API key in Admin Dashboard → APIs → Avatar.' });
     }
 
     // Check status with HeyGen
