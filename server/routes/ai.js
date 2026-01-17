@@ -2639,32 +2639,40 @@ router.post('/simli/create-face', authenticate, async (req, res) => {
     // Convert base64 to buffer
     const imageBuffer = Buffer.from(imageData.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 
+    const avatarName = faceName || `${req.user.firstName}_face`;
+
     console.log('Creating Simli face with:', {
-      faceName: faceName || req.user.firstName + '_avatar',
+      faceName: avatarName,
       imageSize: imageBuffer.length,
       apiKeyExists: !!simliConfig.apiKey
     });
 
-    // Create form data for Simli API
+    // Create form data for Simli API - IMPORTANT: Use form-data library correctly
     const FormData = (await import('form-data')).default;
     const formData = new FormData();
+
+    // Append image as a stream from buffer with proper filename
     formData.append('image', imageBuffer, {
       filename: 'avatar.jpg',
-      contentType: 'image/jpeg'
+      contentType: 'image/jpeg',
+      knownLength: imageBuffer.length
     });
 
-    // Call Simli generateFaceID API
-    const response = await fetch(
-      `https://api.simli.ai/generateFaceID?face_name=${encodeURIComponent(faceName || req.user.firstName + '_avatar')}`,
-      {
-        method: 'POST',
-        headers: {
-          'api-key': simliConfig.apiKey,
-          ...formData.getHeaders()
-        },
-        body: formData
-      }
-    );
+    // Call Simli generateFaceID API with query parameter for face_name
+    const url = `https://api.simli.ai/generateFaceID?face_name=${encodeURIComponent(avatarName)}`;
+
+    console.log('Calling Simli API:', url);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'api-key': simliConfig.apiKey,
+        ...formData.getHeaders() // This adds correct Content-Type with boundary
+      },
+      body: formData,
+      // Important for form-data streaming
+      duplex: 'half'
+    });
 
     console.log('Simli API response:', {
       status: response.status,
