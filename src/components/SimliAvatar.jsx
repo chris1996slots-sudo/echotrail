@@ -172,24 +172,29 @@ export function SimliAvatar({ onClose, persona, config }) {
         const ttsResponse = await api.getSimliTTS(responseText, voiceIdToUse);
 
         if (ttsResponse.audio) {
-          // Convert base64 to Uint8Array
+          // Convert base64 to Uint8Array (raw bytes)
           const binaryString = atob(ttsResponse.audio);
-          const bytes = new Uint8Array(binaryString.length);
+          const uint8Array = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+            uint8Array[i] = binaryString.charCodeAt(i);
           }
 
+          // Convert Uint8Array to Int16Array (PCM16 format)
+          // PCM16 uses 16-bit signed integers, not 8-bit unsigned
+          const int16Array = new Int16Array(uint8Array.buffer);
+
           console.log('Sending audio to Simli:', {
-            totalBytes: bytes.length,
+            uint8Bytes: uint8Array.length,
+            int16Samples: int16Array.length,
             sampleRate: ttsResponse.sampleRate,
             format: ttsResponse.format
           });
 
           // Send all audio at once - Simli handles internal buffering
           // Simli's WebRTC implementation manages the streaming internally
-          simliClientRef.current.sendAudioData(bytes);
+          simliClientRef.current.sendAudioData(int16Array);
 
-          console.log('Audio sent to Simli (single chunk)');
+          console.log('Audio sent to Simli as Int16Array');
         }
       }
     } catch (err) {
