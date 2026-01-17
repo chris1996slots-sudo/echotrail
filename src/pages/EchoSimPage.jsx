@@ -38,6 +38,7 @@ import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../compon
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import SimliAvatar from '../components/SimliAvatar';
+import SimliChatConfig from '../components/SimliChatConfig';
 
 // Event templates for Option 1 (Video Generation)
 const eventTemplates = [
@@ -717,7 +718,9 @@ export function EchoSimPage({ onNavigate }) {
   const [customMessage, setCustomMessage] = useState('');
   const [hasVoiceClone, setHasVoiceClone] = useState(false);
   const [hasPhotoAvatar, setHasPhotoAvatar] = useState(false);
+  const [showChatConfig, setShowChatConfig] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
+  const [chatConfig, setChatConfig] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   // Check status on mount
@@ -1013,7 +1016,7 @@ export function EchoSimPage({ onNavigate }) {
                     </div>
                   </div>
                   <motion.button
-                    onClick={() => setShowLiveChat(true)}
+                    onClick={() => setShowChatConfig(true)}
                     className="px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-all flex-shrink-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-500/25"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -1131,11 +1134,30 @@ export function EchoSimPage({ onNavigate }) {
         )}
       </AnimatePresence>
 
+      {/* Live Chat Config Modal */}
+      <AnimatePresence>
+        {showChatConfig && (
+          <SimliChatConfig
+            onStart={(config) => {
+              setChatConfig(config);
+              setShowChatConfig(false);
+              setShowLiveChat(true);
+            }}
+            onClose={() => setShowChatConfig(false)}
+            persona={persona}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Live Chat Modal - Simli Avatar */}
-      {showLiveChat && (
+      {showLiveChat && chatConfig && (
         <SimliAvatar
-          onClose={() => setShowLiveChat(false)}
+          onClose={() => {
+            setShowLiveChat(false);
+            setChatConfig(null);
+          }}
           persona={persona}
+          config={chatConfig}
         />
       )}
     </PageTransition>
