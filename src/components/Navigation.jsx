@@ -18,6 +18,7 @@ import {
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
+import { NotificationBell } from './NotificationBell';
 
 const navItems = [
   { id: 'landing', label: 'Home', icon: Home, requiresAuth: false, guestOnly: true },
@@ -109,6 +110,9 @@ export function Navigation({ currentPage, onNavigate }) {
                   </motion.button>
                 );
               })}
+
+              {/* Notification Bell - Only for logged in users */}
+              {user && <NotificationBell />}
 
               {!user ? (
                 <motion.button
