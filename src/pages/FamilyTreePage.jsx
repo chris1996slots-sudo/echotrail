@@ -271,7 +271,98 @@ export function FamilyTreePage({ onNavigate }) {
     setSelectedRelationship('');
   };
 
-  // Render a family member card or empty slot
+  // Render category section with all members + add button
+  const renderCategory = (categoryKey) => {
+    const categoryDef = RELATIONSHIP_TYPES[categoryKey];
+    const members = getMembersByCategory(categoryKey);
+
+    return (
+      <div key={categoryKey} className="flex flex-col items-center mb-8">
+        {/* Category Header */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">{categoryDef.icon}</span>
+          <h3 className="text-cream/70 text-lg font-medium">{categoryDef.label}</h3>
+        </div>
+
+        {/* Members Grid */}
+        <div className="flex flex-wrap justify-center gap-4 w-full max-w-4xl">
+          {/* Existing Members */}
+          {members.map((member) => (
+            <motion.div
+              key={member.id}
+              onClick={() => handleMemberClick(member)}
+              className={`relative glass-card p-4 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex flex-col items-center gap-3 w-32">
+                {/* Avatar */}
+                <div className="relative">
+                  {member.imageData ? (
+                    <img
+                      src={member.imageData}
+                      alt={member.name}
+                      className="w-20 h-20 rounded-full object-cover border-3 border-gold/40"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-3 border-gold/40">
+                      <UserIcon className="w-10 h-10 text-gold/60" />
+                    </div>
+                  )}
+
+                  {/* Status indicators */}
+                  {(member.voiceData || member.imageData) && (
+                    <div className="absolute -bottom-1 -right-1 flex gap-1">
+                      {member.voiceData && (
+                        <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center border-2 border-navy">
+                          <Mic className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name and relationship */}
+                <div className="text-center">
+                  <h4 className="text-cream font-medium text-sm truncate w-full">{member.name}</h4>
+                  <p className="text-cream/50 text-xs">{member.relationship}</p>
+                  {member.isDeceased && (
+                    <p className="text-cream/40 text-xs italic">({member.deathYear})</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+
+          {/* Add Member Button */}
+          <motion.div
+            onClick={() => handleAddMember(categoryKey)}
+            className="relative glass-card p-4 cursor-pointer hover:bg-gold/5 transition-all border-2 border-dashed border-gold/30 hover:border-gold"
+            whileHover={{ scale: 1.05, y: -4 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex flex-col items-center gap-3 w-32 h-full justify-center">
+              {/* Plus icon */}
+              <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center border-3 border-dashed border-gold/30">
+                <Plus className="w-10 h-10 text-gold/60" />
+              </div>
+
+              {/* Label */}
+              <div className="text-center">
+                <p className="text-gold/70 text-sm font-medium">Add {categoryDef.label.slice(0, -1)}</p>
+                <p className="text-cream/40 text-xs">Click to create</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  };
+
+  // Old render function (keep for modals that still use it)
   const renderFamilySlot = (slotDef) => {
     const member = getMemberByRelationship(slotDef.relationship);
 
@@ -492,22 +583,12 @@ export function FamilyTreePage({ onNavigate }) {
           </h1>
         </motion.div>
 
-        {/* Family Tree Structure */}
-        <div className="space-y-4">
-          {/* LEVEL 1: Children (above user) */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-col items-center"
-          >
-            <h3 className="text-cream/50 text-sm mb-4">Children</h3>
-            <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-              {FAMILY_STRUCTURE.children.map(renderFamilySlot)}
-            </div>
-          </motion.div>
+        {/* Family Tree Structure - Flexible Layout */}
+        <div className="space-y-8">
+          {/* LEVEL 1: Children */}
+          {renderCategory('children')}
 
-          {/* LEVEL 2: User (middle) */}
+          {/* LEVEL 2: User Card (You) */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -541,54 +622,32 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
               </div>
             </div>
-
-            {/* Siblings (same level) */}
-            <div className="grid grid-cols-2 gap-4 w-full max-w-md mt-6">
-              {FAMILY_STRUCTURE.siblings.map(renderFamilySlot)}
-            </div>
           </motion.div>
+
+          {/* LEVEL 2.5: Siblings (same level as user) */}
+          {renderCategory('siblings')}
 
           {/* Connecting line */}
           <div className="flex justify-center">
-            <div className="w-0.5 h-4 bg-gradient-to-b from-cream/20 to-transparent" />
+            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
-          {/* LEVEL 3: Parents & Aunts/Uncles - Side by Side */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col items-center w-full"
-          >
-            <h3 className="text-cream/50 text-sm mb-4">Parents & Aunts/Uncles</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
-              {/* Parents */}
-              {FAMILY_STRUCTURE.parents.map(renderFamilySlot)}
-              {/* Aunts & Uncles */}
-              {FAMILY_STRUCTURE.auntsUncles.map(renderFamilySlot)}
-            </div>
-          </motion.div>
+          {/* LEVEL 3: Parents */}
+          {renderCategory('parents')}
+
+          {/* LEVEL 3.5: Aunts & Uncles */}
+          {renderCategory('auntsUncles')}
 
           {/* Connecting line */}
           <div className="flex justify-center">
-            <div className="w-0.5 h-6 bg-gradient-to-b from-cream/20 to-transparent" />
+            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
-          {/* LEVEL 4: Grandparents & Great-Grandparents - Side by Side */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-col items-center w-full"
-          >
-            <h3 className="text-cream/50 text-sm mb-4">Grandparents & Great-Grandparents</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
-              {/* Grandparents */}
-              {FAMILY_STRUCTURE.grandparents.map(renderFamilySlot)}
-              {/* Great-Grandparents */}
-              {FAMILY_STRUCTURE.greatGrandparents.map(renderFamilySlot)}
-            </div>
-          </motion.div>
+          {/* LEVEL 4: Grandparents */}
+          {renderCategory('grandparents')}
+
+          {/* LEVEL 5: Great-Grandparents */}
+          {renderCategory('greatGrandparents')}
         </div>
       </div>
 
