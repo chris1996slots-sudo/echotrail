@@ -635,6 +635,52 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // =====================
+  // NOTIFICATIONS API
+  // =====================
+
+  async getNotifications(unreadOnly = false) {
+    const params = unreadOnly ? '?unreadOnly=true' : '';
+    return this.request(`/api/notifications${params}`);
+  }
+
+  async markNotificationAsRead(id) {
+    return this.request(`/api/notifications/${id}/read`, {
+      method: 'PATCH',
+    });
+  }
+
+  async markAllNotificationsAsRead() {
+    return this.request('/api/notifications/read-all', {
+      method: 'POST',
+    });
+  }
+
+  async deleteNotification(id) {
+    return this.request(`/api/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Admin notification routes
+  async sendNotification(userIds, data) {
+    return this.request('/api/notifications/admin/send', {
+      method: 'POST',
+      body: JSON.stringify({ userIds, ...data }),
+    });
+  }
+
+  async broadcastNotification(data) {
+    return this.request('/api/notifications/admin/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getNotificationTemplates() {
+    return this.request('/api/notifications/admin/templates');
+  }
 }
 
 export const api = new ApiService();

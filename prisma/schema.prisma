@@ -64,6 +64,7 @@ model User {
   purchases       Purchase[]
   generatedVideos GeneratedVideo[]
   familyMembers   FamilyMember[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -446,4 +447,35 @@ model FamilyMember {
 
   @@index([userId])
   @@map("family_members")
+}
+
+// Notifications - system and admin notifications for users
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification content
+  title     String
+  message   String   @db.Text
+  type      String   @default("info") // info, success, warning, error, announcement
+  category  String?  // legacy, mission, system, admin, etc.
+
+  // Link/Action
+  link      String?  // Optional link to redirect user (e.g., /persona, /echo-sim)
+  actionText String? // Text for action button (e.g., "Complete Now", "View")
+
+  // Status
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+
+  // Sender info (for admin-sent notifications)
+  senderId  String?  // Admin user ID who sent this
+  senderName String? // Admin name for display
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
 }
