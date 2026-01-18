@@ -3028,6 +3028,28 @@ export function PersonaPage({ onNavigate }) {
         return <ValueStore />;
 
       case 'legacy':
+        // Navigation handler for missions
+        const handleMissionClick = (missionId) => {
+          if (missionId === 'basicProfile') {
+            // Already on persona page, just switch to avatar tab
+            setActiveTab('avatar');
+          } else if (missionId === 'personalityValues') {
+            setActiveTab('values');
+          } else if (missionId === 'echoVibe') {
+            setActiveTab('values');
+          } else if (missionId === 'lifeStories') {
+            setActiveTab('stories');
+          } else if (missionId === 'photoAvatar') {
+            setActiveTab('avatar');
+          } else if (missionId === 'voiceClone') {
+            setActiveTab('avatar'); // Voice samples are in avatar tab
+          } else if (missionId === 'memories') {
+            onNavigate('memory-anchor');
+          } else if (missionId === 'timeCapsule') {
+            onNavigate('time-capsule');
+          }
+        };
+
         return (
           <div className="space-y-6">
             {loadingLegacy ? (
@@ -3081,11 +3103,14 @@ export function PersonaPage({ onNavigate }) {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className={`glass-card p-6 border-2 ${
+                      onClick={() => !mission.completed && handleMissionClick(mission.id)}
+                      className={`glass-card p-6 border-2 transition-all ${
                         mission.completed
                           ? 'bg-green-500/5 border-green-500/30'
-                          : 'bg-navy-dark/30 border-cream/10'
+                          : 'bg-navy-dark/30 border-cream/10 cursor-pointer hover:border-gold/40 hover:bg-gold/5'
                       }`}
+                      whileHover={!mission.completed ? { scale: 1.02, y: -4 } : {}}
+                      whileTap={!mission.completed ? { scale: 0.98 } : {}}
                     >
                       <div className="flex items-start gap-4">
                         {/* Icon */}
@@ -3132,9 +3157,14 @@ export function PersonaPage({ onNavigate }) {
                           )}
 
                           {/* Completion badge */}
-                          {mission.completed && (
+                          {mission.completed ? (
                             <div className="inline-block px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-400/30 mt-2">
                               ✓ Completed
+                            </div>
+                          ) : (
+                            <div className="inline-block px-3 py-1 bg-gold/10 text-gold text-xs rounded-full border border-gold/30 mt-2 flex items-center gap-1">
+                              <ArrowRight className="w-3 h-3" />
+                              Click to start
                             </div>
                           )}
                         </div>
