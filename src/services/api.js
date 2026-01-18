@@ -107,6 +107,10 @@ class ApiService {
     return this.request('/api/persona');
   }
 
+  async getLegacyProgress() {
+    return this.request('/api/persona/legacy-progress');
+  }
+
   async updateValues(values) {
     return this.request('/api/persona/values', {
       method: 'PUT',

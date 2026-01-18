@@ -535,4 +535,150 @@ async function updateLegacyScore(prisma, userId) {
   return { score, missions };
 }
 
+// Helper function to calculate legacy journey progress - Mission-based system
+async function calculateLegacyProgress(userId, prisma) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        persona: {
+          include: {
+            lifeStories: true,
+            avatarImages: true,
+            voiceSamples: true
+          }
+        },
+        memories: true,
+        timeCapsules: true,
+      }
+    });
+
+    if (!user) return { percent: 0, stage: 'Seedling', missions: [] };
+
+    const missions = [];
+    let totalScore = 0;
+
+    // Mission 1: Complete Basic Profile (10%)
+    const hasProfile = user.persona !== null;
+    missions.push({
+      id: 'basicProfile',
+      name: 'Complete Basic Profile',
+      description: 'Create your persona',
+      points: 10,
+      completed: hasProfile,
+      icon: 'user'
+    });
+    if (hasProfile) totalScore += 10;
+
+    // Mission 2: Set Personality Values (10%)
+    const defaultValue = 50;
+    const hasCustomValues = user.persona && [
+      user.persona.humor,
+      user.persona.empathy,
+      user.persona.tradition,
+      user.persona.adventure,
+      user.persona.wisdom,
+      user.persona.creativity,
+      user.persona.patience,
+      user.persona.optimism
+    ].some(v => v !== defaultValue);
+    missions.push({
+      id: 'personalityValues',
+      name: 'Set Personality Values',
+      description: 'Customize your personality traits',
+      points: 10,
+      completed: hasCustomValues,
+      icon: 'heart'
+    });
+    if (hasCustomValues) totalScore += 10;
+
+    // Mission 3: Choose Echo Vibe (10%)
+    const hasEchoVibe = user.persona?.echoVibe && user.persona.echoVibe !== 'compassionate';
+    missions.push({
+      id: 'echoVibe',
+      name: 'Choose Echo Vibe',
+      description: 'Select your conversational style',
+      points: 10,
+      completed: hasEchoVibe,
+      icon: 'sparkles'
+    });
+    if (hasEchoVibe) totalScore += 10;
+
+    // Mission 4: Complete All Life Stories (20%)
+    const lifeStoryCategories = user.persona?.lifeStories?.map(s => s.category) || [];
+    const uniqueCategories = new Set(lifeStoryCategories);
+    const allCategoriesComplete = uniqueCategories.size >= 5;
+    missions.push({
+      id: 'lifeStories',
+      name: 'Complete All Life Stories',
+      description: `Share stories from all 5 categories (${uniqueCategories.size}/5)`,
+      points: 20,
+      completed: allCategoriesComplete,
+      icon: 'book-open',
+      progress: `${uniqueCategories.size}/5`
+    });
+    if (allCategoriesComplete) totalScore += 20;
+
+    // Mission 5: Upload Photo Avatar (15%)
+    const hasPhotoAvatar = (user.persona?.avatarImages?.length || 0) > 0;
+    missions.push({
+      id: 'photoAvatar',
+      name: 'Upload Photo Avatar',
+      description: 'Add your photo for avatar creation',
+      points: 15,
+      completed: hasPhotoAvatar,
+      icon: 'image'
+    });
+    if (hasPhotoAvatar) totalScore += 15;
+
+    // Mission 6: Create Voice Clone (15%)
+    const hasVoiceClone = user.persona?.elevenlabsVoiceId !== null;
+    missions.push({
+      id: 'voiceClone',
+      name: 'Create Voice Clone',
+      description: 'Record voice samples and create clone',
+      points: 15,
+      completed: hasVoiceClone,
+      icon: 'mic'
+    });
+    if (hasVoiceClone) totalScore += 15;
+
+    // Mission 7: Add Memories (10%)
+    const memoryCount = user.memories?.length || 0;
+    const hasMemories = memoryCount >= 3;
+    missions.push({
+      id: 'memories',
+      name: 'Add Memories',
+      description: `Upload at least 3 photos (${memoryCount}/3)`,
+      points: 10,
+      completed: hasMemories,
+      icon: 'image',
+      progress: `${memoryCount}/3`
+    });
+    if (hasMemories) totalScore += 10;
+
+    // Mission 8: Create Time Capsule (10%)
+    const capsuleCount = user.timeCapsules?.length || 0;
+    const hasTimeCapsule = capsuleCount >= 1;
+    missions.push({
+      id: 'timeCapsule',
+      name: 'Create Time Capsule',
+      description: `Create at least 1 time capsule (${capsuleCount}/1)`,
+      points: 10,
+      completed: hasTimeCapsule,
+      icon: 'clock',
+      progress: `${capsuleCount}/1`
+    });
+    if (hasTimeCapsule) totalScore += 10;
+
+    const percent = Math.min(100, totalScore);
+    const stage = percent < 25 ? 'Seedling' : percent < 50 ? 'Growing' : percent < 75 ? 'Thriving' : 'Eternal';
+
+    return { percent, stage, missions };
+  } catch (error) {
+    console.error('Error calculating legacy progress:', error);
+    return { percent: 0, stage: 'Seedling', missions: [] };
+  }
+}
+
 export default router;

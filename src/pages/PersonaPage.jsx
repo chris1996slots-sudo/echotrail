@@ -307,6 +307,10 @@ export function PersonaPage({ onNavigate }) {
   const [editAvatarForm, setEditAvatarForm] = useState({ label: '' });
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
 
+  // Legacy Journey state
+  const [legacyProgress, setLegacyProgress] = useState(null);
+  const [loadingLegacy, setLoadingLegacy] = useState(false);
+
   // LiveAvatar video upload state
   // Training video (2 minutes)
   const [trainingVideo, setTrainingVideo] = useState(null);
@@ -366,6 +370,7 @@ export function PersonaPage({ onNavigate }) {
     { id: 'stories', label: 'Life Stories' },
     { id: 'interview', label: 'Deep Interview' },
     { id: 'values', label: 'Value Store' },
+    { id: 'legacy', label: 'Legacy Journey' },
   ];
 
   // Real background images
@@ -779,6 +784,24 @@ export function PersonaPage({ onNavigate }) {
     if (activeTab === 'simliface') {
       fetchSimliFaceStatus();
     }
+  }, [activeTab]);
+
+  // Fetch Legacy Progress when on legacy tab
+  useEffect(() => {
+    const loadLegacyProgress = async () => {
+      if (activeTab === 'legacy') {
+        setLoadingLegacy(true);
+        try {
+          const progress = await api.getLegacyProgress();
+          setLegacyProgress(progress);
+        } catch (error) {
+          console.error('Failed to load legacy progress:', error);
+        } finally {
+          setLoadingLegacy(false);
+        }
+      }
+    };
+    loadLegacyProgress();
   }, [activeTab]);
 
   // Handle tab navigation from location state
@@ -3003,6 +3026,132 @@ export function PersonaPage({ onNavigate }) {
 
       case 'values':
         return <ValueStore />;
+
+      case 'legacy':
+        return (
+          <div className="space-y-6">
+            {loadingLegacy ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 text-gold animate-spin" />
+              </div>
+            ) : legacyProgress ? (
+              <>
+                {/* Header with Score */}
+                <div className="glass-card p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
+                        <Award className="w-6 h-6 text-gold" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-serif text-cream">Legacy Journey</h2>
+                        <p className="text-cream/50 text-sm">Complete missions to preserve your digital legacy</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-5xl font-serif text-gold">{legacyProgress.percent}%</p>
+                      <p className="text-cream/50 text-sm mt-1">{legacyProgress.stage}</p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="relative h-4 bg-navy-dark rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${legacyProgress.percent}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className="h-full bg-gradient-to-r from-gold via-gold-light to-gold rounded-full"
+                    />
+                  </div>
+
+                  {/* Stages */}
+                  <div className="flex justify-between mt-3 text-xs">
+                    <span className={legacyProgress.percent >= 0 ? 'text-gold' : 'text-cream/30'}>🌱 Seedling</span>
+                    <span className={legacyProgress.percent >= 25 ? 'text-gold' : 'text-cream/30'}>🌿 Growing</span>
+                    <span className={legacyProgress.percent >= 50 ? 'text-gold' : 'text-cream/30'}>🌳 Thriving</span>
+                    <span className={legacyProgress.percent >= 75 ? 'text-gold' : 'text-cream/30'}>♾️ Eternal</span>
+                  </div>
+                </div>
+
+                {/* Mission Cards */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {legacyProgress.missions.map((mission, index) => (
+                    <motion.div
+                      key={mission.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className={`glass-card p-6 border-2 ${
+                        mission.completed
+                          ? 'bg-green-500/5 border-green-500/30'
+                          : 'bg-navy-dark/30 border-cream/10'
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Icon */}
+                        <div
+                          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            mission.completed
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-cream/10 text-cream/40'
+                          }`}
+                        >
+                          {mission.completed ? (
+                            <CheckCircle2 className="w-6 h-6" />
+                          ) : (
+                            <Target className="w-6 h-6" />
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3
+                              className={`font-medium ${
+                                mission.completed ? 'text-cream' : 'text-cream/70'
+                              }`}
+                            >
+                              {mission.name}
+                            </h3>
+                            <span
+                              className={`text-lg font-serif ${
+                                mission.completed ? 'text-green-400' : 'text-cream/40'
+                              }`}
+                            >
+                              {mission.points}%
+                            </span>
+                          </div>
+
+                          <p className="text-cream/50 text-sm mb-2">{mission.description}</p>
+
+                          {/* Progress indicator if available */}
+                          {mission.progress && (
+                            <div className="inline-block px-3 py-1 bg-gold/10 text-gold text-xs rounded-full border border-gold/30">
+                              {mission.progress}
+                            </div>
+                          )}
+
+                          {/* Completion badge */}
+                          {mission.completed && (
+                            <div className="inline-block px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-400/30 mt-2">
+                              ✓ Completed
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="glass-card p-12 text-center">
+                <AlertCircle className="w-16 h-16 text-cream/30 mx-auto mb-4" />
+                <h3 className="text-xl font-serif text-cream mb-2">Unable to Load Progress</h3>
+                <p className="text-cream/50">Please try again later.</p>
+              </div>
+            )}
+          </div>
+        );
 
       default:
         return null;
