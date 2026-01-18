@@ -40,6 +40,17 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// Get legacy journey progress
+router.get('/legacy-progress', authenticate, async (req, res) => {
+  try {
+    const progress = await calculateLegacyProgress(req.user.id, req.prisma);
+    res.json(progress);
+  } catch (error) {
+    console.error('Failed to calculate legacy progress:', error);
+    res.status(500).json({ error: 'Failed to calculate legacy progress' });
+  }
+});
+
 // Update values
 router.put('/values', authenticate, async (req, res) => {
   try {

@@ -35,46 +35,43 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
 
       const customFacesList = [];
 
-      // PRIORITY 1: Check if persona has a Simli face ID (from Real-Time Chat Face upload)
-      // But first check if it's actually ready
-      if (persona?.simliFaceId) {
-        try {
-          const faceStatus = await api.getSimliFaceStatus();
-
-          // Only add face if it's ready
-          if (faceStatus.isReady) {
-            customFacesList.push({
-              id: persona.simliFaceId,
-              name: persona.simliFaceName || 'My Custom Face',
-              type: 'custom',
-              hasSimliFace: true,
-              isPrimary: true,
-              status: 'ready'
-            });
-          }
-        } catch (err) {
-          console.error('Failed to check face status:', err);
+      // Load all avatar images - they are the source of truth
+      if (persona?.avatarImages && persona.avatarImages.length > 0) {
+        for (const avatarImage of persona.avatarImages) {
+          // If this avatar has a Simli face ID, use it
+          // Otherwise, use the avatar itself (will show as needing upload)
+          customFacesList.push({
+            id: avatarImage.simliFaceId || `avatar_${avatarImage.id}`,
+            name: avatarImage.label || 'Custom Avatar',
+            imageUrl: avatarImage.imageData,
+            type: 'custom',
+            avatarImageId: avatarImage.id,
+            hasSimliFace: !!avatarImage.simliFaceId,
+            status: avatarImage.simliFaceId ? 'ready' : 'no_face'
+          });
         }
       }
 
-      // PRIORITY 2: Load all avatar images (with or without simliFaceId)
-      if (persona?.avatarImages && persona.avatarImages.length > 0) {
-        for (const avatarImage of persona.avatarImages) {
-          // Check if it's not already in the list (avoid duplicates)
-          const existingFace = customFacesList.find(f =>
-            f.id === avatarImage.simliFaceId || f.avatarImageId === avatarImage.id
-          );
+      // If persona has simliFaceId but it's not in any avatar image, add it separately
+      // (This handles the case where face was uploaded via Real-Time Chat)
+      if (persona?.simliFaceId) {
+        const existsInAvatars = customFacesList.some(f => f.id === persona.simliFaceId);
 
-          if (!existingFace) {
-            customFacesList.push({
-              id: avatarImage.simliFaceId || `avatar_${avatarImage.id}`, // Use avatar ID if no Simli face
-              name: avatarImage.label || 'Custom Avatar',
-              imageUrl: avatarImage.imageData, // Use imageData from AvatarImage
-              type: 'custom',
-              avatarImageId: avatarImage.id,
-              hasSimliFace: !!avatarImage.simliFaceId, // true if has Simli face, false otherwise
-              status: avatarImage.simliFaceId ? 'unknown' : 'no_face' // Indicate if Simli face exists
-            });
+        if (!existsInAvatars) {
+          try {
+            const faceStatus = await api.getSimliFaceStatus();
+            if (faceStatus.isReady) {
+              customFacesList.push({
+                id: persona.simliFaceId,
+                name: persona.simliFaceName || 'My Custom Face',
+                type: 'custom',
+                hasSimliFace: true,
+                isPrimary: true,
+                status: 'ready'
+              });
+            }
+          } catch (err) {
+            console.error('Failed to check face status:', err);
           }
         }
       }
@@ -212,78 +209,97 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
             <h3 className="text-lg font-medium text-cream">Select Face</h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Custom Faces - Show ALL uploaded avatar images */}
-            {customFaces.map((face) => (
+          {/* Custom Faces Section */}
+          {customFaces.length > 0 ? (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-green-400" />
+                <p className="text-green-400 text-sm font-medium">Your Custom Faces</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {customFaces.map((face) => (
+                  <button
+                    key={face.id}
+                    onClick={() => setSelectedFace(face)}
+                    className={`p-4 rounded-xl border-2 transition-all text-left ${
+                      selectedFace?.id === face.id
+                        ? 'border-green-400 bg-green-400/10 shadow-lg shadow-green-400/20'
+                        : 'border-green-400/40 bg-green-500/5 hover:border-green-400/60'
+                    }`}
+                  >
+                    {/* Image Preview */}
+                    {face.imageUrl && (
+                      <div className="w-full aspect-square rounded-lg overflow-hidden mb-3 bg-navy-dark border border-green-400/20">
+                        <img
+                          src={face.imageUrl}
+                          alt={face.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-green-400" />
+                        <span className="font-medium text-cream text-base">{face.name}</span>
+                      </div>
+                      {selectedFace?.id === face.id && (
+                        <CheckCircle2 className="w-5 h-5 text-green-400" />
+                      )}
+                    </div>
+                    <div className="inline-block px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-400/30">
+                      ✓ Your Face
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 p-6 rounded-xl border-2 border-dashed border-green-400/30 bg-green-500/5 text-center">
+              <Sparkles className="w-8 h-8 text-green-400/50 mx-auto mb-3" />
+              <p className="text-cream/70 text-sm mb-3">No custom face uploaded yet</p>
               <button
-                key={face.id}
-                onClick={() => setSelectedFace(face)}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  selectedFace?.id === face.id
-                    ? 'border-gold bg-gold/10'
-                    : 'border-cream/20 bg-navy-light/30 hover:border-cream/40'
-                }`}
+                onClick={() => {
+                  onClose();
+                  setTimeout(() => {
+                    onNavigate('persona', 'avatar');
+                  }, 100);
+                }}
+                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm font-medium transition-colors border border-green-400/30"
               >
-                {/* Image Preview if available */}
-                {face.imageUrl && (
-                  <div className="w-full aspect-square rounded-lg overflow-hidden mb-3 bg-navy-dark">
-                    <img
-                      src={face.imageUrl}
-                      alt={face.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-gold" />
-                    <span className="font-medium text-cream text-sm">{face.name}</span>
-                  </div>
-                  {selectedFace?.id === face.id && (
-                    <CheckCircle2 className="w-5 h-5 text-gold" />
-                  )}
-                </div>
-                <p className="text-cream/50 text-xs">
-                  {face.hasSimliFace ? 'Your custom face' : 'Standard avatar (no training needed)'}
-                </p>
+                Upload Your Face in My Persona
               </button>
-            ))}
+            </div>
+          )}
 
-            {/* Standard Faces */}
-            {standardFaces.map((face) => (
-              <button
-                key={face.id}
-                onClick={() => setSelectedFace({ id: face.id, name: face.name, type: 'standard' })}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  selectedFace?.id === face.id
-                    ? 'border-gold bg-gold/10'
-                    : 'border-cream/20 bg-navy-light/30 hover:border-cream/40'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="font-medium text-cream">{face.name}</span>
-                  {selectedFace?.id === face.id && (
-                    <CheckCircle2 className="w-5 h-5 text-gold" />
-                  )}
-                </div>
-                <p className="text-cream/50 text-xs">Standard avatar</p>
-              </button>
-            ))}
-          </div>
-
-          {customFaces.length === 0 && (
-            <button
-              onClick={() => {
-                onClose();
-                setTimeout(() => {
-                  onNavigate('persona', 'avatar');
-                }, 100);
-              }}
-              className="mt-3 text-cream/50 text-sm hover:text-gold transition-colors text-left"
-            >
-              💡 Upload your own face in <span className="text-gold underline">My Persona → Avatar</span>
-            </button>
+          {/* Standard Faces Section - Less Prominent */}
+          {standardFaces.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-4 h-4 text-cream/40" />
+                <p className="text-cream/40 text-xs">Standard Avatars (Generic)</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {standardFaces.map((face) => (
+                  <button
+                    key={face.id}
+                    onClick={() => setSelectedFace({ id: face.id, name: face.name, type: 'standard' })}
+                    className={`p-3 rounded-lg border transition-all text-left ${
+                      selectedFace?.id === face.id
+                        ? 'border-cream/40 bg-cream/5'
+                        : 'border-cream/10 bg-navy-light/20 hover:border-cream/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-cream/60 text-xs">{face.name}</span>
+                      {selectedFace?.id === face.id && (
+                        <CheckCircle2 className="w-4 h-4 text-cream/60" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
@@ -294,64 +310,81 @@ export function SimliChatConfig({ onStart, onClose, persona, onNavigate }) {
             <h3 className="text-lg font-medium text-cream">Select Voice</h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Voice Clone */}
-            {voiceClone && (
+          {/* Voice Clone Section */}
+          {voiceClone ? (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-green-400" />
+                <p className="text-green-400 text-sm font-medium">Your Cloned Voice</p>
+              </div>
               <button
                 onClick={() => setSelectedVoice(voiceClone)}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
+                className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                   selectedVoice?.id === voiceClone.id
-                    ? 'border-gold bg-gold/10'
-                    : 'border-cream/20 bg-navy-light/30 hover:border-cream/40'
+                    ? 'border-green-400 bg-green-400/10 shadow-lg shadow-green-400/20'
+                    : 'border-green-400/40 bg-green-500/5 hover:border-green-400/60'
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-gold" />
-                    <span className="font-medium text-cream">{voiceClone.name}</span>
+                    <Sparkles className="w-4 h-4 text-green-400" />
+                    <span className="font-medium text-cream text-base">{voiceClone.name}</span>
                   </div>
                   {selectedVoice?.id === voiceClone.id && (
-                    <CheckCircle2 className="w-5 h-5 text-gold" />
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
                   )}
                 </div>
-                <p className="text-cream/50 text-xs">Your cloned voice</p>
+                <div className="inline-block px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-400/30">
+                  ✓ Your Voice
+                </div>
               </button>
-            )}
-
-            {/* Standard Voices */}
-            {standardVoices.map((voice) => (
+            </div>
+          ) : (
+            <div className="mb-4 p-6 rounded-xl border-2 border-dashed border-green-400/30 bg-green-500/5 text-center">
+              <Mic className="w-8 h-8 text-green-400/50 mx-auto mb-3" />
+              <p className="text-cream/70 text-sm mb-3">No voice clone created yet</p>
               <button
-                key={voice.id}
-                onClick={() => setSelectedVoice({ id: voice.id, name: voice.name, type: 'standard' })}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  selectedVoice?.id === voice.id
-                    ? 'border-gold bg-gold/10'
-                    : 'border-cream/20 bg-navy-light/30 hover:border-cream/40'
-                }`}
+                onClick={() => {
+                  onClose();
+                  setTimeout(() => {
+                    onNavigate('persona', 'voice');
+                  }, 100);
+                }}
+                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm font-medium transition-colors border border-green-400/30"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="font-medium text-cream text-sm">{voice.name}</span>
-                  {selectedVoice?.id === voice.id && (
-                    <CheckCircle2 className="w-5 h-5 text-gold" />
-                  )}
-                </div>
-                <p className="text-cream/50 text-xs">Standard voice</p>
+                Create Voice Clone in My Persona
               </button>
-            ))}
-          </div>
+            </div>
+          )}
 
-          {!voiceClone && (
-            <button
-              onClick={() => {
-                onClose();
-                setTimeout(() => {
-                  onNavigate('persona', 'voice');
-                }, 100);
-              }}
-              className="mt-3 text-cream/50 text-sm hover:text-gold transition-colors text-left"
-            >
-              💡 Create your voice clone in <span className="text-gold underline">My Persona → Voice</span>
-            </button>
+          {/* Standard Voices Section - Less Prominent */}
+          {standardVoices.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Mic className="w-4 h-4 text-cream/40" />
+                <p className="text-cream/40 text-xs">Standard Voices (Generic)</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {standardVoices.map((voice) => (
+                  <button
+                    key={voice.id}
+                    onClick={() => setSelectedVoice({ id: voice.id, name: voice.name, type: 'standard' })}
+                    className={`p-3 rounded-lg border transition-all text-left ${
+                      selectedVoice?.id === voice.id
+                        ? 'border-cream/40 bg-cream/5'
+                        : 'border-cream/10 bg-navy-light/20 hover:border-cream/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-cream/60 text-xs">{voice.name}</span>
+                      {selectedVoice?.id === voice.id && (
+                        <CheckCircle2 className="w-4 h-4 text-cream/60" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
