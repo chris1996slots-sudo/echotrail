@@ -715,6 +715,7 @@ export function EchoSimPage({ onNavigate }) {
   const [textChatMessages, setTextChatMessages] = useState([]);
   const [textChatInput, setTextChatInput] = useState('');
   const [isLoadingTextChat, setIsLoadingTextChat] = useState(false);
+  const [expandedOption, setExpandedOption] = useState(null); // 'chat', 'video', or 'live'
 
   // Check status on mount
   useEffect(() => {
@@ -847,17 +848,101 @@ export function EchoSimPage({ onNavigate }) {
           <h2 className="text-xl font-serif text-cream mb-6 text-center">Choose Your Experience</h2>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Option 1: Video Generation */}
+            {/* Option 1: Text Chat */}
             <FadeIn delay={0.15}>
+              <motion.div
+                onClick={() => setExpandedOption(expandedOption === 'chat' ? null : 'chat')}
+                className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
+                  expandedOption === 'chat' ? 'ring-2 ring-blue-400' : ''
+                }`}
+                whileHover={{ y: -8, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-cyan-500/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                {/* Animated border */}
+                <div className="absolute inset-0 rounded-2xl border-2 border-blue-500/30 group-hover:border-cyan-400/60 transition-colors" />
+
+                {/* Message bubbles animation */}
+                <motion.div
+                  className="absolute top-16 right-12 w-8 h-6 rounded-lg bg-blue-400/20 border border-blue-400/30"
+                  animate={{ x: [0, 5, 0], opacity: [0.2, 0.5, 0.2] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+                <motion.div
+                  className="absolute top-28 right-16 w-10 h-6 rounded-lg bg-cyan-400/20 border border-cyan-400/30"
+                  animate={{ x: [0, -5, 0], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
+                />
+
+                {/* Content */}
+                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                  {/* Icon */}
+                  <motion.div
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                    whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <MessageCircle className="w-10 h-10 text-blue-400" />
+                  </motion.div>
+
+                  {/* Title */}
+                  <h3 className="text-2xl font-serif text-cream mb-3">Text Chat</h3>
+                  <p className="text-cream/60 text-sm mb-6">Simple text-only conversation</p>
+
+                  {/* Features */}
+                  <div className="space-y-3 mb-auto">
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 text-xs">✓</span>
+                      </div>
+                      <span>Instant responses</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 text-xs">✓</span>
+                      </div>
+                      <span>Personal wisdom</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 text-xs">✓</span>
+                      </div>
+                      <span>Chat history</span>
+                    </div>
+                  </div>
+
+                  {/* Simple Badge */}
+                  <div className="mt-4 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs">
+                    Quick & Easy
+                  </div>
+
+                  {/* CTA */}
+                  <motion.div
+                    className="mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    {expandedOption === 'chat' ? 'Selected' : 'Select'}
+                  </motion.div>
+                </div>
+
+                {/* Decorative corner */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-bl-full" />
+              </motion.div>
+            </FadeIn>
+
+            {/* Option 2: Talking Video */}
+            <FadeIn delay={0.2}>
               <motion.div
                 onClick={() => {
                   if (!hasPhotoAvatar) return;
-                  // Show template modal or custom message input
-                  document.getElementById('video-section')?.scrollIntoView({ behavior: 'smooth' });
+                  setExpandedOption(expandedOption === 'video' ? null : 'video');
                 }}
                 className={`relative overflow-hidden rounded-2xl group ${
                   hasPhotoAvatar ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
-                }`}
+                } ${expandedOption === 'video' ? 'ring-2 ring-gold' : ''}`}
                 whileHover={hasPhotoAvatar ? { y: -8, scale: 1.02 } : {}}
                 transition={{ duration: 0.3 }}
               >
@@ -921,7 +1006,7 @@ export function EchoSimPage({ onNavigate }) {
                     }`}
                     whileHover={hasPhotoAvatar ? { scale: 1.05 } : {}}
                   >
-                    Start Creating
+                    {expandedOption === 'video' ? 'Selected' : 'Select'}
                   </motion.div>
                 </div>
 
@@ -930,11 +1015,13 @@ export function EchoSimPage({ onNavigate }) {
               </motion.div>
             </FadeIn>
 
-            {/* Option 2: Live Conversation */}
-            <FadeIn delay={0.2}>
+            {/* Option 3: Live Avatar */}
+            <FadeIn delay={0.25}>
               <motion.div
-                onClick={() => setShowChatConfig(true)}
-                className="relative overflow-hidden rounded-2xl cursor-pointer group"
+                onClick={() => setExpandedOption(expandedOption === 'live' ? null : 'live')}
+                className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
+                  expandedOption === 'live' ? 'ring-2 ring-purple-400' : ''
+                }`}
                 whileHover={{ y: -8, scale: 1.02 }}
                 transition={{ duration: 0.3 }}
               >
@@ -1005,7 +1092,7 @@ export function EchoSimPage({ onNavigate }) {
                     className="mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium"
                     whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(168, 85, 247, 0.5)' }}
                   >
-                    Start Live Chat
+                    {expandedOption === 'live' ? 'Selected' : 'Select'}
                   </motion.div>
                 </div>
 
@@ -1099,97 +1186,179 @@ export function EchoSimPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Video Generation Details - Expandable Section */}
-        <div id="video-section" className="scroll-mt-8">
-          <FadeIn delay={0.3}>
-            <div className="glass-card p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <Film className="w-6 h-6 text-gold" />
-                <h3 className="text-xl font-serif text-cream">Video Generation Options</h3>
-              </div>
-
-              {/* Custom Message */}
-              <div className="mb-6">
-                <label className="block text-cream/70 text-sm mb-2">Custom Message</label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={customMessage}
-                    onChange={(e) => setCustomMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleCustomMessage()}
-                    placeholder="Type what your avatar should say..."
-                    disabled={!hasPhotoAvatar}
-                    className="flex-1 px-4 py-3 rounded-lg bg-navy/60 border border-cream/10 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50 disabled:opacity-50"
-                  />
-                  <motion.button
-                    onClick={handleCustomMessage}
-                    disabled={!customMessage.trim() || !hasPhotoAvatar}
-                    className="px-5 py-3 rounded-lg bg-gold text-navy font-medium disabled:opacity-50 flex items-center gap-2"
-                    whileHover={customMessage.trim() && hasPhotoAvatar ? { scale: 1.02 } : {}}
-                    whileTap={customMessage.trim() && hasPhotoAvatar ? { scale: 0.98 } : {}}
-                  >
-                    <Wand2 className="w-4 h-4" />
-                    Create
-                  </motion.button>
-                </div>
-              </div>
-
-              {/* Event Templates */}
-              <div>
-                <label className="block text-cream/70 text-sm mb-3">Event Templates</label>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {eventTemplates.map((template) => {
-                    const Icon = template.icon;
-                    return (
-                      <motion.button
-                        key={template.id}
-                        onClick={() => handleTemplateSelect(template)}
-                        disabled={!hasPhotoAvatar}
-                        className={`p-4 rounded-lg border text-left transition-all ${
-                          hasPhotoAvatar
-                            ? 'border-cream/20 bg-navy/40 hover:border-gold/40 hover:bg-gold/5'
-                            : 'border-cream/10 bg-navy/20 opacity-50 cursor-not-allowed'
-                        }`}
-                        whileHover={hasPhotoAvatar ? { y: -2 } : {}}
-                      >
-                        <Icon className="w-5 h-5 text-gold mb-2" />
-                        <h4 className="text-cream font-medium text-sm mb-1">{template.name}</h4>
-                        <p className="text-cream/50 text-xs">{template.description}</p>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-
-        {/* Video Archive Card - moves down when options expanded */}
-        <FadeIn delay={0.3}>
-          <Link to="/video-archive" className="block mb-10">
+        {/* Expandable Sections */}
+        <AnimatePresence mode="wait">
+          {expandedOption === 'chat' && (
             <motion.div
-              className="glass-card p-6 border-2 border-transparent hover:border-blue-500/30 transition-all cursor-pointer"
-              whileHover={{ y: -2 }}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                  <Film className="w-7 h-7 text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-serif text-cream">Video Archive</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs">
-                      Your Videos
-                    </span>
+              <FadeIn delay={0.1}>
+                <div className="glass-card p-6 border-2 border-blue-400/30">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <MessageCircle className="w-6 h-6 text-blue-400" />
+                      <h3 className="text-xl font-serif text-cream">Text Chat Options</h3>
+                    </div>
+                    <motion.button
+                      onClick={handleOpenTextChat}
+                      className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Open Chat
+                    </motion.button>
                   </div>
-                  <p className="text-cream/60 text-sm">
-                    View all your generated videos, check status of pending videos, and download completed ones.
+                  <p className="text-cream/60">
+                    Start a text-only conversation with your Echo. Get instant, personalized responses based on your personality and life stories.
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-cream/50" />
-              </div>
+              </FadeIn>
             </motion.div>
-          </Link>
+          )}
+
+          {expandedOption === 'video' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8"
+            >
+              <FadeIn delay={0.1}>
+                <div className="glass-card p-6 border-2 border-gold/30">
+                  <div className="flex items-center gap-4 mb-6">
+                    <Film className="w-6 h-6 text-gold" />
+                    <h3 className="text-xl font-serif text-cream">Video Generation Options</h3>
+                  </div>
+
+                  {/* Custom Message */}
+                  <div className="mb-6">
+                    <label className="block text-cream/70 text-sm mb-2">Custom Message</label>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={customMessage}
+                        onChange={(e) => setCustomMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleCustomMessage()}
+                        placeholder="Type what your avatar should say..."
+                        disabled={!hasPhotoAvatar}
+                        className="flex-1 px-4 py-3 rounded-lg bg-navy/60 border border-cream/10 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50 disabled:opacity-50"
+                      />
+                      <motion.button
+                        onClick={handleCustomMessage}
+                        disabled={!customMessage.trim() || !hasPhotoAvatar}
+                        className="px-5 py-3 rounded-lg bg-gold text-navy font-medium disabled:opacity-50 flex items-center gap-2"
+                        whileHover={customMessage.trim() && hasPhotoAvatar ? { scale: 1.02 } : {}}
+                        whileTap={customMessage.trim() && hasPhotoAvatar ? { scale: 0.98 } : {}}
+                      >
+                        <Wand2 className="w-4 h-4" />
+                        Create
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Event Templates */}
+                  <div>
+                    <label className="block text-cream/70 text-sm mb-3">Event Templates</label>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {eventTemplates.map((template) => {
+                        const Icon = template.icon;
+                        return (
+                          <motion.button
+                            key={template.id}
+                            onClick={() => handleTemplateSelect(template)}
+                            disabled={!hasPhotoAvatar}
+                            className={`p-4 rounded-lg border text-left transition-all ${
+                              hasPhotoAvatar
+                                ? 'border-cream/20 bg-navy/40 hover:border-gold/40 hover:bg-gold/5'
+                                : 'border-cream/10 bg-navy/20 opacity-50 cursor-not-allowed'
+                            }`}
+                            whileHover={hasPhotoAvatar ? { y: -2 } : {}}
+                          >
+                            <Icon className="w-5 h-5 text-gold mb-2" />
+                            <h4 className="text-cream font-medium text-sm mb-1">{template.name}</h4>
+                            <p className="text-cream/50 text-xs">{template.description}</p>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            </motion.div>
+          )}
+
+          {expandedOption === 'live' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8"
+            >
+              <FadeIn delay={0.1}>
+                <div className="glass-card p-6 border-2 border-purple-400/30">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <Radio className="w-6 h-6 text-purple-400" />
+                      <h3 className="text-xl font-serif text-cream">Live Avatar Options</h3>
+                    </div>
+                    <motion.button
+                      onClick={() => setShowChatConfig(true)}
+                      className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Configure & Start
+                    </motion.button>
+                  </div>
+                  <p className="text-cream/60 mb-4">
+                    Start a real-time video conversation with your Echo. Features voice responses with perfect lip-sync and natural chat flow.
+                  </p>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-cream text-sm font-medium mb-1">Low Latency</p>
+                      <p className="text-cream/50 text-xs">~300ms response time</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-cream text-sm font-medium mb-1">WebRTC</p>
+                      <p className="text-cream/50 text-xs">Real-time streaming</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-cream text-sm font-medium mb-1">Up to 20min</p>
+                      <p className="text-cream/50 text-xs">Session duration</p>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Video Archive - Compact Design */}
+        <FadeIn delay={0.35}>
+          <div className="flex items-center justify-between p-4 glass-card border-l-4 border-gold hover:border-gold-light transition-colors group">
+            <div className="flex items-center gap-3">
+              <Film className="w-5 h-5 text-gold" />
+              <div>
+                <h4 className="text-cream font-medium">Video Archive</h4>
+                <p className="text-cream/50 text-xs">View & manage your generated videos</p>
+              </div>
+            </div>
+            <Link to="/video-archive">
+              <motion.button
+                className="px-4 py-2 rounded-lg bg-gold/10 text-gold hover:bg-gold/20 transition-colors flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Open Archive
+                <ChevronRight className="w-4 h-4" />
+              </motion.button>
+            </Link>
+          </div>
         </FadeIn>
 
       </div>
