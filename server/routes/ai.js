@@ -2413,9 +2413,9 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
     }
 
     // Check status with HeyGen
-    const statusResponse = await fetch(`https://api.heygen.com/v2/video_status.get?video_id=${video.videoId}`, {
+    const statusResponse = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${video.videoId}`, {
       headers: {
-        'X-Api-Key': config.apiKey,
+        'x-api-key': config.apiKey,
       },
     });
 
