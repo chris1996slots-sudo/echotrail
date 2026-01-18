@@ -842,28 +842,275 @@ export function EchoSimPage({ onNavigate }) {
           </div>
         </FadeIn>
 
-        {/* Two Main Sections - Always Visible */}
-        <div className="space-y-6">
-          {/* Section 1: Video Generation */}
-          <FadeIn delay={0.15}>
+        {/* Three Main Options - Side by Side */}
+        <div className="mb-12">
+          <h2 className="text-xl font-serif text-cream mb-6 text-center">Choose Your Experience</h2>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Option 1: Video Generation */}
+            <FadeIn delay={0.15}>
+              <motion.div
+                onClick={() => {
+                  if (!hasPhotoAvatar) return;
+                  // Show template modal or custom message input
+                  document.getElementById('video-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`relative overflow-hidden rounded-2xl group ${
+                  hasPhotoAvatar ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                }`}
+                whileHover={hasPhotoAvatar ? { y: -8, scale: 1.02 } : {}}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-gold/20 via-gold/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                {/* Animated border */}
+                <div className="absolute inset-0 rounded-2xl border-2 border-gold/30 group-hover:border-gold/60 transition-colors" />
+
+                {/* Content */}
+                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                  {/* Icon */}
+                  <motion.div
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <Film className="w-10 h-10 text-gold" />
+                  </motion.div>
+
+                  {/* Title */}
+                  <h3 className="text-2xl font-serif text-cream mb-3">Talking Video</h3>
+                  <p className="text-cream/60 text-sm mb-6">Create videos with perfect lip-sync</p>
+
+                  {/* Features */}
+                  <div className="space-y-3 mb-auto">
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
+                        <span className="text-gold text-xs">✓</span>
+                      </div>
+                      <span>Custom messages</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
+                        <span className="text-gold text-xs">✓</span>
+                      </div>
+                      <span>Event templates</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
+                        <span className="text-gold text-xs">✓</span>
+                      </div>
+                      <span>Download & share</span>
+                    </div>
+                  </div>
+
+                  {/* Status Badge */}
+                  {!hasPhotoAvatar && (
+                    <div className="mt-4 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs">
+                      ⚠ Photo Avatar Required
+                    </div>
+                  )}
+
+                  {/* CTA */}
+                  <motion.div
+                    className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                      hasPhotoAvatar
+                        ? 'bg-gradient-to-r from-gold to-gold-light text-navy'
+                        : 'bg-navy/40 text-cream/40'
+                    }`}
+                    whileHover={hasPhotoAvatar ? { scale: 1.05 } : {}}
+                  >
+                    Start Creating
+                  </motion.div>
+                </div>
+
+                {/* Decorative corner */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gold/10 to-transparent rounded-bl-full" />
+              </motion.div>
+            </FadeIn>
+
+            {/* Option 2: Live Conversation */}
+            <FadeIn delay={0.2}>
+              <motion.div
+                onClick={() => setShowChatConfig(true)}
+                className="relative overflow-hidden rounded-2xl cursor-pointer group"
+                whileHover={{ y: -8, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-pink-500/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                {/* Animated border */}
+                <div className="absolute inset-0 rounded-2xl border-2 border-purple-500/30 group-hover:border-purple-400/60 transition-colors" />
+
+                {/* Floating particles */}
+                <motion.div
+                  className="absolute top-10 right-10 w-2 h-2 rounded-full bg-purple-400/40"
+                  animate={{ y: [0, -20, 0], opacity: [0.4, 0.8, 0.4] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+                <motion.div
+                  className="absolute bottom-20 left-10 w-3 h-3 rounded-full bg-pink-400/30"
+                  animate={{ y: [0, 20, 0], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+                />
+
+                {/* Content */}
+                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                  {/* Icon */}
+                  <motion.div
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                    animate={{ boxShadow: ['0 0 0 0 rgba(168, 85, 247, 0)', '0 0 0 20px rgba(168, 85, 247, 0)', '0 0 0 0 rgba(168, 85, 247, 0)'] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Radio className="w-10 h-10 text-purple-400" />
+                  </motion.div>
+
+                  {/* Title */}
+                  <h3 className="text-2xl font-serif text-cream mb-3">Live Avatar</h3>
+                  <p className="text-cream/60 text-sm mb-6">Real-time interactive conversation</p>
+
+                  {/* Features */}
+                  <div className="space-y-3 mb-auto">
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                        <span className="text-purple-400 text-xs">✓</span>
+                      </div>
+                      <span>Voice responses</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                        <span className="text-purple-400 text-xs">✓</span>
+                      </div>
+                      <span>Lip-sync video</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                        <span className="text-purple-400 text-xs">✓</span>
+                      </div>
+                      <span>Natural chat flow</span>
+                    </div>
+                  </div>
+
+                  {/* Live Badge */}
+                  <div className="mt-4 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                    Live Streaming
+                  </div>
+
+                  {/* CTA */}
+                  <motion.div
+                    className="mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium"
+                    whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(168, 85, 247, 0.5)' }}
+                  >
+                    Start Live Chat
+                  </motion.div>
+                </div>
+
+                {/* Decorative corner */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/10 to-transparent rounded-bl-full" />
+              </motion.div>
+            </FadeIn>
+
+            {/* Option 3: Text Chat */}
+            <FadeIn delay={0.25}>
+              <motion.div
+                onClick={handleOpenTextChat}
+                className="relative overflow-hidden rounded-2xl cursor-pointer group"
+                whileHover={{ y: -8, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-cyan-500/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                {/* Animated border */}
+                <div className="absolute inset-0 rounded-2xl border-2 border-blue-500/30 group-hover:border-cyan-400/60 transition-colors" />
+
+                {/* Message bubbles animation */}
+                <motion.div
+                  className="absolute top-16 right-12 w-8 h-6 rounded-lg bg-blue-400/20 border border-blue-400/30"
+                  animate={{ x: [0, 5, 0], opacity: [0.2, 0.5, 0.2] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+                <motion.div
+                  className="absolute top-28 right-16 w-10 h-6 rounded-lg bg-cyan-400/20 border border-cyan-400/30"
+                  animate={{ x: [0, -5, 0], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
+                />
+
+                {/* Content */}
+                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                  {/* Icon */}
+                  <motion.div
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                    whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <MessageCircle className="w-10 h-10 text-blue-400" />
+                  </motion.div>
+
+                  {/* Title */}
+                  <h3 className="text-2xl font-serif text-cream mb-3">Text Chat</h3>
+                  <p className="text-cream/60 text-sm mb-6">Simple text-only conversation</p>
+
+                  {/* Features */}
+                  <div className="space-y-3 mb-auto">
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 text-xs">✓</span>
+                      </div>
+                      <span>Instant responses</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 text-xs">✓</span>
+                      </div>
+                      <span>Personal wisdom</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-cream/70 text-sm">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 text-xs">✓</span>
+                      </div>
+                      <span>Chat history</span>
+                    </div>
+                  </div>
+
+                  {/* Simple Badge */}
+                  <div className="mt-4 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs">
+                    Quick & Easy
+                  </div>
+
+                  {/* CTA */}
+                  <motion.div
+                    className="mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    Open Chat
+                  </motion.div>
+                </div>
+
+                {/* Decorative corner */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-bl-full" />
+              </motion.div>
+            </FadeIn>
+          </div>
+        </div>
+
+        {/* Video Generation Details - Expandable Section */}
+        <div id="video-section" className="scroll-mt-8">
+          <FadeIn delay={0.3}>
             <div className="glass-card p-6">
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-cream/10">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center">
-                  <Film className="w-6 h-6 text-gold" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-medium text-cream">Create Talking Video</h3>
-                  <p className="text-cream/50 text-sm">Generate videos with lip-sync</p>
-                </div>
-                {!hasPhotoAvatar && (
-                  <span className="text-red-400 text-xs">⚠ Photo Avatar needed</span>
-                )}
+              <div className="flex items-center gap-4 mb-6">
+                <Film className="w-6 h-6 text-gold" />
+                <h3 className="text-xl font-serif text-cream">Video Generation Options</h3>
               </div>
 
               {/* Custom Message */}
               <div className="mb-6">
-                <label className="block text-cream/70 text-sm mb-2">Your Message</label>
+                <label className="block text-cream/70 text-sm mb-2">Custom Message</label>
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -889,7 +1136,7 @@ export function EchoSimPage({ onNavigate }) {
 
               {/* Event Templates */}
               <div>
-                <label className="block text-cream/70 text-sm mb-3">Or Choose a Template</label>
+                <label className="block text-cream/70 text-sm mb-3">Event Templates</label>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {eventTemplates.map((template) => {
                     const Icon = template.icon;
@@ -911,110 +1158,6 @@ export function EchoSimPage({ onNavigate }) {
                       </motion.button>
                     );
                   })}
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-
-          {/* Section 2: Live Conversation */}
-          <FadeIn delay={0.2}>
-            <div className="glass-card p-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-cream/10">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                    <Radio className="w-6 h-6 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-medium text-cream">Live Conversation</h3>
-                    <p className="text-cream/50 text-sm">Real-time chat with voice & video</p>
-                  </div>
-                </div>
-                <motion.button
-                  onClick={() => setShowChatConfig(true)}
-                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium flex items-center gap-2 hover:from-purple-500 hover:to-pink-500"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Start Chat
-                </motion.button>
-              </div>
-
-              {/* Features */}
-              <div className="grid sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-lg bg-navy/40">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-2">
-                    <span className="text-purple-400 font-medium text-sm">1</span>
-                  </div>
-                  <p className="text-cream text-xs font-medium mb-1">Connect</p>
-                  <p className="text-cream/50 text-xs">Instant WebRTC session</p>
-                </div>
-                <div className="p-3 rounded-lg bg-navy/40">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-2">
-                    <span className="text-purple-400 font-medium text-sm">2</span>
-                  </div>
-                  <p className="text-cream text-xs font-medium mb-1">Chat</p>
-                  <p className="text-cream/50 text-xs">Type your messages</p>
-                </div>
-                <div className="p-3 rounded-lg bg-navy/40">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-2">
-                    <span className="text-purple-400 font-medium text-sm">3</span>
-                  </div>
-                  <p className="text-cream text-xs font-medium mb-1">Watch</p>
-                  <p className="text-cream/50 text-xs">Avatar responds live</p>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-
-          {/* Section 3: Text Chat */}
-          <FadeIn delay={0.25}>
-            <div className="glass-card p-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-cream/10">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-medium text-cream">Text Chat</h3>
-                    <p className="text-cream/50 text-sm">Chat with your Echo via text only</p>
-                  </div>
-                </div>
-                <motion.button
-                  onClick={handleOpenTextChat}
-                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium flex items-center gap-2 hover:from-blue-500 hover:to-cyan-500"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Start Chat
-                </motion.button>
-              </div>
-
-              {/* Features */}
-              <div className="grid sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-lg bg-navy/40">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
-                    <span className="text-blue-400 font-medium text-sm">1</span>
-                  </div>
-                  <p className="text-cream text-xs font-medium mb-1">Simple</p>
-                  <p className="text-cream/50 text-xs">Text-only conversation</p>
-                </div>
-                <div className="p-3 rounded-lg bg-navy/40">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
-                    <span className="text-blue-400 font-medium text-sm">2</span>
-                  </div>
-                  <p className="text-cream text-xs font-medium mb-1">Fast</p>
-                  <p className="text-cream/50 text-xs">Instant responses</p>
-                </div>
-                <div className="p-3 rounded-lg bg-navy/40">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
-                    <span className="text-blue-400 font-medium text-sm">3</span>
-                  </div>
-                  <p className="text-cream text-xs font-medium mb-1">Personal</p>
-                  <p className="text-cream/50 text-xs">Based on your persona</p>
                 </div>
               </div>
             </div>
