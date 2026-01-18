@@ -23,43 +23,44 @@ import {
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 
-// Define the family tree structure with predefined slots
-const FAMILY_STRUCTURE = {
-  // Children (above user)
-  children: [
-    { relationship: 'Son', label: 'Son', gender: 'male' },
-    { relationship: 'Daughter', label: 'Daughter', gender: 'female' },
-  ],
-
-  // User level (middle)
-  siblings: [
-    { relationship: 'Brother', label: 'Brother', gender: 'male' },
-    { relationship: 'Sister', label: 'Sister', gender: 'female' },
-  ],
-
-  // Parents (below user)
-  parents: [
-    { relationship: 'Father', label: 'Father', gender: 'male' },
-    { relationship: 'Mother', label: 'Mother', gender: 'female' },
-  ],
-
-  // Aunts & Uncles (siblings of parents)
-  auntsUncles: [
-    { relationship: 'Uncle', label: 'Uncle', gender: 'male' },
-    { relationship: 'Aunt', label: 'Aunt', gender: 'female' },
-  ],
-
-  // Grandparents (below parents)
-  grandparents: [
-    { relationship: 'Grandfather', label: 'Grandfather', gender: 'male' },
-    { relationship: 'Grandmother', label: 'Grandmother', gender: 'female' },
-  ],
-
-  // Great-grandparents (below grandparents)
-  greatGrandparents: [
-    { relationship: 'Great-Grandfather', label: 'Great-Grandfather', gender: 'male' },
-    { relationship: 'Great-Grandmother', label: 'Great-Grandmother', gender: 'female' },
-  ],
+// Define relationship types for flexible member addition
+const RELATIONSHIP_TYPES = {
+  children: {
+    label: 'Children',
+    options: ['Son', 'Daughter', 'Child'],
+    icon: '👶',
+    color: 'from-green-500/20 to-emerald-500/10'
+  },
+  siblings: {
+    label: 'Siblings',
+    options: ['Brother', 'Sister', 'Sibling'],
+    icon: '👥',
+    color: 'from-blue-500/20 to-cyan-500/10'
+  },
+  parents: {
+    label: 'Parents',
+    options: ['Father', 'Mother', 'Parent'],
+    icon: '👨‍👩',
+    color: 'from-purple-500/20 to-pink-500/10'
+  },
+  auntsUncles: {
+    label: 'Aunts & Uncles',
+    options: ['Uncle', 'Aunt'],
+    icon: '👔',
+    color: 'from-orange-500/20 to-yellow-500/10'
+  },
+  grandparents: {
+    label: 'Grandparents',
+    options: ['Grandfather', 'Grandmother', 'Grandparent'],
+    icon: '👴',
+    color: 'from-indigo-500/20 to-violet-500/10'
+  },
+  greatGrandparents: {
+    label: 'Great-Grandparents',
+    options: ['Great-Grandfather', 'Great-Grandmother', 'Great-Grandparent'],
+    icon: '🎩',
+    color: 'from-gray-500/20 to-slate-500/10'
+  },
 };
 
 export function FamilyTreePage({ onNavigate }) {
@@ -115,9 +116,30 @@ export function FamilyTreePage({ onNavigate }) {
     }
   };
 
-  // Get member by relationship (returns first match)
-  const getMemberByRelationship = (relationship) => {
-    return familyMembers.find(m => m.relationship === relationship);
+  // Get members by category
+  const getMembersByCategory = (category) => {
+    const categoryDef = RELATIONSHIP_TYPES[category];
+    return familyMembers.filter(m => categoryDef.options.includes(m.relationship));
+  };
+
+  // Handle adding new member to category
+  const handleAddMember = (category) => {
+    const categoryDef = RELATIONSHIP_TYPES[category];
+    const defaultRelationship = categoryDef.options[0]; // Use first option as default
+
+    setSelectedRelationship(defaultRelationship);
+    setFormData({
+      name: '',
+      relationship: defaultRelationship,
+      birthYear: '',
+      birthplace: '',
+      bio: '',
+      imageData: null,
+      voiceData: null,
+      isDeceased: false,
+      deathYear: ''
+    });
+    setShowAddModal(true);
   };
 
   // Handle clicking on an empty slot
