@@ -1923,7 +1923,7 @@ export function PersonaPage({ onNavigate }) {
 
                   {/* Other Avatars (if more than 1) */}
                   {avatarImages.length > 1 && (
-                    <div className="border-t border-gold/20 pt-4">
+                    <div className="border-t border-gold/20 pt-4 mb-4">
                       <p className="text-cream/50 text-sm mb-3">Switch to another avatar:</p>
                       <div className="flex gap-2 overflow-x-auto pb-2">
                         {avatarImages.filter(img => !(img.isActive || persona.activeAvatarId === img.id)).map((img) => (
@@ -1944,6 +1944,19 @@ export function PersonaPage({ onNavigate }) {
                       </div>
                     </div>
                   )}
+
+                  {/* Add New Avatar Photo Button */}
+                  <div className={`${avatarImages.length > 1 ? 'border-t border-gold/20 pt-4' : ''}`}>
+                    <motion.button
+                      onClick={() => setShowAvatarModal(true)}
+                      className="w-full p-4 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-xl flex items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span>Add New Avatar Photo</span>
+                    </motion.button>
+                  </div>
                 </div>
               </FadeIn>
             )}
