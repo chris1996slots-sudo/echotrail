@@ -46,7 +46,8 @@ import {
   Video,
   RefreshCw,
   Info,
-  Shield
+  Shield,
+  Lock
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -1342,9 +1343,7 @@ export function PersonaPage({ onNavigate }) {
     try {
       // Save vibe and mark setup as complete
       setProcessingStep('Saving your preferences...');
-      await api.updatePersona({
-        echoVibe: selectedVibe,
-      });
+      await api.updateVibe(selectedVibe);
 
       await api.updateAvatarSettings({
         avatarSetupComplete: true,
@@ -1949,11 +1948,12 @@ export function PersonaPage({ onNavigate }) {
               </FadeIn>
             )}
 
-            {/* Create New Avatar Section */}
-            <div className="glass-card p-6">
-              <h3 className="text-xl font-serif text-cream mb-6">
-                {hasImages ? 'Create New Avatar' : 'Create Your First Avatar'}
-              </h3>
+            {/* Create New Avatar Section - Only show if setup not complete */}
+            {!persona.avatarSetupComplete && (
+              <div className="glass-card p-6">
+                <h3 className="text-xl font-serif text-cream mb-6">
+                  Create Your Avatar
+                </h3>
 
             {/* Step Progress Header */}
             <div className="flex items-center justify-center mb-2 overflow-x-auto pb-2">
@@ -1962,12 +1962,18 @@ export function PersonaPage({ onNavigate }) {
                   const Icon = step.icon;
                   const isActive = index === avatarStep;
                   const isCompleted = index < avatarStep;
+
+                  // Step-by-step validation: can only access current step or completed steps
+                  const canAccess = isActive || isCompleted;
+                  const isLocked = !canAccess;
+
                   return (
                     <div key={step.id} className="flex items-center">
                       <motion.button
-                        onClick={() => setAvatarStep(index)}
-                        className={`flex flex-col items-center ${isActive || isCompleted ? 'cursor-pointer' : 'cursor-default'}`}
-                        whileHover={isActive || isCompleted ? { scale: 1.05 } : {}}
+                        onClick={() => canAccess && setAvatarStep(index)}
+                        disabled={isLocked}
+                        className={`flex flex-col items-center ${canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+                        whileHover={canAccess ? { scale: 1.05 } : {}}
                       >
                         <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all ${
                           isActive
@@ -1978,6 +1984,8 @@ export function PersonaPage({ onNavigate }) {
                         }`}>
                           {isCompleted ? (
                             <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />
+                          ) : isLocked ? (
+                            <Lock className="w-4 h-4 md:w-5 md:h-5" />
                           ) : (
                             <Icon className="w-5 h-5 md:w-6 md:h-6" />
                           )}
@@ -2171,6 +2179,7 @@ export function PersonaPage({ onNavigate }) {
               )}
             </AnimatePresence>
             </div>
+            )}
           </div>
         );
 
