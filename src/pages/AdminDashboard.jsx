@@ -60,7 +60,10 @@ import {
   Archive,
   RefreshCcw,
   Wifi,
-  Circle
+  Circle,
+  FileImage,
+  HardDrive,
+  Film
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -2116,6 +2119,75 @@ Ask clarifying questions if needed, then help them write or refine their message
                       <p className="text-cream/50 text-xs">Legacy Score</p>
                       <p className="text-gold">{userDetails.persona.legacyScore}%</p>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy Journey - Mission Progress */}
+              {userDetails.legacyProgress && (
+                <div className="glass-card p-6 mb-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <Award className="w-6 h-6 text-gold" />
+                      <div>
+                        <h3 className="text-lg font-serif text-cream">Legacy Journey</h3>
+                        <p className="text-cream/50 text-sm">{userDetails.legacyProgress.percent}% Complete - {userDetails.legacyProgress.stage}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-serif text-gold">{userDetails.legacyProgress.percent}%</p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-6">
+                    <div className="h-3 bg-navy-dark rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-gold to-gold-light transition-all duration-500"
+                        style={{ width: `${userDetails.legacyProgress.percent}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-2 text-xs text-cream/40">
+                      <span>Seedling</span>
+                      <span>Growing</span>
+                      <span>Thriving</span>
+                      <span>Eternal</span>
+                    </div>
+                  </div>
+
+                  {/* Mission Cards */}
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {userDetails.legacyProgress.missions?.map((mission) => (
+                      <div
+                        key={mission.id}
+                        className={`p-4 rounded-lg border transition-all ${
+                          mission.completed
+                            ? 'bg-green-500/10 border-green-500/30'
+                            : 'bg-navy-dark/30 border-cream/10'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              {mission.completed && <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />}
+                              {!mission.completed && <Circle className="w-4 h-4 text-cream/30 flex-shrink-0" />}
+                              <h4 className={`text-sm font-medium ${mission.completed ? 'text-green-400' : 'text-cream'}`}>
+                                {mission.name}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-cream/50 ml-6">{mission.description}</p>
+                            {mission.progress && (
+                              <p className="text-xs text-gold mt-1 ml-6">{mission.progress}</p>
+                            )}
+                          </div>
+                          <div className={`text-xs font-medium px-2 py-1 rounded ${
+                            mission.completed ? 'bg-green-500/20 text-green-400' : 'bg-cream/10 text-cream/50'
+                          }`}>
+                            {mission.points}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -4209,29 +4281,48 @@ Ask clarifying questions if needed, then help them write or refine their message
                     <Database className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-serif text-cream">System Info</h3>
-                    <p className="text-cream/50 text-sm">Overview of system settings</p>
+                    <h3 className="text-lg font-serif text-cream">System Configuration</h3>
+                    <p className="text-cream/50 text-sm">Platform limits and settings</p>
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Max Photos per User</p>
-                    <p className="text-cream font-medium">10 Photos</p>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 bg-gradient-to-br from-blue-500/10 to-navy-dark/30 rounded-xl border border-blue-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Image className="w-4 h-4 text-blue-400" />
+                      <p className="text-cream/70 text-xs font-medium">Max Photos</p>
+                    </div>
+                    <p className="text-cream font-semibold text-lg">10</p>
+                    <p className="text-cream/40 text-xs mt-1">per user</p>
                   </div>
-                  <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Supported Image Formats</p>
-                    <p className="text-cream font-medium">JPG, PNG, WebP</p>
+
+                  <div className="p-4 bg-gradient-to-br from-green-500/10 to-navy-dark/30 rounded-xl border border-green-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileImage className="w-4 h-4 text-green-400" />
+                      <p className="text-cream/70 text-xs font-medium">Image Formats</p>
+                    </div>
+                    <p className="text-cream font-semibold text-sm">JPG, PNG, WebP</p>
+                    <p className="text-cream/40 text-xs mt-1">supported</p>
                   </div>
-                  <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Max Image Size</p>
-                    <p className="text-cream font-medium">10 MB</p>
+
+                  <div className="p-4 bg-gradient-to-br from-orange-500/10 to-navy-dark/30 rounded-xl border border-orange-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <HardDrive className="w-4 h-4 text-orange-400" />
+                      <p className="text-cream/70 text-xs font-medium">Max File Size</p>
+                    </div>
+                    <p className="text-cream font-semibold text-lg">10 MB</p>
+                    <p className="text-cream/40 text-xs mt-1">per image</p>
                   </div>
-                  <div className="p-4 bg-navy-dark/30 rounded-xl">
-                    <p className="text-cream/60 text-sm mb-1">Video Avatar Provider</p>
-                    <p className="text-cream font-medium">
+
+                  <div className="p-4 bg-gradient-to-br from-purple-500/10 to-navy-dark/30 rounded-xl border border-purple-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Film className="w-4 h-4 text-purple-400" />
+                      <p className="text-cream/70 text-xs font-medium">Avatar Provider</p>
+                    </div>
+                    <p className="text-cream font-semibold text-sm">
                       {stats?.avatarProvider || 'Not configured'}
                     </p>
+                    <p className="text-cream/40 text-xs mt-1">video generation</p>
                   </div>
                 </div>
               </div>
