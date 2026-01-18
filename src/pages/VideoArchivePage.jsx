@@ -39,16 +39,34 @@ export function VideoArchivePage() {
     if (!apiConfigured) return;
 
     const interval = setInterval(() => {
-      const pendingVideos = videos.filter(v => v.status === 'pending' || v.status === 'processing');
-      if (pendingVideos.length > 0) {
-        pendingVideos.forEach(video => {
-          handleRefresh(video);
-        });
-      }
+      // Use functional state update to avoid dependency on videos
+      setVideos(currentVideos => {
+        const pendingVideos = currentVideos.filter(v => v.status === 'pending' || v.status === 'processing');
+
+        if (pendingVideos.length > 0) {
+          // Refresh each pending video
+          pendingVideos.forEach(async (video) => {
+            if (video.status === 'completed' || video.status === 'failed') return;
+
+            try {
+              const updated = await api.refreshVideoStatus(video.id);
+              setVideos(prev => prev.map(v => v.id === updated.id ? updated : v));
+            } catch (error) {
+              // If API is not configured, disable auto-refresh silently
+              if (error.message?.includes('API not configured') || error.status === 503) {
+                setApiConfigured(false);
+              }
+              // Don't log other errors in auto-refresh to avoid console spam
+            }
+          });
+        }
+
+        return currentVideos; // Don't modify videos in this update
+      });
     }, 10000); // 10 seconds
 
     return () => clearInterval(interval);
-  }, [videos, apiConfigured]);
+  }, [apiConfigured]); // ONLY depend on apiConfigured, NOT on videos!
 
   const loadVideos = async () => {
     try {
