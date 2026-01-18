@@ -1946,17 +1946,20 @@ export function PersonaPage({ onNavigate }) {
                   )}
 
                   {/* Add New Avatar Photo Button */}
-                  <div className={`${avatarImages.length > 1 ? 'border-t border-gold/20 pt-4' : ''}`}>
-                    <motion.button
-                      onClick={() => setShowAvatarModal(true)}
-                      className="w-full p-4 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-xl flex items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all"
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <Plus className="w-5 h-5" />
-                      <span>Add New Avatar Photo</span>
-                    </motion.button>
-                  </div>
+                  {avatarImages.length < 10 && (
+                    <div className={`${avatarImages.length > 1 ? 'border-t border-gold/20 pt-4' : ''}`}>
+                      <label className="w-full p-4 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-xl flex items-center justify-center gap-3 text-cream/70 hover:text-cream transition-all cursor-pointer">
+                        <Plus className="w-5 h-5" />
+                        <span>Add New Avatar Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </FadeIn>
             )}
