@@ -127,7 +127,7 @@ export function AdminDashboard({ onNavigate }) {
   const navigate = useNavigate();
 
   // Valid tabs for URL routing
-  const validTabs = ['overview', 'support', 'referral', 'shop', 'apis', 'users', 'settings'];
+  const validTabs = ['overview', 'support', 'notifications', 'referral', 'shop', 'apis', 'users', 'settings'];
 
   // Get active tab from URL or default to 'overview'
   const activeTab = validTabs.includes(urlTab) ? urlTab : 'overview';
@@ -241,6 +241,21 @@ export function AdminDashboard({ onNavigate }) {
   const [shopProducts, setShopProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productDraft, setProductDraft] = useState({ name: '', description: '', price: 0, imageUrl: '', category: 'addon', isActive: true });
+
+  // Notification state
+  const [notificationTemplates, setNotificationTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [notificationForm, setNotificationForm] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    category: 'admin',
+    link: '',
+    actionText: ''
+  });
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [notificationSuccess, setNotificationSuccess] = useState(false);
 
   // Avatar Backgrounds state
   const [avatarBackgrounds, setAvatarBackgrounds] = useState([]);
@@ -499,6 +514,13 @@ Ask clarifying questions if needed, then help them write or refine their message
         const productsRes = await fetch(`${API_URL}/api/admin/shop/products`, { headers });
         if (productsRes.ok) {
           setShopProducts(await productsRes.json());
+        }
+      }
+
+      if (activeTab === 'notifications') {
+        const templatesRes = await fetch(`${API_URL}/api/notifications/admin/templates`, { headers });
+        if (templatesRes.ok) {
+          setNotificationTemplates(await templatesRes.json());
         }
       }
 
@@ -3029,6 +3051,322 @@ Ask clarifying questions if needed, then help them write or refine their message
                     </div>
                   </form>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === 'notifications' && (
+            <motion.div
+              key="notifications"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              {/* Success Message */}
+              {notificationSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass-card p-4 bg-green-500/10 border-2 border-green-500/30"
+                >
+                  <p className="text-green-400 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    Notification sent successfully!
+                  </p>
+                </motion.div>
+              )}
+
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Send Notification Panel */}
+                <div className="glass-card p-6">
+                  <h2 className="text-xl font-serif text-cream mb-6">Send Notification</h2>
+
+                  {/* Template Selector */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-cream/70 mb-2">
+                      Use Template (Optional)
+                    </label>
+                    <select
+                      value={selectedTemplate || ''}
+                      onChange={(e) => {
+                        const templateId = e.target.value;
+                        if (templateId) {
+                          const template = notificationTemplates.find(t => t.id === templateId);
+                          if (template) {
+                            setSelectedTemplate(templateId);
+                            setNotificationForm({
+                              title: template.title,
+                              message: template.message,
+                              type: template.type,
+                              category: template.category || 'admin',
+                              link: template.link || '',
+                              actionText: template.actionText || ''
+                            });
+                          }
+                        } else {
+                          setSelectedTemplate(null);
+                          setNotificationForm({
+                            title: '',
+                            message: '',
+                            type: 'info',
+                            category: 'admin',
+                            link: '',
+                            actionText: ''
+                          });
+                        }
+                      }}
+                      className="w-full px-4 py-3 bg-navy-dark/50 border border-cream/20 rounded-xl text-cream focus:border-gold/50 focus:outline-none"
+                    >
+                      <option value="">Custom Message</option>
+                      {notificationTemplates.map(template => (
+                        <option key={template.id} value={template.id}>
+                          {template.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Title */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-cream/70 mb-2">
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={notificationForm.title}
+                      onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })}
+                      placeholder="Enter notification title"
+                      className="w-full px-4 py-3 bg-navy-dark/50 border border-cream/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/50 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-cream/70 mb-2">
+                      Message *
+                    </label>
+                    <textarea
+                      value={notificationForm.message}
+                      onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })}
+                      placeholder="Enter notification message"
+                      rows={4}
+                      className="w-full px-4 py-3 bg-navy-dark/50 border border-cream/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/50 focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  {/* Type */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-cream/70 mb-2">
+                      Type
+                    </label>
+                    <select
+                      value={notificationForm.type}
+                      onChange={(e) => setNotificationForm({ ...notificationForm, type: e.target.value })}
+                      className="w-full px-4 py-3 bg-navy-dark/50 border border-cream/20 rounded-xl text-cream focus:border-gold/50 focus:outline-none"
+                    >
+                      <option value="info">Info (Blue)</option>
+                      <option value="success">Success (Green)</option>
+                      <option value="warning">Warning (Yellow)</option>
+                      <option value="error">Error (Red)</option>
+                      <option value="announcement">Announcement (Purple)</option>
+                    </select>
+                  </div>
+
+                  {/* Link (Optional) */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-cream/70 mb-2">
+                      Link (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={notificationForm.link}
+                      onChange={(e) => setNotificationForm({ ...notificationForm, link: e.target.value })}
+                      placeholder="/persona, /echo-sim, etc."
+                      className="w-full px-4 py-3 bg-navy-dark/50 border border-cream/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/50 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Action Text (Optional) */}
+                  {notificationForm.link && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-cream/70 mb-2">
+                        Action Button Text
+                      </label>
+                      <input
+                        type="text"
+                        value={notificationForm.actionText}
+                        onChange={(e) => setNotificationForm({ ...notificationForm, actionText: e.target.value })}
+                        placeholder="View Details, Complete Now, etc."
+                        className="w-full px-4 py-3 bg-navy-dark/50 border border-cream/20 rounded-xl text-cream placeholder-cream/30 focus:border-gold/50 focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {/* Send Buttons */}
+                  <div className="space-y-3">
+                    <button
+                      onClick={async () => {
+                        if (!notificationForm.title || !notificationForm.message) {
+                          alert('Please fill in title and message');
+                          return;
+                        }
+
+                        if (selectedUsers.length === 0) {
+                          alert('Please select at least one user');
+                          return;
+                        }
+
+                        setSendingNotification(true);
+                        setNotificationSuccess(false);
+
+                        try {
+                          await api.sendNotification(selectedUsers, notificationForm);
+                          setNotificationSuccess(true);
+                          setSelectedUsers([]);
+                          setNotificationForm({
+                            title: '',
+                            message: '',
+                            type: 'info',
+                            category: 'admin',
+                            link: '',
+                            actionText: ''
+                          });
+                          setSelectedTemplate(null);
+                          setTimeout(() => setNotificationSuccess(false), 5000);
+                        } catch (error) {
+                          console.error('Failed to send notification:', error);
+                          alert('Failed to send notification. Please try again.');
+                        } finally {
+                          setSendingNotification(false);
+                        }
+                      }}
+                      disabled={sendingNotification || !notificationForm.title || !notificationForm.message || selectedUsers.length === 0}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {sendingNotification ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Users className="w-5 h-5" />
+                          Send to Selected Users ({selectedUsers.length})
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (!notificationForm.title || !notificationForm.message) {
+                          alert('Please fill in title and message');
+                          return;
+                        }
+
+                        if (!confirm(`Send this notification to ALL users? This cannot be undone.`)) {
+                          return;
+                        }
+
+                        setSendingNotification(true);
+                        setNotificationSuccess(false);
+
+                        try {
+                          await api.broadcastNotification(notificationForm);
+                          setNotificationSuccess(true);
+                          setNotificationForm({
+                            title: '',
+                            message: '',
+                            type: 'info',
+                            category: 'admin',
+                            link: '',
+                            actionText: ''
+                          });
+                          setSelectedTemplate(null);
+                          setTimeout(() => setNotificationSuccess(false), 5000);
+                        } catch (error) {
+                          console.error('Failed to broadcast notification:', error);
+                          alert('Failed to broadcast notification. Please try again.');
+                        } finally {
+                          setSendingNotification(false);
+                        }
+                      }}
+                      disabled={sendingNotification || !notificationForm.title || !notificationForm.message}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {sendingNotification ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5" />
+                          Broadcast to All Users
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* User Selector */}
+                <div className="glass-card p-6">
+                  <h2 className="text-xl font-serif text-cream mb-6">Select Recipients</h2>
+
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                    {users.length === 0 ? (
+                      <p className="text-cream/50 text-sm text-center py-8">No users found</p>
+                    ) : (
+                      users.map(user => (
+                        <label
+                          key={user.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                            selectedUsers.includes(user.id)
+                              ? 'border-gold bg-gold/10'
+                              : 'border-cream/10 hover:border-cream/30'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(user.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedUsers([...selectedUsers, user.id]);
+                              } else {
+                                setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                              }
+                            }}
+                            className="w-5 h-5 rounded border-cream/30 text-gold focus:ring-gold/50"
+                          />
+                          <div className="flex-1">
+                            <p className="text-cream font-medium">
+                              {user.firstName} {user.lastName}
+                            </p>
+                            <p className="text-cream/50 text-sm">{user.email}</p>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+
+                  {users.length > 0 && (
+                    <div className="mt-4 flex items-center justify-between">
+                      <button
+                        onClick={() => setSelectedUsers(users.map(u => u.id))}
+                        className="text-sm text-gold hover:text-gold-light transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={() => setSelectedUsers([])}
+                        className="text-sm text-cream/50 hover:text-cream/70 transition-colors"
+                      >
+                        Clear Selection
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
