@@ -32,6 +32,8 @@ export function VideoArchivePage() {
 
   useEffect(() => {
     loadVideos();
+    // Scroll to top when page loads
+    window.scrollTo(0, 0);
   }, []);
 
   // Auto-refresh pending/processing videos every 10 seconds (only if API is configured)

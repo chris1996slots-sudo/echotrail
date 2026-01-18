@@ -441,34 +441,78 @@ router.delete('/voice-samples/:id', authenticate, async (req, res) => {
   }
 });
 
-// Helper to update legacy score
+// Helper to update legacy score - Mission-based system
 async function updateLegacyScore(prisma, userId) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
       persona: {
-        include: { lifeStories: true }
+        include: {
+          lifeStories: true,
+          avatarImages: true,
+          voiceSamples: true
+        }
       },
       memories: true,
       timeCapsules: true,
-      wisdomChats: true,
     }
   });
 
-  let score = 10; // Base score for registered user
-  score += Math.min(user.persona?.lifeStories?.length * 10 || 0, 30);
-  score += user.persona?.echoVibe !== 'compassionate' ? 5 : 0;
-  score += Math.min(user.memories?.length * 5 || 0, 20);
-  score += Math.min(user.timeCapsules?.length * 5 || 0, 15);
-  score += user.wisdomChats?.length > 0 ? 5 : 0;
+  let score = 0;
+  const missions = {};
 
-  // Check if values are customized
-  if (user.persona) {
-    const defaultValue = 50;
-    const isCustomized = [user.persona.humor, user.persona.empathy, user.persona.tradition, user.persona.adventure]
-      .some(v => v !== defaultValue);
-    if (isCustomized) score += 15;
-  }
+  // Mission 1: Complete Basic Profile (10%) - Auto-complete on registration
+  const hasProfile = user.persona !== null;
+  missions.basicProfile = hasProfile;
+  if (hasProfile) score += 10;
+
+  // Mission 2: Set Personality Values (10%) - Customize at least one value from default
+  const defaultValue = 50;
+  const hasCustomValues = user.persona && [
+    user.persona.humor,
+    user.persona.empathy,
+    user.persona.tradition,
+    user.persona.adventure,
+    user.persona.wisdom,
+    user.persona.creativity,
+    user.persona.patience,
+    user.persona.optimism
+  ].some(v => v !== defaultValue);
+  missions.personalityValues = hasCustomValues;
+  if (hasCustomValues) score += 10;
+
+  // Mission 3: Choose Echo Vibe (10%)
+  const hasEchoVibe = user.persona?.echoVibe && user.persona.echoVibe !== 'compassionate';
+  missions.echoVibe = hasEchoVibe;
+  if (hasEchoVibe) score += 10;
+
+  // Mission 4: Complete All Life Stories (20%) - All 5 categories
+  // Categories: Childhood, Education, Career, Relationships, Life Lessons
+  const lifeStoryCategories = user.persona?.lifeStories?.map(s => s.category) || [];
+  const uniqueCategories = new Set(lifeStoryCategories);
+  const allCategoriesComplete = uniqueCategories.size >= 5;
+  missions.lifeStories = allCategoriesComplete;
+  if (allCategoriesComplete) score += 20;
+
+  // Mission 5: Upload Photo Avatar (15%)
+  const hasPhotoAvatar = (user.persona?.avatarImages?.length || 0) > 0;
+  missions.photoAvatar = hasPhotoAvatar;
+  if (hasPhotoAvatar) score += 15;
+
+  // Mission 6: Create Voice Clone (15%)
+  const hasVoiceClone = user.persona?.elevenlabsVoiceId !== null;
+  missions.voiceClone = hasVoiceClone;
+  if (hasVoiceClone) score += 15;
+
+  // Mission 7: Add Memories (10%) - At least 3 memories
+  const hasMemories = (user.memories?.length || 0) >= 3;
+  missions.memories = hasMemories;
+  if (hasMemories) score += 10;
+
+  // Mission 8: Create Time Capsule (10%) - At least 1 capsule
+  const hasTimeCapsule = (user.timeCapsules?.length || 0) >= 1;
+  missions.timeCapsule = hasTimeCapsule;
+  if (hasTimeCapsule) score += 10;
 
   score = Math.min(score, 100);
 
@@ -477,7 +521,7 @@ async function updateLegacyScore(prisma, userId) {
     data: { legacyScore: score }
   });
 
-  return score;
+  return { score, missions };
 }
 
 export default router;
