@@ -336,23 +336,138 @@ export function FamilyTreePage({ onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy via-navy-light to-navy pt-20 pb-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light pt-16 pb-12 px-4 relative overflow-hidden">
+      {/* Animated Tree Background */}
+      <div className="absolute inset-0 pointer-events-none opacity-30">
+        <svg className="w-full h-full" viewBox="0 0 1000 1200" preserveAspectRatio="xMidYMax meet">
+          {/* Tree Trunk */}
+          <motion.path
+            d="M 500 1200 Q 480 1000 490 800 Q 495 600 500 400"
+            stroke="url(#trunkGradient)"
+            strokeWidth="20"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 2, ease: "easeInOut" }}
+          />
+
+          {/* Main Branches - spreading upward */}
+          {/* Left main branch */}
+          <motion.path
+            d="M 500 600 Q 400 550 300 500"
+            stroke="url(#branchGradient)"
+            strokeWidth="12"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 0.5 }}
+          />
+
+          {/* Right main branch */}
+          <motion.path
+            d="M 500 600 Q 600 550 700 500"
+            stroke="url(#branchGradient)"
+            strokeWidth="12"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 0.5 }}
+          />
+
+          {/* Upper branches */}
+          <motion.path
+            d="M 500 400 Q 420 350 350 300"
+            stroke="url(#branchGradient)"
+            strokeWidth="10"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, delay: 0.8 }}
+          />
+
+          <motion.path
+            d="M 500 400 Q 580 350 650 300"
+            stroke="url(#branchGradient)"
+            strokeWidth="10"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, delay: 0.8 }}
+          />
+
+          {/* Smaller branches */}
+          <motion.path
+            d="M 350 300 Q 320 250 280 200"
+            stroke="url(#branchGradient)"
+            strokeWidth="6"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+          />
+
+          <motion.path
+            d="M 650 300 Q 680 250 720 200"
+            stroke="url(#branchGradient)"
+            strokeWidth="6"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+          />
+
+          {/* Root system */}
+          <motion.path
+            d="M 490 1200 Q 450 1250 400 1300"
+            stroke="url(#rootGradient)"
+            strokeWidth="8"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 0.3 }}
+          />
+
+          <motion.path
+            d="M 510 1200 Q 550 1250 600 1300"
+            stroke="url(#rootGradient)"
+            strokeWidth="8"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 0.3 }}
+          />
+
+          {/* Gradients */}
+          <defs>
+            <linearGradient id="trunkGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#8B7355" stopOpacity="0.8" />
+            </linearGradient>
+
+            <linearGradient id="branchGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#9E8B6F" stopOpacity="0.3" />
+            </linearGradient>
+
+            <linearGradient id="rootGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor="#8B7355" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#654321" stopOpacity="0.5" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Compact Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold to-gold-light flex items-center justify-center">
-              <Users className="w-6 h-6 text-navy" />
-            </div>
-            <h1 className="text-4xl font-serif text-cream">Family Tree</h1>
-          </div>
-          <p className="text-cream/60 text-lg">
-            Build your legacy tree - add your children, grandchildren, and future generations
-          </p>
+          <h1 className="text-3xl font-serif text-cream flex items-center justify-center gap-2">
+            <Users className="w-7 h-7 text-gold" />
+            Your Family Tree
+          </h1>
         </motion.div>
 
         {/* Family Tree Structure */}
