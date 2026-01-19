@@ -24,6 +24,7 @@ import {
   Flame
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
+import { GameContainer } from '../components/games/GameContainer';
 import api from '../services/api';
 
 const gameTypes = [
@@ -129,8 +130,19 @@ export function EchoGamesPage() {
   };
 
   const handlePlayGame = (gameType) => {
-    // TODO: Navigate to game play interface
     setSelectedGame(gameType);
+  };
+
+  const handleGameComplete = (result) => {
+    // Reload game data to show updated progress
+    loadGameData();
+    // Keep game open to show results
+  };
+
+  const handleExitGame = () => {
+    setSelectedGame(null);
+    // Reload data in case game was completed
+    loadGameData();
   };
 
   const getLevelProgress = () => {
@@ -396,43 +408,26 @@ export function EchoGamesPage() {
                 </div>
               </div>
 
-              {/* Coming Soon Overlay for Game Play */}
+              {/* Game Play Modal */}
               <AnimatePresence>
                 {selectedGame && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-                    onClick={() => setSelectedGame(null)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto"
                   >
                     <motion.div
-                      initial={{ scale: 0.9, opacity: 0 }}
+                      initial={{ scale: 0.95, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-navy-dark border-2 border-green-500/30 rounded-2xl p-8 max-w-md w-full"
+                      exit={{ scale: 0.95, opacity: 0 }}
+                      className="bg-navy-dark border-2 border-green-500/30 rounded-2xl p-8 max-w-5xl w-full my-8"
                     >
-                      <button
-                        onClick={() => setSelectedGame(null)}
-                        className="absolute top-4 right-4 p-2 rounded-lg text-cream/50 hover:text-cream hover:bg-navy-light/50"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-
-                      <div className="text-center">
-                        <Sparkles className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                        <h2 className="text-2xl font-serif text-cream mb-3">Coming Soon!</h2>
-                        <p className="text-cream/60 mb-6">
-                          The game play interface is currently in development. Soon you'll be able to play interactive games and earn achievements!
-                        </p>
-                        <button
-                          onClick={() => setSelectedGame(null)}
-                          className="btn-primary w-full"
-                        >
-                          Got it!
-                        </button>
-                      </div>
+                      <GameContainer
+                        gameType={selectedGame}
+                        onComplete={handleGameComplete}
+                        onExit={handleExitGame}
+                      />
                     </motion.div>
                   </motion.div>
                 )}

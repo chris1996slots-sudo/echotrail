@@ -744,6 +744,12 @@ class ApiService {
     });
   }
 
+  async generateWisdomCard() {
+    return this.request('/api/wisdom-cards/generate', {
+      method: 'POST',
+    });
+  }
+
   // ===== Echo Games =====
   async getGameProgress() {
     return this.request('/api/games/progress');

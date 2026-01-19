@@ -36,6 +36,7 @@ export function WisdomCardsPage() {
   const [loading, setLoading] = useState(true);
   const [showAllCards, setShowAllCards] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     loadCards();
@@ -63,6 +64,22 @@ export function WisdomCardsPage() {
       loadCards();
     } catch (error) {
       console.error('Failed to mark card as read:', error);
+    }
+  };
+
+  const handleGenerateCard = async () => {
+    try {
+      setGenerating(true);
+      const newCard = await api.generateWisdomCard();
+      // Reload cards to show the new one
+      await loadCards();
+      // Switch to all cards view and navigate to the new card
+      setShowAllCards(true);
+      setCurrentCardIndex(0); // New card will be first (latest)
+    } catch (error) {
+      console.error('Failed to generate wisdom card:', error);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -130,6 +147,23 @@ export function WisdomCardsPage() {
             >
               <Star className="w-5 h-5 inline mr-2" />
               All Cards ({allCards.length})
+            </button>
+            <button
+              onClick={handleGenerateCard}
+              disabled={generating}
+              className="px-6 py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {generating ? (
+                <>
+                  <RefreshCw className="w-5 h-5 inline mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 inline mr-2" />
+                  Generate New Card
+                </>
+              )}
             </button>
           </div>
 
