@@ -1243,7 +1243,7 @@ export function FamilyTreePage({ onNavigate }) {
 
               {/* Chat Interface */}
               {showChat ? (
-                <div className="flex flex-col h-[400px]">
+                <div className="flex flex-col h-[500px]">
                   {/* Chat messages */}
                   <div className="flex-1 overflow-y-auto space-y-3 mb-4 p-4 bg-navy-dark/30 rounded-lg">
                     {chatMessages.length === 0 ? (
@@ -1282,7 +1282,7 @@ export function FamilyTreePage({ onNavigate }) {
                   </div>
 
                   {/* Chat input */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-4">
                     <input
                       type="text"
                       value={chatInput}
@@ -1299,6 +1299,55 @@ export function FamilyTreePage({ onNavigate }) {
                     >
                       Send
                     </button>
+                  </div>
+
+                  {/* Advanced Options */}
+                  <div className="border-t border-cream/10 pt-4">
+                    <p className="text-cream/50 text-xs mb-3">Advanced Interactions</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <motion.button
+                        onClick={() => {
+                          setShowProfileModal(false);
+                          setTimeout(() => onNavigate('echo-sim'), 0);
+                        }}
+                        disabled={!selectedMember.imageData || !selectedMember.voiceData}
+                        className={`px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                          selectedMember.imageData && selectedMember.voiceData
+                            ? 'bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-purple-300 border border-purple-500/30 hover:from-purple-600/30 hover:to-pink-600/30'
+                            : 'bg-cream/5 text-cream/30 border border-cream/10 cursor-not-allowed'
+                        }`}
+                        whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
+                        whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
+                      >
+                        <Video className="w-4 h-4" />
+                        <span className="hidden sm:inline">Live Conversation</span>
+                        <span className="sm:hidden">Live</span>
+                      </motion.button>
+
+                      <motion.button
+                        onClick={() => {
+                          setShowProfileModal(false);
+                          setTimeout(() => onNavigate('echo-sim'), 0);
+                        }}
+                        disabled={!selectedMember.imageData || !selectedMember.voiceData}
+                        className={`px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                          selectedMember.imageData && selectedMember.voiceData
+                            ? 'bg-gradient-to-r from-blue-600/20 to-cyan-600/20 text-blue-300 border border-blue-500/30 hover:from-blue-600/30 hover:to-cyan-600/30'
+                            : 'bg-cream/5 text-cream/30 border border-cream/10 cursor-not-allowed'
+                        }`}
+                        whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
+                        whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
+                      >
+                        <Film className="w-4 h-4" />
+                        <span className="hidden sm:inline">Generate Video</span>
+                        <span className="sm:hidden">Video</span>
+                      </motion.button>
+                    </div>
+                    {(!selectedMember.imageData || !selectedMember.voiceData) && (
+                      <p className="text-cream/30 text-xs mt-2 text-center">
+                        Add photo & voice to unlock advanced features
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (
