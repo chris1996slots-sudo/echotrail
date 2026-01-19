@@ -14,7 +14,6 @@ import {
   Users,
   ChevronDown,
   Target,
-  Video,
   Zap,
   Gamepad2
 } from 'lucide-react';
@@ -27,6 +26,7 @@ const navItems = [
   { id: 'landing', label: 'Home', icon: Home, requiresAuth: false, guestOnly: true },
   { id: 'persona', label: 'My Persona', icon: User, requiresAuth: true, userOnly: true },
   { id: 'echo-sim', label: 'Echo Sim', icon: Sparkles, requiresAuth: true, userOnly: true },
+  { id: 'family-tree', label: 'Family Tree', icon: Users, requiresAuth: true, userOnly: true },
   {
     id: 'experiences',
     label: 'Experiences',
@@ -37,13 +37,11 @@ const navItems = [
     children: [
       { id: 'memory-anchor', label: 'Memories', icon: Image },
       { id: 'echo-timeline', label: 'Echo Timeline', icon: Target },
-      { id: 'echo-duet', label: 'Echo Duet', icon: Video },
+      { id: 'time-capsule', label: 'Time Capsule', icon: Clock },
       { id: 'wisdom-cards', label: 'Wisdom Cards', icon: Sparkles },
       { id: 'echo-games', label: 'Echo Games', icon: Gamepad2 },
     ]
   },
-  { id: 'family-tree', label: 'Family Tree', icon: Users, requiresAuth: true, userOnly: true },
-  { id: 'time-capsule', label: 'Time Capsule', icon: Clock, requiresAuth: true, userOnly: true },
   { id: 'settings', label: 'Settings', icon: Settings, requiresAuth: true, userOnly: true },
   { id: 'admin', label: 'Dashboard', icon: Shield, requiresAuth: true, adminOnly: true },
 ];
