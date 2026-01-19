@@ -1,9 +1,8 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
   User,
   Sparkles,
-  MessageCircle,
   Clock,
   Image,
   Shield,
@@ -12,10 +11,14 @@ import {
   LogOut,
   Menu,
   X,
-  Film,
-  Users
+  Users,
+  ChevronDown,
+  Target,
+  Video,
+  Zap,
+  Gamepad2
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import { NotificationBell } from './NotificationBell';
@@ -24,8 +27,22 @@ const navItems = [
   { id: 'landing', label: 'Home', icon: Home, requiresAuth: false, guestOnly: true },
   { id: 'persona', label: 'My Persona', icon: User, requiresAuth: true, userOnly: true },
   { id: 'echo-sim', label: 'Echo Sim', icon: Sparkles, requiresAuth: true, userOnly: true },
+  {
+    id: 'experiences',
+    label: 'Experiences',
+    icon: Zap,
+    requiresAuth: true,
+    userOnly: true,
+    isDropdown: true,
+    children: [
+      { id: 'memory-anchor', label: 'Memories', icon: Image },
+      { id: 'echo-timeline', label: 'Echo Timeline', icon: Target },
+      { id: 'echo-duet', label: 'Echo Duet', icon: Video },
+      { id: 'wisdom-cards', label: 'Wisdom Cards', icon: Sparkles },
+      { id: 'echo-games', label: 'Echo Games', icon: Gamepad2 },
+    ]
+  },
   { id: 'family-tree', label: 'Family Tree', icon: Users, requiresAuth: true, userOnly: true },
-  { id: 'memory-anchor', label: 'Memories', icon: Image, requiresAuth: true, userOnly: true },
   { id: 'time-capsule', label: 'Time Capsule', icon: Clock, requiresAuth: true, userOnly: true },
   { id: 'settings', label: 'Settings', icon: Settings, requiresAuth: true, userOnly: true },
   { id: 'admin', label: 'Dashboard', icon: Shield, requiresAuth: true, adminOnly: true },
@@ -33,6 +50,8 @@ const navItems = [
 
 export function Navigation({ currentPage, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const dropdownRef = useRef(null);
   const { user, resetAll } = useApp();
 
   const isAdmin = user?.role === 'ADMIN';
@@ -49,6 +68,18 @@ export function Navigation({ currentPage, onNavigate }) {
     return true;
   });
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleLogout = async () => {
     try {
       await api.logout();
@@ -63,6 +94,11 @@ export function Navigation({ currentPage, onNavigate }) {
     setTimeout(() => {
       onNavigate('landing');
     }, 50);
+  };
+
+  const isChildActive = (item) => {
+    if (!item.children) return false;
+    return item.children.some(child => child.id === currentPage);
   };
 
   return (
@@ -90,7 +126,69 @@ export function Navigation({ currentPage, onNavigate }) {
             <div className="hidden md:flex items-center space-x-1">
               {filteredItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = currentPage === item.id;
+                const isActive = currentPage === item.id || isChildActive(item);
+
+                // Dropdown item
+                if (item.isDropdown) {
+                  return (
+                    <div key={item.id} className="relative" ref={dropdownRef}>
+                      <motion.button
+                        onClick={() => setOpenDropdown(openDropdown === item.id ? null : item.id)}
+                        className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-gold/20 text-gold'
+                            : 'text-cream/70 hover:text-cream hover:bg-navy-light/50'
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Icon className="w-4 h-4 mr-2" />
+                        {item.label}
+                        <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${
+                          openDropdown === item.id ? 'rotate-180' : ''
+                        }`} />
+                      </motion.button>
+
+                      {/* Dropdown Menu */}
+                      <AnimatePresence>
+                        {openDropdown === item.id && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute top-full mt-2 right-0 w-56 bg-navy-dark/95 backdrop-blur-lg border border-gold/20 rounded-xl shadow-2xl overflow-hidden"
+                          >
+                            {item.children.map((child) => {
+                              const ChildIcon = child.icon;
+                              const isChildPageActive = currentPage === child.id;
+                              return (
+                                <motion.button
+                                  key={child.id}
+                                  onClick={() => {
+                                    onNavigate(child.id);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-colors ${
+                                    isChildPageActive
+                                      ? 'bg-gold/20 text-gold'
+                                      : 'text-cream/70 hover:text-cream hover:bg-navy-light/50'
+                                  }`}
+                                  whileHover={{ x: 4 }}
+                                >
+                                  <ChildIcon className="w-4 h-4 mr-3" />
+                                  {child.label}
+                                </motion.button>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                }
+
+                // Regular item
                 return (
                   <motion.button
                     key={item.id}
@@ -147,6 +245,7 @@ export function Navigation({ currentPage, onNavigate }) {
         </div>
       </motion.nav>
 
+      {/* Mobile Menu */}
       <motion.div
         initial={false}
         animate={{
@@ -158,7 +257,68 @@ export function Navigation({ currentPage, onNavigate }) {
         <div className="px-4 py-4 space-y-2">
           {filteredItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPage === item.id;
+            const isActive = currentPage === item.id || isChildActive(item);
+
+            // Dropdown item for mobile
+            if (item.isDropdown) {
+              return (
+                <div key={item.id}>
+                  <button
+                    onClick={() => setOpenDropdown(openDropdown === item.id ? null : item.id)}
+                    className={`flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-gold/20 text-gold'
+                        : 'text-cream/70 hover:text-cream hover:bg-navy-light/50'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <Icon className="w-5 h-5 mr-3" />
+                      {item.label}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${
+                      openDropdown === item.id ? 'rotate-180' : ''
+                    }`} />
+                  </button>
+
+                  {/* Mobile Dropdown Content */}
+                  <AnimatePresence>
+                    {openDropdown === item.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="ml-4 mt-2 space-y-1 overflow-hidden"
+                      >
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const isChildPageActive = currentPage === child.id;
+                          return (
+                            <button
+                              key={child.id}
+                              onClick={() => {
+                                onNavigate(child.id);
+                                setIsOpen(false);
+                                setOpenDropdown(null);
+                              }}
+                              className={`flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                isChildPageActive
+                                  ? 'bg-gold/20 text-gold'
+                                  : 'text-cream/60 hover:text-cream hover:bg-navy-light/30'
+                              }`}
+                            >
+                              <ChildIcon className="w-4 h-4 mr-3" />
+                              {child.label}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+
+            // Regular item for mobile
             return (
               <button
                 key={item.id}
