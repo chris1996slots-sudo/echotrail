@@ -82,6 +82,12 @@ export function FamilyTreePage({ onNavigate }) {
   const [showChildren, setShowChildren] = useState(true);
   const [showGrandchildren, setShowGrandchildren] = useState(true);
 
+  // Chat state
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -208,6 +214,9 @@ export function FamilyTreePage({ onNavigate }) {
   const handleMemberClick = (member) => {
     setSelectedMember(member);
     setShowProfileModal(true);
+    setShowChat(true); // Open chat directly
+    setChatMessages([]); // Reset chat
+    setChatInput('');
   };
 
   const handleImageUpload = (e) => {
@@ -338,6 +347,43 @@ export function FamilyTreePage({ onNavigate }) {
       importantDates: ''
     });
     setSelectedRelationship('');
+  };
+
+  // Handle chat with family member
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedMember || isChatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+
+    // Add user message to chat
+    setChatMessages(prev => [...prev, {
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date()
+    }]);
+
+    setIsChatLoading(true);
+
+    try {
+      const response = await api.chatWithFamilyMember(selectedMember.id, userMessage);
+
+      // Add AI response to chat
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.message,
+        timestamp: new Date()
+      }]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setChatMessages(prev => [...prev, {
+        role: 'error',
+        content: 'Sorry, I had trouble responding. Please try again.',
+        timestamp: new Date()
+      }]);
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
   // Render category section with all members + add button
@@ -1140,6 +1186,32 @@ export function FamilyTreePage({ onNavigate }) {
                   <h2 className="text-2xl font-serif text-cream mb-1">{selectedMember.name}</h2>
                   <p className="text-cream/50 mb-3">{selectedMember.relationship}</p>
 
+                  {/* Toggle between Chat and Profile */}
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      onClick={() => setShowChat(true)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                        showChat
+                          ? 'bg-gold/20 text-gold border border-gold/30'
+                          : 'bg-cream/5 text-cream/50 border border-cream/10 hover:bg-cream/10'
+                      }`}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Chat
+                    </button>
+                    <button
+                      onClick={() => setShowChat(false)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                        !showChat
+                          ? 'bg-gold/20 text-gold border border-gold/30'
+                          : 'bg-cream/5 text-cream/50 border border-cream/10 hover:bg-cream/10'
+                      }`}
+                    >
+                      <UserIcon className="w-4 h-4" />
+                      Profile
+                    </button>
+                  </div>
+
                   {/* Media indicators */}
                   <div className="flex gap-2">
                     {selectedMember.imageData && (
@@ -1158,123 +1230,153 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
 
                 <button
-                  onClick={() => setShowProfileModal(false)}
+                  onClick={() => {
+                    setShowProfileModal(false);
+                    setShowChat(false);
+                    setChatMessages([]);
+                  }}
                   className="p-2 hover:bg-cream/10 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5 text-cream/50" />
                 </button>
               </div>
 
-              {/* Details */}
-              <div className="space-y-4 mb-6">
-                {selectedMember.birthYear && (
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-gold/50" />
-                    <div>
-                      <p className="text-cream/50 text-xs">Born</p>
-                      <p className="text-cream">{selectedMember.birthYear}</p>
-                    </div>
+              {/* Chat Interface */}
+              {showChat ? (
+                <div className="flex flex-col h-[400px]">
+                  {/* Chat messages */}
+                  <div className="flex-1 overflow-y-auto space-y-3 mb-4 p-4 bg-navy-dark/30 rounded-lg">
+                    {chatMessages.length === 0 ? (
+                      <div className="text-center text-cream/40 py-8">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <p className="text-sm">Start a conversation with {selectedMember.name}</p>
+                        <p className="text-xs mt-1">Ask about their life, memories, or seek their wisdom</p>
+                      </div>
+                    ) : (
+                      chatMessages.map((msg, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                              msg.role === 'user'
+                                ? 'bg-gold/20 text-cream'
+                                : msg.role === 'error'
+                                ? 'bg-red-500/20 text-red-300'
+                                : 'bg-cream/10 text-cream'
+                            }`}
+                          >
+                            <p className="text-sm leading-relaxed">{msg.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {isChatLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-cream/10 px-4 py-2 rounded-lg">
+                          <Loader2 className="w-4 h-4 text-cream/50 animate-spin" />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {selectedMember.birthplace && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-gold/50" />
-                    <div>
-                      <p className="text-cream/50 text-xs">Birthplace</p>
-                      <p className="text-cream">{selectedMember.birthplace}</p>
-                    </div>
+                  {/* Chat input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      placeholder={`Message ${selectedMember.name}...`}
+                      disabled={isChatLoading}
+                      className="flex-1 px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream placeholder-cream/30 focus:outline-none focus:border-gold/50 disabled:opacity-50"
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!chatInput.trim() || isChatLoading}
+                      className="px-6 py-3 bg-gradient-to-r from-gold to-gold-light text-navy rounded-lg font-medium hover:from-gold-light hover:to-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Send
+                    </button>
                   </div>
-                )}
+                </div>
+              ) : (
+                <>
+                  {/* Profile Details */}
+                  <div className="space-y-4 mb-6">
+                    {selectedMember.birthYear && (
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-5 h-5 text-gold/50" />
+                        <div>
+                          <p className="text-cream/50 text-xs">Born</p>
+                          <p className="text-cream">{selectedMember.birthYear}</p>
+                        </div>
+                      </div>
+                    )}
 
-                {selectedMember.isDeceased && selectedMember.deathYear && (
-                  <div className="flex items-center gap-3">
-                    <Heart className="w-5 h-5 text-red-400/50" />
-                    <div>
-                      <p className="text-cream/50 text-xs">Passed Away</p>
-                      <p className="text-cream">{selectedMember.deathYear}</p>
-                    </div>
+                    {selectedMember.birthplace && (
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-5 h-5 text-gold/50" />
+                        <div>
+                          <p className="text-cream/50 text-xs">Birthplace</p>
+                          <p className="text-cream">{selectedMember.birthplace}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedMember.isDeceased && selectedMember.deathYear && (
+                      <div className="flex items-center gap-3">
+                        <Heart className="w-5 h-5 text-red-400/50" />
+                        <div>
+                          <p className="text-cream/50 text-xs">Passed Away</p>
+                          <p className="text-cream">{selectedMember.deathYear}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedMember.bio && (
+                      <div className="pt-4 border-t border-cream/10">
+                        <p className="text-cream/50 text-xs mb-2">Biography</p>
+                        <p className="text-cream/80 leading-relaxed">{selectedMember.bio}</p>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {selectedMember.bio && (
-                  <div className="pt-4 border-t border-cream/10">
-                    <p className="text-cream/50 text-xs mb-2">Biography</p>
-                    <p className="text-cream/80 leading-relaxed">{selectedMember.bio}</p>
+                  {/* Action buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <motion.button
+                      onClick={startEdit}
+                      className="px-4 py-3 rounded-xl bg-cream/10 text-cream text-sm font-medium flex items-center justify-center gap-2 hover:bg-cream/20"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit
+                    </motion.button>
+
+                    <motion.button
+                      onClick={handleDelete}
+                      disabled={submitting}
+                      className="px-4 py-3 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium flex items-center justify-center gap-2 hover:bg-red-500/20 disabled:opacity-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </>
+                      )}
+                    </motion.button>
                   </div>
-                )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <motion.button
-                  onClick={() => {
-                    setShowProfileModal(false);
-                    // Navigate to Echo Sim - will use family member's photo/voice if available
-                    setTimeout(() => onNavigate('echo-sim'), 0);
-                  }}
-                  disabled={!selectedMember.imageData || !selectedMember.voiceData}
-                  className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                    selectedMember.imageData && selectedMember.voiceData
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
-                      : 'bg-cream/10 text-cream/40 cursor-not-allowed'
-                  }`}
-                  whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
-                  whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  {selectedMember.imageData && selectedMember.voiceData ? 'Live Chat' : 'Add Photo & Voice First'}
-                </motion.button>
-
-                <motion.button
-                  onClick={() => {
-                    setShowProfileModal(false);
-                    // Navigate to Echo Sim - will use family member's photo/voice if available
-                    setTimeout(() => onNavigate('echo-sim'), 0);
-                  }}
-                  disabled={!selectedMember.imageData || !selectedMember.voiceData}
-                  className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                    selectedMember.imageData && selectedMember.voiceData
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500'
-                      : 'bg-cream/10 text-cream/40 cursor-not-allowed'
-                  }`}
-                  whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
-                  whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
-                >
-                  <Film className="w-4 h-4" />
-                  {selectedMember.imageData && selectedMember.voiceData ? 'Generate Video' : 'Add Photo & Voice First'}
-                </motion.button>
-
-                <motion.button
-                  onClick={startEdit}
-                  className="px-4 py-3 rounded-xl bg-cream/10 text-cream text-sm font-medium flex items-center justify-center gap-2 hover:bg-cream/20"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit
-                </motion.button>
-
-                <motion.button
-                  onClick={handleDelete}
-                  disabled={submitting}
-                  className="px-4 py-3 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium flex items-center justify-center gap-2 hover:bg-red-500/20 disabled:opacity-50"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </>
-                  )}
-                </motion.button>
-              </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

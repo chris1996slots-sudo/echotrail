@@ -640,6 +640,13 @@ class ApiService {
     });
   }
 
+  async chatWithFamilyMember(id, message) {
+    return this.request(`/api/family/${id}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
   // =====================
   // NOTIFICATIONS API
   // =====================
