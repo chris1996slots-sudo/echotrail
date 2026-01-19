@@ -685,6 +685,84 @@ class ApiService {
   async getNotificationTemplates() {
     return this.request('/api/notifications/admin/templates');
   }
+
+  // ===== Echo Timeline =====
+  async getTimelineEvents() {
+    return this.request('/api/timeline');
+  }
+
+  async createTimelineEvent(data) {
+    return this.request('/api/timeline', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTimelineEvent(id) {
+    return this.request(`/api/timeline/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ===== Echo Duet =====
+  async getEchoDuets() {
+    return this.request('/api/duets');
+  }
+
+  async createEchoDuet(data) {
+    return this.request('/api/duets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteEchoDuet(id) {
+    return this.request(`/api/duets/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ===== Wisdom Cards =====
+  async getWisdomCards() {
+    return this.request('/api/wisdom-cards');
+  }
+
+  async getTodayWisdomCard() {
+    return this.request('/api/wisdom-cards/today');
+  }
+
+  async createWisdomCard(data) {
+    return this.request('/api/wisdom-cards', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markWisdomCardAsRead(id) {
+    return this.request(`/api/wisdom-cards/${id}/read`, {
+      method: 'PATCH',
+    });
+  }
+
+  // ===== Echo Games =====
+  async getGameProgress() {
+    return this.request('/api/games/progress');
+  }
+
+  async getGameSessions() {
+    return this.request('/api/games/sessions');
+  }
+
+  async createGameSession(data) {
+    return this.request('/api/games/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAchievements() {
+    return this.request('/api/games/achievements');
+  }
 }
 
 export const api = new ApiService();

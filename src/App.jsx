@@ -15,6 +15,10 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { LoginPage } from './pages/LoginPage';
 import { VideoArchivePage } from './pages/VideoArchivePage';
 import { SupportChat } from './components/SupportChat';
+import { EchoTimelinePage } from './pages/EchoTimelinePage';
+import { EchoDuetPage } from './pages/EchoDuetPage';
+import { WisdomCardsPage } from './pages/WisdomCardsPage';
+import { EchoGamesPage } from './pages/EchoGamesPage';
 
 // Protected route wrapper for user pages
 function UserRoute({ children }) {
@@ -178,6 +182,28 @@ function AppContent() {
           <Route path="/settings" element={
             <UserRoute>
               <SettingsPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+
+          {/* Experiences routes */}
+          <Route path="/echo-timeline" element={
+            <UserRoute>
+              <EchoTimelinePage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/echo-duet" element={
+            <UserRoute>
+              <EchoDuetPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/wisdom-cards" element={
+            <UserRoute>
+              <WisdomCardsPage onNavigate={handleNavigate} />
+            </UserRoute>
+          } />
+          <Route path="/echo-games" element={
+            <UserRoute>
+              <EchoGamesPage onNavigate={handleNavigate} />
             </UserRoute>
           } />
 
