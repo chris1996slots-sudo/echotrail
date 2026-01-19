@@ -18,6 +18,10 @@ import supportRoutes from './routes/support.js';
 import referralRoutes from './routes/referral.js';
 import familyRoutes from './routes/family.js';
 import notificationRoutes from './routes/notifications.js';
+import timelineRoutes from './routes/timeline.js';
+import duetsRoutes from './routes/duets.js';
+import wisdomCardsRoutes from './routes/wisdomCards.js';
+import gamesRoutes from './routes/games.js';
 
 dotenv.config();
 
@@ -83,6 +87,10 @@ app.use('/api/support', supportRoutes);
 app.use('/api/referral', referralRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/timeline', timelineRoutes);
+app.use('/api/duets', duetsRoutes);
+app.use('/api/wisdom-cards', wisdomCardsRoutes);
+app.use('/api/games', gamesRoutes);
 
 // Serve uploaded files (videos for LiveAvatar training)
 const uploadsPath = path.join(__dirname, '..', 'uploads');
