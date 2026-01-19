@@ -134,26 +134,42 @@ export function GuessTheYearGame({ onComplete, onExit }) {
 
   if (gameState === 'no_events') {
     return (
-      <div className="text-center py-20">
-        <Calendar className="w-16 h-16 text-purple-400/30 mx-auto mb-4" />
-        <h3 className="text-xl font-serif text-cream mb-3">Not Enough Events</h3>
-        <p className="text-cream/50 mb-6">Add at least 3 timeline events to play!</p>
-        <button onClick={onExit} className="btn-primary">
-          Go to Echo Timeline
+      <div className="relative">
+        <button
+          onClick={onExit}
+          className="absolute top-0 right-0 p-2 rounded-lg text-cream/50 hover:text-cream hover:bg-navy-light/50 transition-colors"
+        >
+          <X className="w-6 h-6" />
         </button>
+        <div className="text-center py-20">
+          <Calendar className="w-16 h-16 text-purple-400/30 mx-auto mb-4" />
+          <h3 className="text-xl font-serif text-cream mb-3">Not Enough Events</h3>
+          <p className="text-cream/50 mb-6">Add at least 3 timeline events to play!</p>
+          <button onClick={onExit} className="btn-primary">
+            Go to Echo Timeline
+          </button>
+        </div>
       </div>
     );
   }
 
   if (gameState === 'error') {
     return (
-      <div className="text-center py-20">
-        <XCircle className="w-16 h-16 text-red-400/50 mx-auto mb-4" />
-        <h3 className="text-xl font-serif text-cream mb-3">Error</h3>
-        <p className="text-cream/50 mb-6">Failed to load events. Please try again.</p>
-        <button onClick={onExit} className="btn-primary">
-          Back to Games
+      <div className="relative">
+        <button
+          onClick={onExit}
+          className="absolute top-0 right-0 p-2 rounded-lg text-cream/50 hover:text-cream hover:bg-navy-light/50 transition-colors"
+        >
+          <X className="w-6 h-6" />
         </button>
+        <div className="text-center py-20">
+          <XCircle className="w-16 h-16 text-red-400/50 mx-auto mb-4" />
+          <h3 className="text-xl font-serif text-cream mb-3">Error</h3>
+          <p className="text-cream/50 mb-6">Failed to load events. Please try again.</p>
+          <button onClick={onExit} className="btn-primary">
+            Back to Games
+          </button>
+        </div>
       </div>
     );
   }
