@@ -479,3 +479,206 @@ model Notification {
   @@index([isRead])
   @@map("notifications")
 }
+
+// Echo Timeline - Interactive life journey with events
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  personaId   String?  // Optional: link to specific persona/avatar
+
+  // Event details
+  title       String
+  description String?  @db.Text
+  eventDate   DateTime // When this event happened in real life
+  ageAtEvent  Int?     // How old user was at this event
+
+  // Event categorization
+  category    String   // childhood, education, career, family, milestone, achievement, etc.
+  importance  Int      @default(3) // 1-5 stars
+
+  // Media attachments
+  imageUrl    String?  @db.Text
+  videoUrl    String?  @db.Text
+  audioNote   String?  @db.Text // Audio message from avatar about this event
+
+  // Avatar message for this event
+  avatarMessage String? @db.Text // What the avatar says about this event
+
+  // Position in timeline
+  sortOrder   Int      @default(0)
+
+  // Visibility
+  isPublic    Boolean  @default(false) // Share with family?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([eventDate])
+  @@map("timeline_events")
+}
+
+// Echo Duet - User videos with avatar responses
+model EchoDuet {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // User's video
+  userVideoUrl    String   @db.Text // URL to user's uploaded video
+  userTranscript  String?  @db.Text // What user said (from speech-to-text)
+  userQuestion    String?  @db.Text // Extracted question/topic
+
+  // Avatar's response
+  avatarVideoUrl  String?  @db.Text // Generated avatar response video
+  avatarResponse  String?  @db.Text // What avatar said
+  avatarEmotion   String?  @default("thoughtful") // compassionate, proud, nostalgic, etc.
+
+  // Metadata
+  title           String?  // Optional title for this duet
+  topic           String?  // conversation, advice, memory, celebration, etc.
+  duration        Int?     // Total duration in seconds
+
+  // Status
+  status          String   @default("processing") // processing, completed, failed
+  processingError String?  @db.Text
+
+  // Engagement
+  viewCount       Int      @default(0)
+  isFavorite      Boolean  @default(false)
+  isPublic        Boolean  @default(false) // Share with family?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("echo_duets")
+}
+
+// Wisdom Cards - Daily inspiration messages
+model WisdomCard {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Card content
+  title           String
+  message         String   @db.Text
+  quote           String?  @db.Text // Optional quote
+  wisdom          String?  @db.Text // Additional wisdom/advice
+
+  // Appearance
+  cardStyle       String   @default("default") // default, vintage, modern, minimalist
+  imageUrl        String?  @db.Text // Background image
+  accentColor     String   @default("gold") // gold, blue, purple, green
+
+  // Timing & delivery
+  scheduledFor    DateTime? // When to show this card (future scheduling)
+  shownAt         DateTime? // When user actually viewed it
+
+  // Categorization
+  category        String?  // inspiration, advice, memory, celebration, reflection
+  tags            String[] @default([])
+
+  // Triggers (when to show this card)
+  triggerEvent    String?  // birthday, anniversary, achievement, tough_time, etc.
+  triggerDate     DateTime? // Specific date to trigger
+
+  // Status
+  isRead          Boolean  @default(false)
+  isFavorite      Boolean  @default(false)
+
+  // Audio
+  audioUrl        String?  @db.Text // Avatar reading this card
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([scheduledFor])
+  @@index([isRead])
+  @@map("wisdom_cards")
+}
+
+// Echo Games - Gamification system
+model GameProgress {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Overall stats
+  totalPoints     Int      @default(0)
+  level           Int      @default(1)
+  currentStreak   Int      @default(0) // Days in a row
+  longestStreak   Int      @default(0)
+
+  // Achievements unlocked
+  achievements    String[] @default([]) // Array of achievement IDs
+
+  // Game-specific progress
+  twentyQuestionsPlayed     Int @default(0)
+  twentyQuestionsWon        Int @default(0)
+  treasureHuntsCompleted    Int @default(0)
+  guessTheYearCorrect       Int @default(0)
+  guessTheYearPlayed        Int @default(0)
+
+  // Rewards
+  cardsCollected  Int      @default(0) // Collectible story cards
+  badgesEarned    Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("game_progress")
+}
+
+model GameSession {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Game details
+  gameType        String   // twenty_questions, treasure_hunt, guess_year, story_match
+  difficulty      String   @default("medium") // easy, medium, hard
+
+  // Session data
+  questionsAsked  Int      @default(0)
+  correctAnswers  Int      @default(0)
+  hintsUsed       Int      @default(0)
+  timeSpent       Int?     // Seconds
+
+  // Results
+  completed       Boolean  @default(false)
+  won             Boolean  @default(false)
+  pointsEarned    Int      @default(0)
+
+  // Game-specific data (JSON)
+  gameData        String?  @db.Text // Flexible JSON storage
+
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([userId])
+  @@index([gameType])
+  @@map("game_sessions")
+}
+
+model Achievement {
+  id              String   @id @default(cuid())
+
+  // Achievement details
+  key             String   @unique // story_collector_10, time_traveler, perfect_streak_7
+  name            String
+  description     String   @db.Text
+  icon            String   // Icon name or emoji
+  rarity          String   @default("common") // common, rare, epic, legendary
+
+  // Unlock requirements
+  requirementType String   // points, streak, games_won, cards_collected, etc.
+  requirementValue Int     // Threshold to unlock
+
+  // Rewards
+  pointsReward    Int      @default(0)
+  badgeUrl        String?  @db.Text
+
+  createdAt       DateTime @default(now())
+
+  @@map("achievements")
+}
