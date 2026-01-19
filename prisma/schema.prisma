@@ -435,12 +435,30 @@ model FamilyMember {
   imageData    String?  @db.Text  // Base64 encoded photo (optional)
   voiceData    String?  @db.Text  // Base64 encoded audio (optional)
 
-  // Optional details
+  // Personal details
   birthYear    String?
   birthplace   String?
   bio          String?  @db.Text  // Story, memories, important details
   isDeceased   Boolean  @default(false)
   deathYear    String?
+
+  // New expanded fields
+  nickname     String?  // Nickname or also known as
+  occupation   String?  // Career/job information
+  education    String?  // Educational background
+  hobbies      String?  @db.Text  // Hobbies and interests
+  phoneNumber  String?  // Contact phone
+  email        String?  // Contact email
+
+  // Family info
+  spouse       String?  // Spouse name
+  marriageDate String?  // Marriage date if applicable
+
+  // Characteristics
+  physicalDescription String? @db.Text  // Physical characteristics
+  personalityTraits   String? @db.Text  // Personality description
+  favoriteMemories    String? @db.Text  // Favorite shared memories
+  importantDates      String? @db.Text  // Other important dates (JSON or comma-separated)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
