@@ -80,6 +80,54 @@ router.patch('/:id', authenticate, async (req, res) => {
   }
 });
 
+// Update timeline event (PUT method)
+router.put('/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      description,
+      eventDate,
+      ageAtEvent,
+      category,
+      importance,
+      imageUrl,
+      avatarMessage,
+    } = req.body;
+
+    const event = await req.prisma.timelineEvent.findUnique({
+      where: { id },
+    });
+
+    if (!event || event.userId !== req.user.id) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (!title || !eventDate || !category) {
+      return res.status(400).json({ error: 'Title, date, and category are required' });
+    }
+
+    const updated = await req.prisma.timelineEvent.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        eventDate: new Date(eventDate),
+        ageAtEvent: ageAtEvent ? parseInt(ageAtEvent) : null,
+        category,
+        importance: importance || 3,
+        imageUrl,
+        avatarMessage,
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating timeline event:', error);
+    res.status(500).json({ error: 'Failed to update timeline event' });
+  }
+});
+
 // Delete timeline event
 router.delete('/:id', authenticate, async (req, res) => {
   try {

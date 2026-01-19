@@ -50,6 +50,7 @@ export function EchoTimelinePage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [editingEvent, setEditingEvent] = useState(null);
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -79,8 +80,15 @@ export function EchoTimelinePage() {
 
   const handleAddEvent = async () => {
     try {
-      await api.createTimelineEvent(newEvent);
+      if (editingEvent) {
+        // Update existing event
+        await api.updateTimelineEvent(editingEvent.id, newEvent);
+      } else {
+        // Create new event
+        await api.createTimelineEvent(newEvent);
+      }
       setShowAddModal(false);
+      setEditingEvent(null);
       setNewEvent({
         title: '',
         description: '',
@@ -93,8 +101,23 @@ export function EchoTimelinePage() {
       });
       loadEvents();
     } catch (error) {
-      console.error('Failed to create event:', error);
+      console.error('Failed to save event:', error);
     }
+  };
+
+  const handleEditEvent = (event) => {
+    setEditingEvent(event);
+    setNewEvent({
+      title: event.title,
+      description: event.description || '',
+      eventDate: event.eventDate.split('T')[0], // Convert to YYYY-MM-DD format
+      ageAtEvent: event.ageAtEvent?.toString() || '',
+      category: event.category,
+      importance: event.importance,
+      imageUrl: event.imageUrl || '',
+      avatarMessage: event.avatarMessage || ''
+    });
+    setShowAddModal(true);
   };
 
   const handleDeleteEvent = async (id) => {
@@ -269,6 +292,12 @@ export function EchoTimelinePage() {
                           {/* Actions */}
                           <div className="flex gap-2">
                             <button
+                              onClick={() => handleEditEvent(event)}
+                              className="p-2 rounded-lg text-cream/50 hover:text-gold hover:bg-gold/10 transition-colors"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleDeleteEvent(event.id)}
                               className="p-2 rounded-lg text-cream/50 hover:text-red-400 hover:bg-red-400/10 transition-colors"
                             >
@@ -302,9 +331,12 @@ export function EchoTimelinePage() {
                   className="bg-navy-dark border-2 border-gold/30 rounded-2xl p-4 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-serif text-cream">Add Life Event</h2>
+                    <h2 className="text-2xl font-serif text-cream">{editingEvent ? 'Edit Life Event' : 'Add Life Event'}</h2>
                     <button
-                      onClick={() => setShowAddModal(false)}
+                      onClick={() => {
+                        setShowAddModal(false);
+                        setEditingEvent(null);
+                      }}
                       className="p-2 rounded-lg text-cream/50 hover:text-cream hover:bg-navy-light/50"
                     >
                       <X className="w-5 h-5" />
@@ -403,7 +435,10 @@ export function EchoTimelinePage() {
 
                     <div className="flex flex-col sm:flex-row gap-3 pt-4">
                       <button
-                        onClick={() => setShowAddModal(false)}
+                        onClick={() => {
+                          setShowAddModal(false);
+                          setEditingEvent(null);
+                        }}
                         className="flex-1 px-6 py-3 bg-navy-light text-cream/70 rounded-lg hover:bg-navy-light/70 transition-colors"
                       >
                         Cancel
@@ -413,7 +448,7 @@ export function EchoTimelinePage() {
                         disabled={!newEvent.title || !newEvent.eventDate}
                         className="flex-1 px-6 py-3 bg-gradient-to-r from-gold to-gold-light text-navy font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Add Event
+                        {editingEvent ? 'Save Changes' : 'Add Event'}
                       </button>
                     </div>
                   </div>

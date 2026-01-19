@@ -698,6 +698,13 @@ class ApiService {
     });
   }
 
+  async updateTimelineEvent(id, data) {
+    return this.request(`/api/timeline/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteTimelineEvent(id) {
     return this.request(`/api/timeline/${id}`, {
       method: 'DELETE',
