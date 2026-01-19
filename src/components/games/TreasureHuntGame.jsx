@@ -67,19 +67,27 @@ HINT3: [Hint for clue 3]`,
       });
 
       // Parse clues from response
-      const text = cluesResponse.text;
+      const text = cluesResponse?.text || cluesResponse?.message || '';
       const clues = [];
-      for (let i = 1; i <= 3; i++) {
-        const clueMatch = text.match(new RegExp(`CLUE${i}:\\s*(.+?)(?=ANSWER${i}:|$)`, 's'));
-        const answerMatch = text.match(new RegExp(`ANSWER${i}:\\s*(.+?)(?=HINT${i}:|$)`, 's'));
-        const hintMatch = text.match(new RegExp(`HINT${i}:\\s*(.+?)(?=CLUE${i + 1}:|$)`, 's'));
 
-        if (clueMatch && answerMatch) {
-          clues.push({
-            clue: clueMatch[1].trim(),
-            answer: answerMatch[1].trim().toLowerCase(),
-            hint: hintMatch ? hintMatch[1].trim() : 'Think about the previous clues...',
-          });
+      // Only parse if we have valid text
+      if (text && typeof text === 'string') {
+        for (let i = 1; i <= 3; i++) {
+          try {
+            const clueMatch = text.match(new RegExp(`CLUE${i}:\\s*(.+?)(?=ANSWER${i}:|$)`, 's'));
+            const answerMatch = text.match(new RegExp(`ANSWER${i}:\\s*(.+?)(?=HINT${i}:|$)`, 's'));
+            const hintMatch = text.match(new RegExp(`HINT${i}:\\s*(.+?)(?=CLUE${i + 1}:|$)`, 's'));
+
+            if (clueMatch && answerMatch) {
+              clues.push({
+                clue: clueMatch[1].trim(),
+                answer: answerMatch[1].trim().toLowerCase(),
+                hint: hintMatch ? hintMatch[1].trim() : 'Think about the previous clues...',
+              });
+            }
+          } catch (parseError) {
+            console.error(`Failed to parse clue ${i}:`, parseError);
+          }
         }
       }
 
