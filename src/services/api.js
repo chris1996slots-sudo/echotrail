@@ -769,6 +769,16 @@ class ApiService {
   async getAchievements() {
     return this.request('/api/games/achievements');
   }
+
+  // Helper methods for games (using existing Persona Stories and Memories APIs)
+  async getLifeStories() {
+    const persona = await this.getPersona();
+    return persona?.lifeStories || [];
+  }
+
+  async getMemoryAnchors() {
+    return this.getMemories();
+  }
 }
 
 export const api = new ApiService();

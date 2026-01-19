@@ -342,9 +342,9 @@ router.put('/language', async (req, res) => {
 });
 
 // Update user profile
-router.put('/profile', async (req, res) => {
+router.put('/profile', authenticate, async (req, res) => {
   const prisma = req.app.get('prisma');
-  const userId = req.userId;
+  const userId = req.user.id;
 
   const { firstName, lastName, phoneNumber, telegramUsername } = req.body;
 

@@ -994,38 +994,40 @@ export function FamilyTreePage({ onNavigate }) {
               <div className="grid grid-cols-2 gap-3">
                 <motion.button
                   onClick={() => {
-                    if (!selectedMember.imageData || !selectedMember.voiceData) {
-                      alert('Please add a photo and voice recording to enable live chat with this family member.');
-                      return;
-                    }
                     setShowProfileModal(false);
-                    onNavigate('echo-sim');
-                    alert(`Live Chat with ${selectedMember.name} will use their uploaded photo and voice. This feature is coming soon!`);
+                    // Navigate to Echo Sim - will use family member's photo/voice if available
+                    setTimeout(() => onNavigate('echo-sim'), 0);
                   }}
-                  className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-medium flex items-center justify-center gap-2 hover:from-purple-500 hover:to-pink-500"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  disabled={!selectedMember.imageData || !selectedMember.voiceData}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                    selectedMember.imageData && selectedMember.voiceData
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
+                      : 'bg-cream/10 text-cream/40 cursor-not-allowed'
+                  }`}
+                  whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
+                  whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Live Chat
+                  {selectedMember.imageData && selectedMember.voiceData ? 'Live Chat' : 'Add Photo & Voice First'}
                 </motion.button>
 
                 <motion.button
                   onClick={() => {
-                    if (!selectedMember.imageData || !selectedMember.voiceData) {
-                      alert('Please add a photo and voice recording to generate videos with this family member.');
-                      return;
-                    }
                     setShowProfileModal(false);
-                    onNavigate('echo-sim');
-                    alert(`Video Generation for ${selectedMember.name} will use their uploaded photo and voice. This feature is coming soon!`);
+                    // Navigate to Echo Sim - will use family member's photo/voice if available
+                    setTimeout(() => onNavigate('echo-sim'), 0);
                   }}
-                  className="px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-medium flex items-center justify-center gap-2 hover:from-blue-500 hover:to-cyan-500"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  disabled={!selectedMember.imageData || !selectedMember.voiceData}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                    selectedMember.imageData && selectedMember.voiceData
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500'
+                      : 'bg-cream/10 text-cream/40 cursor-not-allowed'
+                  }`}
+                  whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
+                  whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
                 >
                   <Film className="w-4 h-4" />
-                  Generate Video
+                  {selectedMember.imageData && selectedMember.voiceData ? 'Generate Video' : 'Add Photo & Voice First'}
                 </motion.button>
 
                 <motion.button
