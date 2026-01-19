@@ -79,6 +79,8 @@ export function FamilyTreePage({ onNavigate }) {
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedRelationship, setSelectedRelationship] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showChildren, setShowChildren] = useState(true);
+  const [showGrandchildren, setShowGrandchildren] = useState(true);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -587,22 +589,53 @@ export function FamilyTreePage({ onNavigate }) {
             <Users className="w-7 h-7 text-gold" />
             Your Family Tree
           </h1>
+
+          {/* Toggle Options */}
+          <div className="flex flex-wrap justify-center gap-3 mt-6">
+            <button
+              onClick={() => setShowGrandchildren(!showGrandchildren)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                showGrandchildren
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                  : 'bg-cream/5 text-cream/40 border border-cream/10'
+              }`}
+            >
+              👼 Grandchildren
+            </button>
+            <button
+              onClick={() => setShowChildren(!showChildren)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                showChildren
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                  : 'bg-cream/5 text-cream/40 border border-cream/10'
+              }`}
+            >
+              👶 Children
+            </button>
+          </div>
         </motion.div>
 
         {/* Family Tree Structure - Flexible Layout */}
         <div className="space-y-8">
           {/* LEVEL 0: Grandchildren (Children's Children) */}
-          {renderCategory('grandchildren')}
+          {showGrandchildren && renderCategory('grandchildren')}
 
           {/* Connecting line */}
-          {getMembersByCategory('grandchildren').length > 0 && (
+          {showGrandchildren && getMembersByCategory('grandchildren').length > 0 && (
             <div className="flex justify-center">
               <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
             </div>
           )}
 
           {/* LEVEL 1: Children */}
-          {renderCategory('children')}
+          {showChildren && renderCategory('children')}
+
+          {/* Connecting line between Children and User (only if children shown) */}
+          {showChildren && getMembersByCategory('children').length > 0 && (
+            <div className="flex justify-center">
+              <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+            </div>
+          )}
 
           {/* LEVEL 2: User Card (You) */}
           <motion.div
