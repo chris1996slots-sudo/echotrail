@@ -681,11 +681,11 @@ export function FamilyTreePage({ onNavigate }) {
             <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
-          {/* LEVEL 3: Parents */}
-          {renderCategory('parents')}
-
-          {/* LEVEL 3.5: Aunts & Uncles */}
-          {renderCategory('auntsUncles')}
+          {/* LEVEL 3: Parents & Aunts/Uncles (Same Generation) */}
+          <div className="space-y-8">
+            {renderCategory('parents')}
+            {renderCategory('auntsUncles')}
+          </div>
 
           {/* Connecting line */}
           <div className="flex justify-center">
