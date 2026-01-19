@@ -25,6 +25,12 @@ import api from '../services/api';
 
 // Define relationship types for flexible member addition
 const RELATIONSHIP_TYPES = {
+  grandchildren: {
+    label: 'Grandchildren',
+    options: ['Grandson', 'Granddaughter', 'Grandchild'],
+    icon: '👼',
+    color: 'from-teal-500/20 to-cyan-500/10'
+  },
   children: {
     label: 'Children',
     options: ['Son', 'Daughter', 'Child'],
@@ -585,6 +591,16 @@ export function FamilyTreePage({ onNavigate }) {
 
         {/* Family Tree Structure - Flexible Layout */}
         <div className="space-y-8">
+          {/* LEVEL 0: Grandchildren (Children's Children) */}
+          {renderCategory('grandchildren')}
+
+          {/* Connecting line */}
+          {getMembersByCategory('grandchildren').length > 0 && (
+            <div className="flex justify-center">
+              <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+            </div>
+          )}
+
           {/* LEVEL 1: Children */}
           {renderCategory('children')}
 
