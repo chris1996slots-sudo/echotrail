@@ -133,7 +133,11 @@ export function Navigation({ currentPage, onNavigate }) {
                   return (
                     <div key={item.id} className="relative" ref={dropdownRef}>
                       <motion.button
-                        onClick={() => setOpenDropdown(openDropdown === item.id ? null : item.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOpenDropdown(openDropdown === item.id ? null : item.id);
+                        }}
                         className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           isActive
                             ? 'bg-gold/20 text-gold'
@@ -264,7 +268,11 @@ export function Navigation({ currentPage, onNavigate }) {
               return (
                 <div key={item.id}>
                   <button
-                    onClick={() => setOpenDropdown(openDropdown === item.id ? null : item.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setOpenDropdown(openDropdown === item.id ? null : item.id);
+                    }}
                     className={`flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-gold/20 text-gold'
