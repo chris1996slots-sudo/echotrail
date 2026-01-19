@@ -131,9 +131,14 @@ router.post('/sessions', authenticate, async (req, res) => {
           }
         }
 
-        await req.prisma.gameProgress.update({
+        const updatedProgress = await req.prisma.gameProgress.update({
           where: { userId: req.userId },
           data: updates,
+        });
+
+        // Check for achievement unlocks
+        checkAndUnlockAchievements(req.prisma, req.userId, updatedProgress).catch(err => {
+          console.error('Achievement check failed:', err);
         });
       }
     }
@@ -241,5 +246,105 @@ router.post('/achievements/:key/unlock', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to unlock achievement' });
   }
 });
+
+// Check and auto-unlock achievements based on progress
+async function checkAndUnlockAchievements(prisma, userId, progress) {
+  try {
+    // Get all achievements
+    const allAchievements = await prisma.achievement.findMany();
+
+    // Get current unlocked achievements
+    const currentUnlocked = progress.achievements || [];
+
+    // Check each achievement
+    for (const achievement of allAchievements) {
+      // Skip if already unlocked
+      if (currentUnlocked.includes(achievement.key)) {
+        continue;
+      }
+
+      let shouldUnlock = false;
+
+      // Check requirement based on achievement type
+      switch (achievement.requirement) {
+        case 'total_points':
+          shouldUnlock = progress.totalPoints >= achievement.requirementValue;
+          break;
+
+        case 'level':
+          shouldUnlock = progress.level >= achievement.requirementValue;
+          break;
+
+        case 'twenty_questions_played':
+          shouldUnlock = progress.twentyQuestionsPlayed >= achievement.requirementValue;
+          break;
+
+        case 'twenty_questions_won':
+          shouldUnlock = progress.twentyQuestionsWon >= achievement.requirementValue;
+          break;
+
+        case 'treasure_hunts_completed':
+          shouldUnlock = progress.treasureHuntsCompleted >= achievement.requirementValue;
+          break;
+
+        case 'guess_year_played':
+          shouldUnlock = progress.guessTheYearPlayed >= achievement.requirementValue;
+          break;
+
+        case 'guess_year_correct':
+          shouldUnlock = progress.guessTheYearCorrect >= achievement.requirementValue;
+          break;
+
+        case 'current_streak':
+          shouldUnlock = progress.currentStreak >= achievement.requirementValue;
+          break;
+
+        case 'longest_streak':
+          shouldUnlock = progress.longestStreak >= achievement.requirementValue;
+          break;
+
+        case 'badges_earned':
+          shouldUnlock = progress.badgesEarned >= achievement.requirementValue;
+          break;
+
+        case 'all_games_played':
+          // Check if user played at least 1 of each game type
+          shouldUnlock = progress.twentyQuestionsPlayed > 0 &&
+                        progress.treasureHuntsCompleted > 0 &&
+                        progress.guessTheYearPlayed > 0;
+          break;
+
+        case 'perfect_score':
+          // Check if user has any perfect games (won with max points)
+          // This would need game session data, skip for now
+          break;
+
+        default:
+          console.log(`Unknown achievement requirement: ${achievement.requirement}`);
+      }
+
+      // Unlock achievement if requirements met
+      if (shouldUnlock) {
+        await prisma.gameProgress.update({
+          where: { userId },
+          data: {
+            achievements: [...currentUnlocked, achievement.key],
+            totalPoints: progress.totalPoints + achievement.pointsReward,
+            badgesEarned: progress.badgesEarned + 1,
+          },
+        });
+
+        console.log(`🏆 Achievement unlocked for user ${userId}: ${achievement.name} (+${achievement.pointsReward} points)`);
+
+        // Update current list for next iteration
+        currentUnlocked.push(achievement.key);
+        progress.totalPoints += achievement.pointsReward;
+        progress.badgesEarned += 1;
+      }
+    }
+  } catch (error) {
+    console.error('Error checking achievements:', error);
+  }
+}
 
 export default router;
