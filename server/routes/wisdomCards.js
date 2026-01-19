@@ -81,6 +81,7 @@ ${persona.lifeStories.map(s => `- ${s.title}: ${s.content?.substring(0, 200)}`).
 
           // Generate personalized wisdom with AI
           const aiResponse = await callAI({
+            prisma: req.prisma,
             prompt: `You are creating a daily wisdom card for someone based on their life story and personality.
 
 ${personaContext}
@@ -210,6 +211,7 @@ ${persona.lifeStories.map(s => `- ${s.title}: ${s.content?.substring(0, 200)}`).
 
       // Generate personalized wisdom with AI
       const aiResponse = await callAI({
+        prisma: req.prisma,
         prompt: `You are creating a wisdom card for someone based on their life story and personality.
 
 ${personaContext}

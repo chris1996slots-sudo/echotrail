@@ -158,6 +158,7 @@ ${persona.lifeStories.map(s => `- ${s.title}: ${s.content?.substring(0, 150)}`).
       const userMessage = duet.userTranscript || duet.userQuestion || duet.title || 'a video message';
 
       const aiResponse = await callAI({
+        prisma,
         prompt: `You are responding as ${persona.firstName}, a ${persona.echoVibe || 'wise'} person speaking to a loved one.
 
 ${context}
@@ -186,6 +187,7 @@ Be encouraging, loving, and reference your shared experiences when appropriate.`
     if (persona?.heygenAvatarId && persona?.elevenlabsVoiceId) {
       try {
         const videoResponse = await callAI({
+          prisma,
           prompt: responseText,
           category: 'avatar',
           action: 'generate',
@@ -254,6 +256,7 @@ async function pollVideoStatus(prisma, duetId, videoId) {
       attempts++;
 
       const statusResponse = await callAI({
+        prisma,
         category: 'avatar',
         action: 'status',
         videoId,
