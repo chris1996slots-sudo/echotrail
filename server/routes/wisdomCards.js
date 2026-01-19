@@ -40,27 +40,27 @@ router.get('/today', authenticate, async (req, res) => {
 
     // If no card for today, generate one with AI
     if (!card) {
-      try {
-        // Get user's persona and stories for context
-        const persona = await req.prisma.persona.findUnique({
-          where: { userId: req.userId },
-          include: {
-            lifeStories: {
-              orderBy: { createdAt: 'desc' },
-              take: 5, // Latest 5 stories for context
-            },
+      // Get user's persona and stories for context
+      const persona = await req.prisma.persona.findUnique({
+        where: { userId: req.userId },
+        include: {
+          lifeStories: {
+            orderBy: { createdAt: 'desc' },
+            take: 5, // Latest 5 stories for context
           },
-        });
+        },
+      });
 
-        let title = 'Daily Wisdom';
-        let message = 'Every moment is a chance to create a lasting legacy. What will you share today?';
-        let quote = null;
-        let wisdom = null;
-        let cardStyle = 'default';
-        let accentColor = 'gold';
-        let category = 'inspiration';
+      let title = 'Daily Wisdom';
+      let message = 'Every moment is a chance to create a lasting legacy. What will you share today?';
+      let quote = null;
+      let wisdom = null;
+      let cardStyle = 'default';
+      let accentColor = 'gold';
+      let category = 'inspiration';
 
-        if (persona) {
+      if (persona) {
+        try {
           // Build persona context
           const personaContext = `
 Name: ${persona.firstName} ${persona.lastName}
@@ -130,35 +130,26 @@ Make it personal, warm, and reflective of their unique journey.`,
           if (categoryMatch) category = categoryMatch[1].trim().toLowerCase();
           if (styleMatch) cardStyle = styleMatch[1].trim().toLowerCase();
           if (colorMatch) accentColor = colorMatch[1].trim().toLowerCase();
+        } catch (aiError) {
+          console.error('AI generation failed, using fallback:', aiError);
+          // If AI fails, use default values already set above
         }
-
-        // Create the card
-        card = await req.prisma.wisdomCard.create({
-          data: {
-            userId: req.userId,
-            title,
-            message,
-            quote,
-            wisdom,
-            cardStyle,
-            accentColor,
-            category,
-            shownAt: new Date(),
-          },
-        });
-      } catch (aiError) {
-        console.error('AI generation failed, using fallback:', aiError);
-        // Fallback to simple card if AI fails
-        card = await req.prisma.wisdomCard.create({
-          data: {
-            userId: req.userId,
-            title: 'Daily Wisdom',
-            message: 'Every moment is a chance to create a lasting legacy. What will you share today?',
-            category: 'inspiration',
-            shownAt: new Date(),
-          },
-        });
       }
+
+      // Create the card (either with AI-generated content or default values)
+      card = await req.prisma.wisdomCard.create({
+        data: {
+          userId: req.userId,
+          title,
+          message,
+          quote,
+          wisdom,
+          cardStyle,
+          accentColor,
+          category,
+          shownAt: new Date(),
+        },
+      });
     }
 
     res.json(card);
@@ -191,8 +182,9 @@ router.post('/generate', authenticate, async (req, res) => {
     let category = 'inspiration';
 
     if (persona) {
-      // Build persona context
-      const personaContext = `
+      try {
+        // Build persona context
+        const personaContext = `
 Name: ${persona.firstName} ${persona.lastName}
 Echo Vibe: ${persona.echoVibe || 'wise and compassionate'}
 Personality Traits:
@@ -207,10 +199,10 @@ Personality Traits:
 
 Life Stories:
 ${persona.lifeStories.map(s => `- ${s.title}: ${s.content?.substring(0, 200)}`).join('\n')}
-      `.trim();
+        `.trim();
 
-      // Generate personalized wisdom with AI
-      const aiResponse = await callAI({
+        // Generate personalized wisdom with AI
+        const aiResponse = await callAI({
         prisma: req.prisma,
         prompt: `You are creating a wisdom card for someone based on their life story and personality.
 
@@ -257,12 +249,16 @@ Make it personal, warm, and reflective of their unique journey.`,
       if (wisdomMatch && !wisdomMatch[1].toLowerCase().includes('none')) {
         wisdom = wisdomMatch[1].trim();
       }
-      if (categoryMatch) category = categoryMatch[1].trim().toLowerCase();
-      if (styleMatch) cardStyle = styleMatch[1].trim().toLowerCase();
-      if (colorMatch) accentColor = colorMatch[1].trim().toLowerCase();
+        if (categoryMatch) category = categoryMatch[1].trim().toLowerCase();
+        if (styleMatch) cardStyle = styleMatch[1].trim().toLowerCase();
+        if (colorMatch) accentColor = colorMatch[1].trim().toLowerCase();
+      } catch (aiError) {
+        console.error('AI generation failed in /generate, using fallback:', aiError);
+        // If AI fails, use default values already set above
+      }
     }
 
-    // Create the card
+    // Create the card (either with AI-generated content or default values)
     const card = await req.prisma.wisdomCard.create({
       data: {
         userId: req.userId,
