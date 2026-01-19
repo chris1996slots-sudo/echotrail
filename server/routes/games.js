@@ -7,13 +7,13 @@ const router = express.Router();
 router.get('/progress', authenticate, async (req, res) => {
   try {
     let progress = await req.prisma.gameProgress.findUnique({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
     });
 
     // Create progress if doesn't exist
     if (!progress) {
       progress = await req.prisma.gameProgress.create({
-        data: { userId: req.userId },
+        data: { userId: req.user.id },
       });
     }
 
@@ -28,10 +28,10 @@ router.get('/progress', authenticate, async (req, res) => {
 router.patch('/progress', authenticate, async (req, res) => {
   try {
     const progress = await req.prisma.gameProgress.upsert({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
       update: req.body,
       create: {
-        userId: req.userId,
+        userId: req.user.id,
         ...req.body,
       },
     });
@@ -48,7 +48,7 @@ router.get('/sessions', authenticate, async (req, res) => {
   try {
     const { gameType, limit = 20 } = req.query;
 
-    const where = { userId: req.userId };
+    const where = { userId: req.user.id };
     if (gameType) {
       where.gameType = gameType;
     }
@@ -88,7 +88,7 @@ router.post('/sessions', authenticate, async (req, res) => {
 
     const session = await req.prisma.gameSession.create({
       data: {
-        userId: req.userId,
+        userId: req.user.id,
         gameType,
         difficulty: difficulty || 'medium',
         questionsAsked: questionsAsked || 0,
@@ -106,7 +106,7 @@ router.post('/sessions', authenticate, async (req, res) => {
     // Update game progress if session is completed
     if (completed) {
       const progress = await req.prisma.gameProgress.findUnique({
-        where: { userId: req.userId },
+        where: { userId: req.user.id },
       });
 
       if (progress) {
@@ -132,12 +132,12 @@ router.post('/sessions', authenticate, async (req, res) => {
         }
 
         const updatedProgress = await req.prisma.gameProgress.update({
-          where: { userId: req.userId },
+          where: { userId: req.user.id },
           data: updates,
         });
 
         // Check for achievement unlocks
-        checkAndUnlockAchievements(req.prisma, req.userId, updatedProgress).catch(err => {
+        checkAndUnlockAchievements(req.prisma, req.user.id, updatedProgress).catch(err => {
           console.error('Achievement check failed:', err);
         });
       }
@@ -158,7 +158,7 @@ router.patch('/sessions/:id', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!session || session.userId !== req.userId) {
+    if (!session || session.userId !== req.user.id) {
       return res.status(404).json({ error: 'Session not found' });
     }
 
@@ -186,7 +186,7 @@ router.get('/achievements', authenticate, async (req, res) => {
 
     // Get user's progress to check which achievements are unlocked
     const progress = await req.prisma.gameProgress.findUnique({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
     });
 
     const achievementsWithStatus = achievements.map(achievement => ({
@@ -215,7 +215,7 @@ router.post('/achievements/:key/unlock', authenticate, async (req, res) => {
     }
 
     const progress = await req.prisma.gameProgress.findUnique({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
     });
 
     if (!progress) {
@@ -229,7 +229,7 @@ router.post('/achievements/:key/unlock', authenticate, async (req, res) => {
 
     // Add achievement and reward points
     const updated = await req.prisma.gameProgress.update({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
       data: {
         achievements: [...progress.achievements, key],
         totalPoints: progress.totalPoints + achievement.pointsReward,

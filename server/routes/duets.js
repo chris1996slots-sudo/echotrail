@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
   try {
     const duets = await req.prisma.echoDuet.findMany({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
     });
     res.json(duets);
@@ -35,7 +35,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const duet = await req.prisma.echoDuet.create({
       data: {
-        userId: req.userId,
+        userId: req.user.id,
         userVideoUrl,
         userTranscript,
         userQuestion,
@@ -46,7 +46,7 @@ router.post('/', authenticate, async (req, res) => {
     });
 
     // Trigger background avatar video generation
-    processAvatarResponse(req.prisma, duet.id, req.userId).catch(err => {
+    processAvatarResponse(req.prisma, duet.id, req.user.id).catch(err => {
       console.error('Background avatar processing failed:', err);
     });
 
@@ -65,7 +65,7 @@ router.patch('/:id', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!duet || duet.userId !== req.userId) {
+    if (!duet || duet.userId !== req.user.id) {
       return res.status(404).json({ error: 'Duet not found' });
     }
 
@@ -89,7 +89,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!duet || duet.userId !== req.userId) {
+    if (!duet || duet.userId !== req.user.id) {
       return res.status(404).json({ error: 'Duet not found' });
     }
 

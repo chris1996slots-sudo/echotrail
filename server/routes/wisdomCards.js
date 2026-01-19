@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
   try {
     const cards = await req.prisma.wisdomCard.findMany({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
     });
     res.json(cards);
@@ -30,7 +30,7 @@ router.get('/today', authenticate, async (req, res) => {
     // Check if there's a card for today
     let card = await req.prisma.wisdomCard.findFirst({
       where: {
-        userId: req.userId,
+        userId: req.user.id,
         shownAt: {
           gte: today,
           lt: tomorrow,
@@ -42,7 +42,7 @@ router.get('/today', authenticate, async (req, res) => {
     if (!card) {
       // Get user's persona and stories for context
       const persona = await req.prisma.persona.findUnique({
-        where: { userId: req.userId },
+        where: { userId: req.user.id },
         include: {
           lifeStories: {
             orderBy: { createdAt: 'desc' },
@@ -139,7 +139,7 @@ Make it personal, warm, and reflective of their unique journey.`,
       // Create the card (either with AI-generated content or default values)
       card = await req.prisma.wisdomCard.create({
         data: {
-          userId: req.userId,
+          userId: req.user.id,
           title,
           message,
           quote,
@@ -164,7 +164,7 @@ router.post('/generate', authenticate, async (req, res) => {
   try {
     // Get user's persona and stories for context
     const persona = await req.prisma.persona.findUnique({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
       include: {
         lifeStories: {
           orderBy: { createdAt: 'desc' },
@@ -261,7 +261,7 @@ Make it personal, warm, and reflective of their unique journey.`,
     // Create the card (either with AI-generated content or default values)
     const card = await req.prisma.wisdomCard.create({
       data: {
-        userId: req.userId,
+        userId: req.user.id,
         title,
         message,
         quote,
@@ -304,7 +304,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const card = await req.prisma.wisdomCard.create({
       data: {
-        userId: req.userId,
+        userId: req.user.id,
         title,
         message,
         quote,
@@ -335,7 +335,7 @@ router.patch('/:id/read', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!card || card.userId !== req.userId) {
+    if (!card || card.userId !== req.user.id) {
       return res.status(404).json({ error: 'Card not found' });
     }
 
@@ -361,7 +361,7 @@ router.patch('/:id/favorite', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!card || card.userId !== req.userId) {
+    if (!card || card.userId !== req.user.id) {
       return res.status(404).json({ error: 'Card not found' });
     }
 
@@ -387,7 +387,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!card || card.userId !== req.userId) {
+    if (!card || card.userId !== req.user.id) {
       return res.status(404).json({ error: 'Card not found' });
     }
 

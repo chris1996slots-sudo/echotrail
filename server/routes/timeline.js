@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
   try {
     const events = await req.prisma.timelineEvent.findMany({
-      where: { userId: req.userId },
+      where: { userId: req.user.id },
       orderBy: { eventDate: 'asc' },
     });
     res.json(events);
@@ -37,7 +37,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const event = await req.prisma.timelineEvent.create({
       data: {
-        userId: req.userId,
+        userId: req.user.id,
         title,
         description,
         eventDate: new Date(eventDate),
@@ -64,7 +64,7 @@ router.patch('/:id', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!event || event.userId !== req.userId) {
+    if (!event || event.userId !== req.user.id) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
@@ -88,7 +88,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       where: { id },
     });
 
-    if (!event || event.userId !== req.userId) {
+    if (!event || event.userId !== req.user.id) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
