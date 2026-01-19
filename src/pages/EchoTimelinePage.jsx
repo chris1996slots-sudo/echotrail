@@ -126,8 +126,8 @@ export function EchoTimelinePage() {
               >
                 <Calendar className="w-10 h-10 text-navy" />
               </motion.div>
-              <h1 className="text-5xl font-serif text-cream mb-4">Echo Timeline</h1>
-              <p className="text-cream/60 text-lg max-w-2xl mx-auto">
+              <h1 className="text-3xl md:text-5xl font-serif text-cream mb-4">Echo Timeline</h1>
+              <p className="text-cream/60 text-base md:text-lg max-w-2xl mx-auto">
                 Your life's journey, preserved forever. Add milestones, memories, and moments
                 that shaped who you are.
               </p>
@@ -135,7 +135,7 @@ export function EchoTimelinePage() {
           </FadeIn>
 
           {/* Category Filter */}
-          <div className="mb-8 flex flex-wrap gap-2 justify-center">
+          <div className="mb-8 flex flex-wrap gap-2 justify-center px-2">
             <button
               onClick={() => setSelectedCategory('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -299,7 +299,7 @@ export function EchoTimelinePage() {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-navy-dark border-2 border-gold/30 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                  className="bg-navy-dark border-2 border-gold/30 rounded-2xl p-4 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                 >
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-serif text-cream">Add Life Event</h2>
@@ -334,7 +334,7 @@ export function EchoTimelinePage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-cream/70 text-sm mb-2">Date *</label>
                         <input
@@ -401,7 +401,7 @@ export function EchoTimelinePage() {
                       />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
                       <button
                         onClick={() => setShowAddModal(false)}
                         className="flex-1 px-6 py-3 bg-navy-light text-cream/70 rounded-lg hover:bg-navy-light/70 transition-colors"

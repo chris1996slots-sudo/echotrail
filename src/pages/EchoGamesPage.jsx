@@ -171,8 +171,8 @@ export function EchoGamesPage() {
               >
                 <Gamepad2 className="w-10 h-10 text-white" />
               </motion.div>
-              <h1 className="text-5xl font-serif text-cream mb-4">Echo Games</h1>
-              <p className="text-cream/60 text-lg max-w-2xl mx-auto">
+              <h1 className="text-3xl md:text-5xl font-serif text-cream mb-4">Echo Games</h1>
+              <p className="text-cream/60 text-base md:text-lg max-w-2xl mx-auto">
                 Play interactive games and discover family stories while earning points and unlocking achievements.
               </p>
             </div>
@@ -328,7 +328,7 @@ export function EchoGamesPage() {
                         const Icon = game?.icon || Gamepad2;
                         return (
                           <div key={session.id} className="p-4 hover:bg-navy-light/30 transition-colors">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                               <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 bg-gradient-to-br ${game?.color || 'from-gray-500 to-gray-600'} rounded-lg flex items-center justify-center`}>
                                   <Icon className="w-5 h-5 text-white" />

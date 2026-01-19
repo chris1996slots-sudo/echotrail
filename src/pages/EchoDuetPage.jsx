@@ -135,8 +135,8 @@ export function EchoDuetPage() {
               >
                 <Video className="w-10 h-10 text-white" />
               </motion.div>
-              <h1 className="text-5xl font-serif text-cream mb-4">Echo Duet</h1>
-              <p className="text-cream/60 text-lg max-w-2xl mx-auto">
+              <h1 className="text-3xl md:text-5xl font-serif text-cream mb-4">Echo Duet</h1>
+              <p className="text-cream/60 text-base md:text-lg max-w-2xl mx-auto">
                 Record a video message and get a personalized response from your avatar.
                 Create meaningful conversations that last forever.
               </p>
@@ -249,7 +249,7 @@ export function EchoDuetPage() {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-navy-dark border-2 border-purple-500/30 rounded-2xl p-8 max-w-md w-full"
+                  className="bg-navy-dark border-2 border-purple-500/30 rounded-2xl p-4 md:p-8 max-w-md w-full"
                 >
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-serif text-cream">Upload Video</h2>
@@ -320,7 +320,7 @@ export function EchoDuetPage() {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-navy-dark border-2 border-purple-500/30 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                  className="bg-navy-dark border-2 border-purple-500/30 rounded-2xl p-4 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
                 >
                   <div className="flex items-center justify-between mb-6">
                     <div>

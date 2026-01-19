@@ -116,8 +116,8 @@ export function WisdomCardsPage() {
               >
                 <Sparkles className="w-10 h-10 text-navy" />
               </motion.div>
-              <h1 className="text-5xl font-serif text-cream mb-4">Wisdom Cards</h1>
-              <p className="text-cream/60 text-lg max-w-2xl mx-auto">
+              <h1 className="text-3xl md:text-5xl font-serif text-cream mb-4">Wisdom Cards</h1>
+              <p className="text-cream/60 text-base md:text-lg max-w-2xl mx-auto">
                 Daily inspiration and wisdom from your digital legacy.
                 {!showAllCards && " Today's card awaits you."}
               </p>
@@ -125,7 +125,7 @@ export function WisdomCardsPage() {
           </FadeIn>
 
           {/* Toggle View */}
-          <div className="flex justify-center gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mb-8 px-4">
             <button
               onClick={() => setShowAllCards(false)}
               className={`px-6 py-3 rounded-lg font-medium transition-all ${
@@ -186,13 +186,13 @@ export function WisdomCardsPage() {
                 <>
                   <button
                     onClick={prevCard}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 w-12 h-12 bg-navy-dark/80 hover:bg-navy-dark border-2 border-gold/30 hover:border-gold/50 rounded-full flex items-center justify-center text-gold transition-all z-10"
+                    className="absolute left-0 md:left-auto md:-translate-x-16 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-navy-dark/80 hover:bg-navy-dark border-2 border-gold/30 hover:border-gold/50 rounded-full flex items-center justify-center text-gold transition-all z-10"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <button
                     onClick={nextCard}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 w-12 h-12 bg-navy-dark/80 hover:bg-navy-dark border-2 border-gold/30 hover:border-gold/50 rounded-full flex items-center justify-center text-gold transition-all z-10"
+                    className="absolute right-0 md:right-auto md:translate-x-16 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-navy-dark/80 hover:bg-navy-dark border-2 border-gold/30 hover:border-gold/50 rounded-full flex items-center justify-center text-gold transition-all z-10"
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>
