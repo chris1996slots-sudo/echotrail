@@ -65,6 +65,10 @@ export function SettingsPage({ onNavigate }) {
     emailUpdates: true,
     timeCapsuleReminders: true,
     weeklyDigest: false,
+    // Notification channels
+    emailChannel: true,
+    whatsappChannel: false,
+    telegramChannel: false,
   });
 
   // Language state
@@ -865,57 +869,134 @@ export function SettingsPage({ onNavigate }) {
                       )}
 
                       {section.id === 'notifications' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-cream">Email Updates</p>
-                              <p className="text-sm text-cream/50">Receive updates about new features</p>
+                        <div className="space-y-6">
+                          {/* Notification Types */}
+                          <div>
+                            <h4 className="text-cream font-medium mb-4">Notification Types</h4>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-cream">Email Updates</p>
+                                  <p className="text-sm text-cream/50">Receive updates about new features</p>
+                                </div>
+                                <button
+                                  onClick={() => setNotifications(prev => ({ ...prev, emailUpdates: !prev.emailUpdates }))}
+                                  className={`w-12 h-6 rounded-full transition-colors ${
+                                    notifications.emailUpdates ? 'bg-gold' : 'bg-navy-light'
+                                  }`}
+                                >
+                                  <motion.div
+                                    className="w-5 h-5 bg-white rounded-full shadow"
+                                    animate={{ x: notifications.emailUpdates ? 26 : 2 }}
+                                  />
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-cream">Time Capsule Reminders</p>
+                                  <p className="text-sm text-cream/50">Get notified when capsules unlock</p>
+                                </div>
+                                <button
+                                  onClick={() => setNotifications(prev => ({ ...prev, timeCapsuleReminders: !prev.timeCapsuleReminders }))}
+                                  className={`w-12 h-6 rounded-full transition-colors ${
+                                    notifications.timeCapsuleReminders ? 'bg-gold' : 'bg-navy-light'
+                                  }`}
+                                >
+                                  <motion.div
+                                    className="w-5 h-5 bg-white rounded-full shadow"
+                                    animate={{ x: notifications.timeCapsuleReminders ? 26 : 2 }}
+                                  />
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-cream">Weekly Digest</p>
+                                  <p className="text-sm text-cream/50">Receive a weekly summary email</p>
+                                </div>
+                                <button
+                                  onClick={() => setNotifications(prev => ({ ...prev, weeklyDigest: !prev.weeklyDigest }))}
+                                  className={`w-12 h-6 rounded-full transition-colors ${
+                                    notifications.weeklyDigest ? 'bg-gold' : 'bg-navy-light'
+                                  }`}
+                                >
+                                  <motion.div
+                                    className="w-5 h-5 bg-white rounded-full shadow"
+                                    animate={{ x: notifications.weeklyDigest ? 26 : 2 }}
+                                  />
+                                </button>
+                              </div>
                             </div>
-                            <button
-                              onClick={() => setNotifications(prev => ({ ...prev, emailUpdates: !prev.emailUpdates }))}
-                              className={`w-12 h-6 rounded-full transition-colors ${
-                                notifications.emailUpdates ? 'bg-gold' : 'bg-navy-light'
-                              }`}
-                            >
-                              <motion.div
-                                className="w-5 h-5 bg-white rounded-full shadow"
-                                animate={{ x: notifications.emailUpdates ? 26 : 2 }}
-                              />
-                            </button>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-cream">Time Capsule Reminders</p>
-                              <p className="text-sm text-cream/50">Get notified when capsules unlock</p>
+
+                          {/* Notification Channels */}
+                          <div className="border-t border-cream/10 pt-6">
+                            <h4 className="text-cream font-medium mb-2">Notification Channels</h4>
+                            <p className="text-cream/50 text-sm mb-4">Choose how you want to receive notifications</p>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-cream">Email</p>
+                                  <p className="text-sm text-cream/50">Receive notifications via email</p>
+                                </div>
+                                <button
+                                  onClick={() => setNotifications(prev => ({ ...prev, emailChannel: !prev.emailChannel }))}
+                                  className={`w-12 h-6 rounded-full transition-colors ${
+                                    notifications.emailChannel ? 'bg-gold' : 'bg-navy-light'
+                                  }`}
+                                >
+                                  <motion.div
+                                    className="w-5 h-5 bg-white rounded-full shadow"
+                                    animate={{ x: notifications.emailChannel ? 26 : 2 }}
+                                  />
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-cream">WhatsApp</p>
+                                    {!user?.phoneNumber && (
+                                      <span className="text-xs text-amber-400">(Add phone number first)</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-cream/50">Receive notifications via WhatsApp</p>
+                                </div>
+                                <button
+                                  onClick={() => setNotifications(prev => ({ ...prev, whatsappChannel: !prev.whatsappChannel }))}
+                                  disabled={!user?.phoneNumber}
+                                  className={`w-12 h-6 rounded-full transition-colors ${
+                                    notifications.whatsappChannel ? 'bg-gold' : 'bg-navy-light'
+                                  } disabled:opacity-30 disabled:cursor-not-allowed`}
+                                >
+                                  <motion.div
+                                    className="w-5 h-5 bg-white rounded-full shadow"
+                                    animate={{ x: notifications.whatsappChannel ? 26 : 2 }}
+                                  />
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-cream">Telegram</p>
+                                    {!user?.telegramUsername && (
+                                      <span className="text-xs text-amber-400">(Add Telegram username first)</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-cream/50">Receive notifications via Telegram bot</p>
+                                </div>
+                                <button
+                                  onClick={() => setNotifications(prev => ({ ...prev, telegramChannel: !prev.telegramChannel }))}
+                                  disabled={!user?.telegramUsername}
+                                  className={`w-12 h-6 rounded-full transition-colors ${
+                                    notifications.telegramChannel ? 'bg-gold' : 'bg-navy-light'
+                                  } disabled:opacity-30 disabled:cursor-not-allowed`}
+                                >
+                                  <motion.div
+                                    className="w-5 h-5 bg-white rounded-full shadow"
+                                    animate={{ x: notifications.telegramChannel ? 26 : 2 }}
+                                  />
+                                </button>
+                              </div>
                             </div>
-                            <button
-                              onClick={() => setNotifications(prev => ({ ...prev, timeCapsuleReminders: !prev.timeCapsuleReminders }))}
-                              className={`w-12 h-6 rounded-full transition-colors ${
-                                notifications.timeCapsuleReminders ? 'bg-gold' : 'bg-navy-light'
-                              }`}
-                            >
-                              <motion.div
-                                className="w-5 h-5 bg-white rounded-full shadow"
-                                animate={{ x: notifications.timeCapsuleReminders ? 26 : 2 }}
-                              />
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-cream">Weekly Digest</p>
-                              <p className="text-sm text-cream/50">Receive a weekly summary email</p>
-                            </div>
-                            <button
-                              onClick={() => setNotifications(prev => ({ ...prev, weeklyDigest: !prev.weeklyDigest }))}
-                              className={`w-12 h-6 rounded-full transition-colors ${
-                                notifications.weeklyDigest ? 'bg-gold' : 'bg-navy-light'
-                              }`}
-                            >
-                              <motion.div
-                                className="w-5 h-5 bg-white rounded-full shadow"
-                                animate={{ x: notifications.weeklyDigest ? 26 : 2 }}
-                              />
-                            </button>
                           </div>
                         </div>
                       )}
