@@ -92,7 +92,20 @@ export function FamilyTreePage({ onNavigate }) {
     imageData: null,
     voiceData: null,
     isDeceased: false,
-    deathYear: ''
+    deathYear: '',
+    // Extended fields
+    nickname: '',
+    occupation: '',
+    education: '',
+    hobbies: '',
+    phoneNumber: '',
+    email: '',
+    spouse: '',
+    marriageDate: '',
+    physicalDescription: '',
+    personalityTraits: '',
+    favoriteMemories: '',
+    importantDates: ''
   });
 
   useEffect(() => {
@@ -145,7 +158,19 @@ export function FamilyTreePage({ onNavigate }) {
       imageData: null,
       voiceData: null,
       isDeceased: false,
-      deathYear: ''
+      deathYear: '',
+      nickname: '',
+      occupation: '',
+      education: '',
+      hobbies: '',
+      phoneNumber: '',
+      email: '',
+      spouse: '',
+      marriageDate: '',
+      physicalDescription: '',
+      personalityTraits: '',
+      favoriteMemories: '',
+      importantDates: ''
     });
     setShowAddModal(true);
   };
@@ -162,7 +187,19 @@ export function FamilyTreePage({ onNavigate }) {
       imageData: null,
       voiceData: null,
       isDeceased: false,
-      deathYear: ''
+      deathYear: '',
+      nickname: '',
+      occupation: '',
+      education: '',
+      hobbies: '',
+      phoneNumber: '',
+      email: '',
+      spouse: '',
+      marriageDate: '',
+      physicalDescription: '',
+      personalityTraits: '',
+      favoriteMemories: '',
+      importantDates: ''
     });
     setShowAddModal(true);
   };
@@ -258,7 +295,19 @@ export function FamilyTreePage({ onNavigate }) {
       imageData: selectedMember.imageData,
       voiceData: selectedMember.voiceData,
       isDeceased: selectedMember.isDeceased,
-      deathYear: selectedMember.deathYear || ''
+      deathYear: selectedMember.deathYear || '',
+      nickname: selectedMember.nickname || '',
+      occupation: selectedMember.occupation || '',
+      education: selectedMember.education || '',
+      hobbies: selectedMember.hobbies || '',
+      phoneNumber: selectedMember.phoneNumber || '',
+      email: selectedMember.email || '',
+      spouse: selectedMember.spouse || '',
+      marriageDate: selectedMember.marriageDate || '',
+      physicalDescription: selectedMember.physicalDescription || '',
+      personalityTraits: selectedMember.personalityTraits || '',
+      favoriteMemories: selectedMember.favoriteMemories || '',
+      importantDates: selectedMember.importantDates || ''
     });
     setShowProfileModal(false);
     setShowAddModal(true);
@@ -274,7 +323,19 @@ export function FamilyTreePage({ onNavigate }) {
       imageData: null,
       voiceData: null,
       isDeceased: false,
-      deathYear: ''
+      deathYear: '',
+      nickname: '',
+      occupation: '',
+      education: '',
+      hobbies: '',
+      phoneNumber: '',
+      email: '',
+      spouse: '',
+      marriageDate: '',
+      physicalDescription: '',
+      personalityTraits: '',
+      favoriteMemories: '',
+      importantDates: ''
     });
     setSelectedRelationship('');
   };
@@ -857,6 +918,160 @@ export function FamilyTreePage({ onNavigate }) {
                     />
                   </div>
                 )}
+
+                {/* Divider */}
+                <div className="border-t border-cream/10 my-4"></div>
+                <h4 className="text-cream font-medium mb-3">Additional Information (Optional)</h4>
+
+                {/* Nickname */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Nickname</label>
+                  <input
+                    type="text"
+                    value={formData.nickname}
+                    onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                    placeholder="e.g., Grandpa Joe"
+                  />
+                </div>
+
+                {/* Occupation */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Occupation / Career</label>
+                  <input
+                    type="text"
+                    value={formData.occupation}
+                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                    placeholder="e.g., Teacher, Engineer, Artist"
+                  />
+                </div>
+
+                {/* Education */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Education</label>
+                  <input
+                    type="text"
+                    value={formData.education}
+                    onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                    placeholder="e.g., PhD in Physics, High School Diploma"
+                  />
+                </div>
+
+                {/* Hobbies */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Hobbies & Interests</label>
+                  <textarea
+                    value={formData.hobbies}
+                    onChange={(e) => setFormData({ ...formData, hobbies: e.target.value })}
+                    rows={2}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                    placeholder="e.g., Gardening, reading, cooking, traveling"
+                  />
+                </div>
+
+                {/* Contact Section */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Phone Number */}
+                  <div>
+                    <label className="block text-sm text-cream/70 mb-2">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                      placeholder="+49 123 456 7890"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm text-cream/70 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Family Section */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Spouse */}
+                  <div>
+                    <label className="block text-sm text-cream/70 mb-2">Spouse</label>
+                    <input
+                      type="text"
+                      value={formData.spouse}
+                      onChange={(e) => setFormData({ ...formData, spouse: e.target.value })}
+                      className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                      placeholder="Spouse's name"
+                    />
+                  </div>
+
+                  {/* Marriage Date */}
+                  <div>
+                    <label className="block text-sm text-cream/70 mb-2">Marriage Date</label>
+                    <input
+                      type="text"
+                      value={formData.marriageDate}
+                      onChange={(e) => setFormData({ ...formData, marriageDate: e.target.value })}
+                      className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                      placeholder="e.g., June 1975"
+                    />
+                  </div>
+                </div>
+
+                {/* Physical Description */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Physical Description</label>
+                  <textarea
+                    value={formData.physicalDescription}
+                    onChange={(e) => setFormData({ ...formData, physicalDescription: e.target.value })}
+                    rows={2}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                    placeholder="e.g., Tall with blue eyes, always wearing a smile"
+                  />
+                </div>
+
+                {/* Personality Traits */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Personality Traits</label>
+                  <textarea
+                    value={formData.personalityTraits}
+                    onChange={(e) => setFormData({ ...formData, personalityTraits: e.target.value })}
+                    rows={2}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                    placeholder="e.g., Kind, patient, funny, wise"
+                  />
+                </div>
+
+                {/* Favorite Memories */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Favorite Memories</label>
+                  <textarea
+                    value={formData.favoriteMemories}
+                    onChange={(e) => setFormData({ ...formData, favoriteMemories: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                    placeholder="Share cherished moments and special memories..."
+                  />
+                </div>
+
+                {/* Important Dates */}
+                <div>
+                  <label className="block text-sm text-cream/70 mb-2">Important Dates</label>
+                  <textarea
+                    value={formData.importantDates}
+                    onChange={(e) => setFormData({ ...formData, importantDates: e.target.value })}
+                    rows={2}
+                    className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                    placeholder="e.g., Anniversary: May 15, Retirement: 2010"
+                  />
+                </div>
 
                 {/* Buttons */}
                 <div className="flex gap-3 pt-4">
