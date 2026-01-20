@@ -143,9 +143,9 @@ export function OnboardingPage({ onNavigate }) {
     switch (step.id) {
       case 'welcome':
         return (
-          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 max-w-5xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16 max-w-7xl mx-auto">
             {/* Left: Text Content */}
-            <div className="flex-1 text-center lg:text-left lg:max-w-md">
+            <div className="flex-1 text-center lg:text-left lg:max-w-lg">
               <motion.div
                 className="w-16 h-16 mx-auto lg:mx-0 mb-5 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center pulse-glow"
                 animate={{ scale: [1, 1.05, 1] }}
@@ -168,7 +168,7 @@ export function OnboardingPage({ onNavigate }) {
             </div>
 
             {/* Right: Live Simli Demo */}
-            <div className="flex-1 w-full max-w-md lg:max-w-lg">
+            <div className="flex-1 w-full max-w-lg lg:max-w-xl">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -368,7 +368,7 @@ export function OnboardingPage({ onNavigate }) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-4 pt-8">
-        <div className="w-full max-w-2xl">
+        <div className={`w-full ${currentStep === 0 ? 'max-w-7xl' : 'max-w-2xl'}`}>
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               {steps.map((_, index) => (

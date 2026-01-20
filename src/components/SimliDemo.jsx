@@ -6,34 +6,49 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  MessageCircle
+  MessageCircle,
+  Play,
+  User
 } from 'lucide-react';
 import api from '../services/api';
 
 // Simli SDK will be loaded dynamically
 let SimliClient = null;
 
+// Available demo characters (using Simli default face IDs)
+const DEMO_CHARACTERS = [
+  { id: 'tmp9i8bbq7c', name: 'Marcus', gender: 'male', description: 'Professional male' },
+  { id: 'tmp3ub1smil', name: 'Sarah', gender: 'female', description: 'Professional female' },
+];
+
 /**
  * SimliDemo - A compact demo avatar for the registration/landing page
  * Works without authentication, uses default face and voice
  */
 export function SimliDemo({ className = '' }) {
-  const [status, setStatus] = useState('initializing');
+  const [status, setStatus] = useState('idle'); // Start with idle to require user interaction
   const [error, setError] = useState(null);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [lastMessage, setLastMessage] = useState('');
   const [simliConfig, setSimliConfig] = useState(null);
+  const [selectedCharacter, setSelectedCharacter] = useState(DEMO_CHARACTERS[0]);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const simliClientRef = useRef(null);
 
+  // Don't auto-initialize - wait for user interaction
   useEffect(() => {
-    initializeSimli();
     return () => cleanup();
   }, []);
+
+  const startDemo = async () => {
+    setHasUserInteracted(true);
+    await initializeSimli();
+  };
 
   const initializeSimli = async () => {
     try {
@@ -67,7 +82,7 @@ export function SimliDemo({ className = '' }) {
 
       const initConfig = {
         apiKey: config.simliApiKey,
-        faceID: config.defaultFaceId,
+        faceID: selectedCharacter.id || config.defaultFaceId,
         handleSilence: true,
         syncAudio: true,
         maxSessionLength: 300, // 5 min demo limit
@@ -208,6 +223,51 @@ export function SimliDemo({ className = '' }) {
     }
   };
 
+  // Render idle state (waiting for user to start)
+  if (status === 'idle' && !hasUserInteracted) {
+    return (
+      <div className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-navy-light to-navy border-2 border-gold/30 ${className}`}>
+        <div className="aspect-[4/3] flex items-center justify-center">
+          <div className="text-center p-6">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/30 to-gold/20 flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-gold" />
+            </div>
+            <h3 className="text-cream font-medium mb-2">Live AI Avatar Demo</h3>
+            <p className="text-cream/60 text-sm mb-4">Choose a character and start chatting!</p>
+
+            {/* Character Selection */}
+            <div className="flex justify-center gap-2 mb-4">
+              {DEMO_CHARACTERS.map((char) => (
+                <button
+                  key={char.name}
+                  onClick={() => setSelectedCharacter(char)}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                    selectedCharacter.name === char.name
+                      ? 'bg-gold text-navy'
+                      : 'bg-navy-light border border-gold/30 text-cream/70 hover:border-gold/50'
+                  }`}
+                >
+                  <User className="w-3 h-3" />
+                  {char.name}
+                </button>
+              ))}
+            </div>
+
+            <motion.button
+              onClick={startDemo}
+              className="px-6 py-3 bg-gradient-to-r from-gold to-gold-light text-navy font-medium rounded-xl flex items-center gap-2 mx-auto hover:shadow-lg hover:shadow-gold/20 transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Play className="w-5 h-5" />
+              Start Demo
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Render fallback if error
   if (status === 'error') {
     return (
@@ -218,7 +278,15 @@ export function SimliDemo({ className = '' }) {
               <Sparkles className="w-8 h-8 text-purple-400" />
             </div>
             <p className="text-cream/70 text-sm">AI Avatar Demo</p>
-            <p className="text-cream/50 text-xs mt-2">Create your account to try it!</p>
+            <p className="text-cream/50 text-xs mt-2">Demo temporarily unavailable</p>
+            <motion.button
+              onClick={startDemo}
+              className="mt-4 px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm hover:bg-gold/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Try Again
+            </motion.button>
           </div>
         </div>
       </div>
