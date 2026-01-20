@@ -241,7 +241,7 @@ const voicePrompts = [
 
 export function PersonaPage({ onNavigate }) {
   const location = useLocation();
-  const { persona, setPersona, user, addStory, updateStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, deleteVoiceSample, isLoading } = useApp();
+  const { persona, setPersona, user, addStory, updateStory, deleteStory, uploadAvatar, updateAvatar, deleteAvatar, uploadVoiceSample, updateVoiceSample, deleteVoiceSample, isLoading } = useApp();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'avatar');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentStory, setCurrentStory] = useState('');
@@ -307,6 +307,16 @@ export function PersonaPage({ onNavigate }) {
   const [deletingAvatar, setDeletingAvatar] = useState(null);
   const [editAvatarForm, setEditAvatarForm] = useState({ label: '' });
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+
+  // Voice sample playback state
+  const [playingSampleId, setPlayingSampleId] = useState(null);
+  const [replacingSampleId, setReplacingSampleId] = useState(null);
+  const sampleAudioRef = useRef(null);
+
+  // Avatar settings edit state (for editing after setup complete)
+  const [showVibeEditor, setShowVibeEditor] = useState(false);
+  const [editingVibe, setEditingVibe] = useState(null);
+  const [isSavingVibe, setIsSavingVibe] = useState(false);
 
   // Legacy Journey state
   const [legacyProgress, setLegacyProgress] = useState(null);
@@ -680,6 +690,67 @@ export function PersonaPage({ onNavigate }) {
         setSaving(false);
       },
     });
+  };
+
+  // Play/pause voice sample
+  const handlePlaySample = (sample) => {
+    if (playingSampleId === sample.id) {
+      // Pause current
+      if (sampleAudioRef.current) {
+        sampleAudioRef.current.pause();
+        sampleAudioRef.current = null;
+      }
+      setPlayingSampleId(null);
+    } else {
+      // Stop any playing
+      if (sampleAudioRef.current) {
+        sampleAudioRef.current.pause();
+      }
+      // Play new
+      const audio = new Audio(sample.audioData);
+      audio.onended = () => {
+        setPlayingSampleId(null);
+        sampleAudioRef.current = null;
+      };
+      audio.play();
+      sampleAudioRef.current = audio;
+      setPlayingSampleId(sample.id);
+    }
+  };
+
+  // Replace voice sample - delete old and open recorder
+  const handleReplaceSample = (sampleId) => {
+    setReplacingSampleId(sampleId);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Replace Voice Recording',
+      message: 'This will delete the current recording and open the recorder to create a new one. Continue?',
+      onConfirm: async () => {
+        setSaving(true);
+        await deleteVoiceSample(sampleId);
+        setSaving(false);
+        setReplacingSampleId(null);
+        setShowVoiceModal(true);
+      },
+      onCancel: () => {
+        setReplacingSampleId(null);
+      }
+    });
+  };
+
+  // Edit voice sample label
+  const handleEditSampleLabel = async (sample) => {
+    const newLabel = prompt('Edit recording name:', sample.label || '');
+    if (newLabel !== null && newLabel.trim() !== '' && newLabel !== sample.label) {
+      setSaving(true);
+      try {
+        await updateVoiceSample(sample.id, { label: newLabel.trim() });
+      } catch (error) {
+        console.error('Failed to update voice sample label:', error);
+      } finally {
+        setSaving(false);
+      }
+    }
   };
 
   // Handle voice memo file selection
@@ -1334,6 +1405,25 @@ export function PersonaPage({ onNavigate }) {
     }
   };
 
+  // Save vibe change for existing avatar (after setup complete)
+  const handleSaveVibeChange = async (newVibe) => {
+    setIsSavingVibe(true);
+    try {
+      await api.updateVibe(newVibe);
+      setPersona(prev => ({
+        ...prev,
+        echoVibe: newVibe,
+      }));
+      setSelectedVibe(newVibe);
+      setShowVibeEditor(false);
+      setEditingVibe(null);
+    } catch (error) {
+      console.error('Failed to update vibe:', error);
+    } finally {
+      setIsSavingVibe(false);
+    }
+  };
+
   // Handle avatar creation completion (Final step - just save vibe and complete)
   const handleAvatarCreation = async () => {
     setIsProcessingAvatar(true);
@@ -1647,9 +1737,23 @@ export function PersonaPage({ onNavigate }) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                           >
-                            <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
-                              <Volume2 className="w-6 h-6 text-gold" />
-                            </div>
+                            {/* Play Button */}
+                            <motion.button
+                              onClick={() => handlePlaySample(sample)}
+                              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                                playingSampleId === sample.id
+                                  ? 'bg-gold text-navy'
+                                  : 'bg-gold/20 hover:bg-gold/30 text-gold'
+                              }`}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {playingSampleId === sample.id ? (
+                                <Pause className="w-6 h-6" />
+                              ) : (
+                                <Play className="w-6 h-6 ml-0.5" />
+                              )}
+                            </motion.button>
                             <div className="flex-1 min-w-0">
                               <p className="text-cream font-medium">{sample.label}</p>
                               <p className="text-cream/50 text-sm truncate">
@@ -1659,14 +1763,36 @@ export function PersonaPage({ onNavigate }) {
                                 Duration: {formatTime(sample.duration || 0)}
                               </p>
                             </div>
-                            <motion.button
-                              onClick={() => handleDeleteVoiceSample(sample.id)}
-                              className="p-2 rounded-full hover:bg-red-500/20 text-cream/50 hover:text-red-400 transition-colors"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </motion.button>
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1">
+                              <motion.button
+                                onClick={() => handleEditSampleLabel(sample)}
+                                className="p-2 rounded-full hover:bg-gold/20 text-cream/50 hover:text-gold transition-colors"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                title="Edit name"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </motion.button>
+                              <motion.button
+                                onClick={() => handleReplaceSample(sample.id)}
+                                className="p-2 rounded-full hover:bg-purple-500/20 text-cream/50 hover:text-purple-400 transition-colors"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                title="Re-record"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </motion.button>
+                              <motion.button
+                                onClick={() => handleDeleteVoiceSample(sample.id)}
+                                className="p-2 rounded-full hover:bg-red-500/20 text-cream/50 hover:text-red-400 transition-colors"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </motion.button>
+                            </div>
                           </motion.div>
                         ))}
                       </div>
@@ -1758,12 +1884,36 @@ export function PersonaPage({ onNavigate }) {
 
                   {/* Voice Clone Status - Show if already created */}
                   {persona.elevenlabsVoiceId && (
-                    <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center gap-3">
-                      <CheckCircle2 className="w-6 h-6 text-green-400" />
-                      <div>
-                        <p className="text-green-400 font-medium">Voice Clone Active</p>
-                        <p className="text-green-300/60 text-sm">Your AI will speak in your voice</p>
+                    <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30">
+                      <div className="flex items-center gap-3 mb-3">
+                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                        <div className="flex-1">
+                          <p className="text-green-400 font-medium">Voice Clone Active</p>
+                          <p className="text-green-300/60 text-sm">Your AI will speak in your voice</p>
+                        </div>
                       </div>
+                      {/* Recreate button - useful if user changed samples */}
+                      {voiceSamples.length > 0 && (
+                        <motion.button
+                          onClick={handleCreateVoiceClone}
+                          disabled={isCreatingVoiceClone}
+                          className="w-full px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          {isCreatingVoiceClone ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Recreating...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4" />
+                              Recreate Voice Clone
+                            </>
+                          )}
+                        </motion.button>
+                      )}
                     </div>
                   )}
 
@@ -1843,10 +1993,13 @@ export function PersonaPage({ onNavigate }) {
           }
         };
 
+        // Show wizard if setup not complete OR if all avatars were deleted
+        const showWizard = !persona.avatarSetupComplete || (!activeAvatar && avatarImages.length === 0);
+
         return (
           <div className="space-y-6">
-            {/* Avatar Gallery Preview - Only shown when avatar setup wizard is complete */}
-            {activeAvatar && persona.avatarSetupComplete && (
+            {/* Avatar Gallery Preview - Only shown when avatar setup wizard is complete AND has avatars */}
+            {activeAvatar && persona.avatarSetupComplete && !showWizard && (
               <FadeIn>
                 <div className="glass-card p-6 border-gold/30">
                   <div className="flex items-center justify-between mb-4">
@@ -1904,13 +2057,23 @@ export function PersonaPage({ onNavigate }) {
                   </div>
 
                   {/* Edit/Delete Actions for Active Avatar */}
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 mb-4">
                     <button
                       onClick={() => openEditAvatarModal(activeAvatar)}
                       className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-gold/20 text-cream/70 hover:text-gold rounded-lg text-sm transition-colors"
                     >
                       <Edit3 className="w-4 h-4" />
                       Edit Name
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingVibe(persona.echoVibe || 'compassionate');
+                        setShowVibeEditor(!showVibeEditor);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-navy hover:bg-purple-500/20 text-cream/70 hover:text-purple-400 rounded-lg text-sm transition-colors"
+                    >
+                      <Heart className="w-4 h-4" />
+                      Change Vibe
                     </button>
                     <button
                       onClick={() => setDeletingAvatar(activeAvatar)}
@@ -1920,6 +2083,76 @@ export function PersonaPage({ onNavigate }) {
                       Delete
                     </button>
                   </div>
+
+                  {/* Vibe Editor (collapsible) */}
+                  <AnimatePresence>
+                    {showVibeEditor && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-4 overflow-hidden"
+                      >
+                        <div className="p-4 bg-navy-dark/50 rounded-xl border border-purple-500/30">
+                          <h4 className="text-cream font-medium mb-3 flex items-center gap-2">
+                            <Heart className="w-4 h-4 text-purple-400" />
+                            Choose Echo Vibe
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+                            {vibeOptions.map((vibe) => (
+                              <motion.button
+                                key={vibe.id}
+                                onClick={() => setEditingVibe(vibe.id)}
+                                className={`p-3 rounded-lg border text-left transition-all ${
+                                  editingVibe === vibe.id
+                                    ? 'border-purple-500 bg-purple-500/20'
+                                    : 'border-gold/20 hover:border-gold/40 bg-navy-light/30'
+                                }`}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-lg">{vibe.icon}</span>
+                                  <span className="text-cream text-sm font-medium">{vibe.label}</span>
+                                </div>
+                                <p className="text-cream/50 text-xs">{vibe.description}</p>
+                              </motion.button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <motion.button
+                              onClick={() => handleSaveVibeChange(editingVibe)}
+                              disabled={isSavingVibe || editingVibe === persona.echoVibe}
+                              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              {isSavingVibe ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="w-4 h-4" />
+                                  Save Vibe
+                                </>
+                              )}
+                            </motion.button>
+                            <button
+                              onClick={() => {
+                                setShowVibeEditor(false);
+                                setEditingVibe(null);
+                              }}
+                              className="px-4 py-2 bg-navy-light/50 hover:bg-navy-light text-cream/70 rounded-lg text-sm transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Other Avatars (if more than 1) */}
                   {avatarImages.length > 1 && (
@@ -1964,8 +2197,8 @@ export function PersonaPage({ onNavigate }) {
               </FadeIn>
             )}
 
-            {/* Create New Avatar Section - Only show if setup not complete */}
-            {!persona.avatarSetupComplete && (
+            {/* Create New Avatar Section - Show if setup not complete OR all avatars deleted */}
+            {showWizard && (
               <div className="glass-card p-6">
                 <h3 className="text-xl font-serif text-cream mb-6">
                   Create Your Avatar
