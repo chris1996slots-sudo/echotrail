@@ -17,6 +17,7 @@ import {
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
 import { LegacyScore } from '../components/LegacyScore';
+import { SimliDemo } from '../components/SimliDemo';
 import api from '../services/api';
 
 const steps = [
@@ -142,114 +143,38 @@ export function OnboardingPage({ onNavigate }) {
     switch (step.id) {
       case 'welcome':
         return (
-          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 max-w-5xl mx-auto">
             {/* Left: Text Content */}
-            <div className="flex-1 text-center lg:text-left">
+            <div className="flex-1 text-center lg:text-left lg:max-w-md">
               <motion.div
-                className="w-20 h-20 mx-auto lg:mx-0 mb-6 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center pulse-glow"
+                className="w-16 h-16 mx-auto lg:mx-0 mb-5 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center pulse-glow"
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <Sparkles className="w-10 h-10 text-navy" />
+                <Sparkles className="w-8 h-8 text-navy" />
               </motion.div>
-              <p className="text-cream/70 text-lg mb-6">
+              <p className="text-cream/70 text-lg mb-5">
                 In the next few moments, you'll take the first steps toward creating a digital
                 version of yourself that will carry your wisdom, your values, and your stories
                 into the future.
               </p>
-              <div className="flex items-center justify-center lg:justify-start gap-2 text-gold">
+              <div className="flex items-center justify-center lg:justify-start gap-2 text-gold mb-4">
                 <Heart className="w-5 h-5" />
                 <span className="text-sm">This is a journey of love and legacy</span>
               </div>
+              <p className="text-cream/50 text-sm hidden lg:block">
+                Try chatting with the AI demo on the right to see what your future avatar can do!
+              </p>
             </div>
 
-            {/* Right: Avatar Demo Preview */}
-            <div className="flex-1 flex justify-center">
+            {/* Right: Live Simli Demo */}
+            <div className="flex-1 w-full max-w-md lg:max-w-lg">
               <motion.div
-                className="relative"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3, duration: 0.6 }}
               >
-                {/* Avatar Container */}
-                <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden bg-gradient-to-br from-navy-light to-navy border-2 border-gold/30 shadow-2xl">
-                  {/* Simli Demo Avatar Image */}
-                  <img
-                    src="https://simli.com/newsroom/open-graph.png"
-                    alt="AI Avatar Demo"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  {/* Fallback Avatar Placeholder */}
-                  <div className="hidden w-full h-full items-center justify-center bg-gradient-to-br from-purple-900/50 to-navy">
-                    <div className="text-center">
-                      <div className="w-20 h-20 mx-auto mb-3 rounded-full bg-gold/20 flex items-center justify-center">
-                        <User className="w-10 h-10 text-gold" />
-                      </div>
-                      <p className="text-cream/60 text-sm">Your Digital Twin</p>
-                    </div>
-                  </div>
-
-                  {/* Speaking Animation Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                    <div className="flex items-center gap-3">
-                      {/* Sound Wave Animation */}
-                      <div className="flex items-end gap-0.5 h-6">
-                        {[...Array(5)].map((_, i) => (
-                          <motion.div
-                            key={i}
-                            className="w-1 bg-gold rounded-full"
-                            animate={{
-                              height: ['8px', '24px', '8px'],
-                            }}
-                            transition={{
-                              duration: 0.8,
-                              repeat: Infinity,
-                              delay: i * 0.15,
-                              ease: 'easeInOut',
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-cream/80 text-sm italic">
-                        "Hello, I'm your digital echo..."
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Live Badge */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 bg-red-500/90 rounded-full">
-                    <motion.div
-                      className="w-2 h-2 bg-white rounded-full"
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                    <span className="text-white text-xs font-medium">LIVE</span>
-                  </div>
-
-                  {/* AI Powered Badge */}
-                  <div className="absolute top-3 right-3 px-2 py-1 bg-purple-500/80 rounded-full">
-                    <span className="text-white text-xs font-medium flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" />
-                      AI
-                    </span>
-                  </div>
-                </div>
-
-                {/* Floating Label */}
-                <motion.div
-                  className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-navy-dark/90 border border-gold/30 rounded-full shadow-lg"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                >
-                  <p className="text-gold text-xs font-medium whitespace-nowrap">
-                    Your AI Avatar Preview
-                  </p>
-                </motion.div>
+                <SimliDemo className="w-full" />
               </motion.div>
             </div>
           </div>

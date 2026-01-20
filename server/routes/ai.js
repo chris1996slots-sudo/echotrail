@@ -2483,7 +2483,49 @@ router.post('/videos/:id/refresh', authenticate, async (req, res) => {
 // SIMLI API - Real-Time Avatar with ElevenLabs Voice Clone
 // =====================
 
-// Get Simli session for real-time avatar streaming
+// Public demo endpoint - Get Simli session without authentication (for landing/register page demo)
+router.get('/simli/demo-session', async (req, res) => {
+  try {
+    // Get Simli API config
+    const simliConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'simli' }
+    });
+
+    if (!simliConfig?.isActive || !simliConfig?.apiKey) {
+      return res.status(503).json({
+        error: 'Demo not available',
+        demoAvailable: false
+      });
+    }
+
+    // Get ElevenLabs config for TTS
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    // Use default face ID from config or hardcoded default
+    const defaultFaceId = simliConfig.settings?.defaultFaceId || '5514e24d-6086-46a3-ace4-6a7264e5cb7c';
+
+    // Return minimal config for demo (no user-specific data)
+    res.json({
+      simliApiKey: simliConfig.apiKey,
+      elevenlabsApiKey: voiceConfig?.apiKey || null,
+      defaultFaceId: defaultFaceId,
+      demoAvailable: true,
+      message: 'Demo configuration ready'
+    });
+  } catch (error) {
+    console.error('Simli demo session error:', error);
+    res.status(500).json({ error: 'Demo not available', demoAvailable: false });
+  }
+});
+
+// Get Simli session for real-time avatar streaming (authenticated)
 router.post('/simli/session', authenticate, async (req, res) => {
   try {
     // Get Simli API config
@@ -2633,7 +2675,87 @@ router.get('/simli/faces', authenticate, async (req, res) => {
   }
 });
 
-// Generate TTS audio for Simli (uses ElevenLabs with voice clone)
+// Public demo TTS endpoint - Generate TTS for demo without authentication
+router.post('/simli/demo-tts', async (req, res) => {
+  try {
+    const { text, voiceSettings } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    // Limit text length for demo
+    const maxLength = 200;
+    const truncatedText = text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+
+    // Get ElevenLabs config
+    let voiceConfig = await req.prisma.apiConfig.findUnique({
+      where: { service: 'voice' }
+    });
+    if (!voiceConfig?.apiKey) {
+      voiceConfig = await req.prisma.apiConfig.findUnique({
+        where: { service: 'elevenlabs' }
+      });
+    }
+
+    if (!voiceConfig?.isActive || !voiceConfig?.apiKey) {
+      return res.status(503).json({ error: 'Demo not available' });
+    }
+
+    // Use default voice for demo (Rachel)
+    const voiceId = '21m00Tcm4TlvDq8ikWAM';
+
+    const defaultSettings = {
+      stability: 0.65,
+      similarity_boost: 0.75,
+      style: 0.0,
+      use_speaker_boost: true
+    };
+
+    const finalVoiceSettings = voiceSettings || defaultSettings;
+
+    // Call ElevenLabs TTS API
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': voiceConfig.apiKey,
+      },
+      body: JSON.stringify({
+        text: truncatedText,
+        model_id: 'eleven_turbo_v2_5',
+        output_format: 'pcm_16000',
+        voice_settings: finalVoiceSettings
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Demo TTS error');
+      return res.status(response.status).json({ error: 'TTS generation failed' });
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const mp3Data = Buffer.from(audioBuffer);
+
+    // Convert to PCM
+    const rawPCM = await convertMp3ToPcm16(mp3Data);
+
+    const base64Audio = rawPCM.toString('base64');
+
+    res.json({
+      audio: base64Audio,
+      format: 'pcm16',
+      sampleRate: 16000,
+      voiceId,
+      isDemo: true
+    });
+  } catch (error) {
+    console.error('Demo TTS error:', error);
+    res.status(500).json({ error: 'Demo TTS failed' });
+  }
+});
+
+// Generate TTS audio for Simli (uses ElevenLabs with voice clone) - authenticated
 router.post('/simli/tts', authenticate, async (req, res) => {
   try {
     const { text, voiceId: requestedVoiceId, voiceSettings } = req.body;

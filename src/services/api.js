@@ -575,6 +575,11 @@ class ApiService {
     });
   }
 
+  // Public demo session - no auth required
+  async getSimliDemoSession() {
+    return this.request('/api/ai/simli/demo-session');
+  }
+
   async startSimliSession(faceId) {
     return this.request('/api/ai/simli/start', {
       method: 'POST',
@@ -594,6 +599,14 @@ class ApiService {
     return this.request('/api/ai/simli/tts', {
       method: 'POST',
       body: JSON.stringify({ text, voiceId, voiceSettings }),
+    });
+  }
+
+  // Public demo TTS - no auth required
+  async getSimliDemoTTS(text, voiceSettings = null) {
+    return this.request('/api/ai/simli/demo-tts', {
+      method: 'POST',
+      body: JSON.stringify({ text, voiceSettings }),
     });
   }
 
