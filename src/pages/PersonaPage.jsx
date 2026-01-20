@@ -218,18 +218,6 @@ const ageCategories = [
   { id: 'senior', label: 'Senior (70+)' },
 ];
 
-// Occasion categories for avatar photos
-const occasionCategories = [
-  { id: 'casual', label: 'Casual' },
-  { id: 'professional', label: 'Professional' },
-  { id: 'formal', label: 'Formal/Celebration' },
-  { id: 'vacation', label: 'Vacation' },
-  { id: 'celebration', label: 'Party/Event' },
-  { id: 'sports', label: 'Sports/Hobby' },
-  { id: 'family', label: 'Family' },
-  { id: 'special', label: 'Special Occasion' },
-];
-
 // Voice recording prompts - Each should take about 30 seconds to read naturally
 const voicePrompts = [
   "Hello, my name is [your name]. I'm creating this voice recording for my digital legacy. I want future generations to hear my real voice and feel connected to me. This is my way of staying present in the lives of those I love, even when I can't be there in person. Thank you for listening to my story.",
@@ -259,7 +247,6 @@ export function PersonaPage({ onNavigate }) {
   const [uploadForm, setUploadForm] = useState({
     name: '',
     age: '',
-    occasion: '',
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const fileInputRef = useRef(null);
@@ -1108,7 +1095,7 @@ export function PersonaPage({ onNavigate }) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPendingImage(reader.result);
-        setUploadForm({ name: '', age: '', occasion: '' });
+        setUploadForm({ name: '', age: '' });
         setUploadErrors({});
         setShowUploadModal(true);
       };
@@ -1179,7 +1166,7 @@ export function PersonaPage({ onNavigate }) {
 
   const usePhoto = () => {
     setPendingImage(capturedPhoto);
-    setUploadForm({ name: '', age: '', occasion: '' });
+    setUploadForm({ name: '', age: '' });
     setUploadErrors({});
     stopCamera();
     setShowUploadModal(true);
@@ -1189,7 +1176,6 @@ export function PersonaPage({ onNavigate }) {
   const handleAvatarSubmit = async () => {
     const errors = {};
     if (!uploadForm.age) errors.age = 'Please select an age group';
-    if (!uploadForm.occasion) errors.occasion = 'Please select an occasion';
 
     if (Object.keys(errors).length > 0) {
       setUploadErrors(errors);
@@ -1201,11 +1187,9 @@ export function PersonaPage({ onNavigate }) {
 
     // Build label from metadata
     const ageCat = ageCategories.find(a => a.id === uploadForm.age);
-    const occasionCat = occasionCategories.find(o => o.id === uploadForm.occasion);
     const labelParts = [];
     if (uploadForm.name) labelParts.push(uploadForm.name);
     labelParts.push(ageCat?.label || uploadForm.age);
-    labelParts.push(occasionCat?.label || uploadForm.occasion);
     const imageLabel = labelParts.join(' • ');
 
     // Save to database with metadata including echo vibe
@@ -1219,7 +1203,7 @@ export function PersonaPage({ onNavigate }) {
     // Close modal and reset
     setShowUploadModal(false);
     setPendingImage(null);
-    setUploadForm({ name: '', age: '', occasion: '' });
+    setUploadForm({ name: '', age: '' });
     setSaving(false);
   };
 
@@ -1227,7 +1211,7 @@ export function PersonaPage({ onNavigate }) {
   const handleUploadCancel = () => {
     setShowUploadModal(false);
     setPendingImage(null);
-    setUploadForm({ name: '', age: '', occasion: '' });
+    setUploadForm({ name: '', age: '' });
     setUploadErrors({});
   };
 
@@ -1696,7 +1680,7 @@ export function PersonaPage({ onNavigate }) {
                     <div className="mt-4 pt-4 border-t border-gold/10">
                       <div className="flex items-center gap-2 text-cream/50 text-sm">
                         <Tag className="w-4 h-4" />
-                        <span>Each photo requires age group and occasion when uploading</span>
+                        <span>Each photo requires an age group when uploading</span>
                       </div>
                     </div>
                   </div>
@@ -1882,8 +1866,8 @@ export function PersonaPage({ onNavigate }) {
                     </div>
                   )}
 
-                  {/* Voice Clone Status - Show if already created */}
-                  {persona.elevenlabsVoiceId && (
+                  {/* Voice Clone Status - Show if already created AND has samples */}
+                  {persona.elevenlabsVoiceId && voiceSamples.length > 0 && (
                     <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30">
                       <div className="flex items-center gap-3 mb-3">
                         <CheckCircle2 className="w-6 h-6 text-green-400" />
@@ -2042,7 +2026,7 @@ export function PersonaPage({ onNavigate }) {
 
                   {/* Avatar Status Badges */}
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {persona.elevenlabsVoiceId && (
+                    {persona.elevenlabsVoiceId && (persona.voiceSamples?.length > 0) && (
                       <span className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs font-medium rounded-full flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Voice Clone Active
@@ -3628,37 +3612,6 @@ export function PersonaPage({ onNavigate }) {
                   </div>
                   {uploadErrors.age && (
                     <p className="text-red-400 text-xs mt-1">{uploadErrors.age}</p>
-                  )}
-                </div>
-
-                {/* Occasion Category (Required) */}
-                <div>
-                  <label className="block text-cream/70 text-sm mb-2">
-                    Occasion <span className="text-red-400">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {occasionCategories.map((occasion) => (
-                      <motion.button
-                        key={occasion.id}
-                        type="button"
-                        onClick={() => {
-                          setUploadForm(prev => ({ ...prev, occasion: occasion.id }));
-                          setUploadErrors(prev => ({ ...prev, occasion: null }));
-                        }}
-                        className={`p-2.5 rounded-lg border-2 text-left text-sm transition-all ${
-                          uploadForm.occasion === occasion.id
-                            ? 'border-gold bg-gold/20 text-cream'
-                            : 'border-gold/20 hover:border-gold/40 text-cream/70'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {occasion.label}
-                      </motion.button>
-                    ))}
-                  </div>
-                  {uploadErrors.occasion && (
-                    <p className="text-red-400 text-xs mt-1">{uploadErrors.occasion}</p>
                   )}
                 </div>
               </div>
