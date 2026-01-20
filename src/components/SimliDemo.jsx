@@ -39,6 +39,8 @@ export function SimliDemo({ className = '' }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const simliClientRef = useRef(null);
+  const isPlayingAudioRef = useRef(false);
+  const audioQueueRef = useRef([]);
 
   // Don't auto-initialize - wait for user interaction
   useEffect(() => {
@@ -97,24 +99,24 @@ export function SimliDemo({ className = '' }) {
       client.on('connected', async () => {
         setStatus('connected');
 
-        // Send welcome greeting
+        // Send welcome greeting after connection is fully established
         setTimeout(async () => {
           try {
-            const greeting = "Hello! I'm an AI avatar demo. Type a message to chat with me!";
+            const greeting = "Hello! I'm your AI avatar demo. Type a message to chat!";
             setLastMessage(greeting);
 
             const ttsResponse = await api.getSimliDemoTTS(greeting, {
-              stability: 0.65,
+              stability: 0.5,
               similarity_boost: 0.75
             });
 
             if (ttsResponse.audio && simliClientRef.current) {
-              sendAudioToSimli(ttsResponse.audio);
+              queueAudio(ttsResponse.audio);
             }
           } catch (err) {
             console.error('Greeting error:', err);
           }
-        }, 1000);
+        }, 1500); // Longer delay for stable connection
       });
 
       client.on('disconnected', () => setStatus('ended'));
@@ -139,7 +141,27 @@ export function SimliDemo({ className = '' }) {
     }
   };
 
+  // Queue audio to prevent overlapping playback
+  const queueAudio = (base64Audio) => {
+    audioQueueRef.current.push(base64Audio);
+    processAudioQueue();
+  };
+
+  const processAudioQueue = () => {
+    if (isPlayingAudioRef.current || audioQueueRef.current.length === 0) {
+      return;
+    }
+
+    const base64Audio = audioQueueRef.current.shift();
+    sendAudioToSimli(base64Audio);
+  };
+
   const sendAudioToSimli = (base64Audio) => {
+    if (!simliClientRef.current) return;
+
+    isPlayingAudioRef.current = true;
+    setStatus('speaking');
+
     const binaryString = atob(base64Audio);
     const evenLength = binaryString.length % 2 === 0 ? binaryString.length : binaryString.length - 1;
     const uint8Array = new Uint8Array(evenLength);
@@ -149,25 +171,48 @@ export function SimliDemo({ className = '' }) {
     }
 
     const int16Array = new Int16Array(uint8Array.buffer);
+
+    // Simli requires 6000 bytes = 3000 Int16 samples per chunk
     const CHUNK_SIZE = 6000;
-    const samplesPerChunk = CHUNK_SIZE / 2;
-    const chunkDurationMs = (samplesPerChunk / 16000) * 1000;
+    const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples
+    const sampleRate = 16000;
+    const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000; // ~187.5ms per chunk
 
     let chunkIndex = 0;
     const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
 
     const sendNextChunk = () => {
-      if (chunkIndex >= totalChunks) return;
+      if (chunkIndex >= totalChunks || !simliClientRef.current) {
+        // Done sending all chunks
+        isPlayingAudioRef.current = false;
+        setStatus('connected');
+        // Process next audio in queue after a small delay
+        setTimeout(processAudioQueue, 200);
+        return;
+      }
 
       const start = chunkIndex * samplesPerChunk;
       const end = Math.min(start + samplesPerChunk, int16Array.length);
       const chunk = int16Array.slice(start, end);
 
-      simliClientRef.current.sendAudioData(chunk);
+      try {
+        simliClientRef.current.sendAudioData(chunk);
+      } catch (err) {
+        console.error('Error sending audio chunk:', err);
+      }
+
       chunkIndex++;
 
       if (chunkIndex < totalChunks) {
         setTimeout(sendNextChunk, chunkDurationMs);
+      } else {
+        // All chunks sent - wait for audio to finish playing
+        const remainingDuration = chunkDurationMs * 2; // Extra buffer
+        setTimeout(() => {
+          isPlayingAudioRef.current = false;
+          setStatus('connected');
+          processAudioQueue();
+        }, remainingDuration);
       }
     };
 
@@ -183,31 +228,32 @@ export function SimliDemo({ className = '' }) {
   };
 
   const handleSendMessage = async () => {
-    if (!inputText.trim() || isProcessing || status !== 'connected') return;
+    // Allow sending while speaking (will queue)
+    if (!inputText.trim() || isProcessing) return;
 
     const userMessage = inputText.trim();
     setInputText('');
     setIsProcessing(true);
 
     try {
-      // Simple demo response (no LLM, just echo for demo)
+      // Simple demo responses - shorter for better performance
       const demoResponses = [
-        `Thanks for saying "${userMessage.slice(0, 30)}${userMessage.length > 30 ? '...' : ''}". This is just a demo of what your AI avatar can do!`,
-        `I heard you! In the full version, I'll be trained on your personality and stories.`,
-        `Great question! Once you create your account, you can customize my voice and appearance.`,
-        `That's interesting! Your future AI avatar will remember conversations and learn from your life stories.`
+        `Thanks for your message! This is a demo of what your AI avatar can do.`,
+        `I heard you! In the full version, I'll know your personality and stories.`,
+        `Great! Create an account to customize my voice and appearance.`,
+        `Interesting! Your future AI avatar will remember our conversations.`
       ];
 
       const response = demoResponses[Math.floor(Math.random() * demoResponses.length)];
       setLastMessage(response);
 
       const ttsResponse = await api.getSimliDemoTTS(response, {
-        stability: 0.65,
+        stability: 0.5,
         similarity_boost: 0.75
       });
 
       if (ttsResponse.audio && simliClientRef.current) {
-        sendAudioToSimli(ttsResponse.audio);
+        queueAudio(ttsResponse.audio);
       }
     } catch (err) {
       console.error('Message error:', err);
