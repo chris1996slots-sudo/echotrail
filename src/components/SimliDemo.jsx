@@ -15,10 +15,10 @@ import api from '../services/api';
 // Simli SDK will be loaded dynamically
 let SimliClient = null;
 
-// Available demo characters (using Simli default face IDs)
+// Available demo characters (using Simli preset face IDs from docs.simli.com)
 const DEMO_CHARACTERS = [
-  { id: 'tmp9i8bbq7c', name: 'Marcus', gender: 'male', description: 'Professional male' },
-  { id: 'tmp3ub1smil', name: 'Sarah', gender: 'female', description: 'Professional female' },
+  { id: '804c347a-26c9-4dcf-bb49-13df4bed61e8', name: 'Mark', gender: 'male', description: 'Professional male' },
+  { id: 'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103', name: 'Kate', gender: 'female', description: 'Professional female' },
 ];
 
 /**

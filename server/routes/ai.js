@@ -2652,10 +2652,14 @@ router.get('/simli/faces', authenticate, async (req, res) => {
   try {
     // Return some default Simli faces
     // These are publicly available face IDs from Simli
+    // Simli preset faces from docs.simli.com/api-reference/preset-faces
     const defaultFaces = [
       { id: '5514e24d-6086-46a3-ace4-6a7264e5cb7c', name: 'Default Avatar', thumbnail: null },
-      { id: 'tmp9i8bbq7c', name: 'Professional Male', thumbnail: null },
-      { id: 'tmp3ub1smil', name: 'Professional Female', thumbnail: null },
+      { id: '804c347a-26c9-4dcf-bb49-13df4bed61e8', name: 'Mark', thumbnail: null },
+      { id: 'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103', name: 'Kate', thumbnail: null },
+      { id: 'cace3ef7-a4c4-425d-a8cf-a5358eb0c427', name: 'Tina', thumbnail: null },
+      { id: '1c6aa65c-d858-4721-a4d9-bda9fde03141', name: 'Fred', thumbnail: null },
+      { id: 'b9e5fba3-071a-4e35-896e-211c4d6eaa7b', name: 'Laila', thumbnail: null },
     ];
 
     // Check if user has custom Simli face ID in settings
