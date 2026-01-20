@@ -603,10 +603,10 @@ class ApiService {
   }
 
   // Public demo TTS - no auth required
-  async getSimliDemoTTS(text, voiceSettings = null) {
+  async getSimliDemoTTS(text, voiceSettings = null, characterId = null) {
     return this.request('/api/ai/simli/demo-tts', {
       method: 'POST',
-      body: JSON.stringify({ text, voiceSettings }),
+      body: JSON.stringify({ text, voiceSettings, characterId }),
     });
   }
 

@@ -2682,14 +2682,14 @@ router.get('/simli/faces', authenticate, async (req, res) => {
 // Public demo TTS endpoint - Generate TTS for demo without authentication
 router.post('/simli/demo-tts', async (req, res) => {
   try {
-    const { text, voiceSettings } = req.body;
+    const { text, voiceSettings, characterId } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
 
     // Limit text length for demo
-    const maxLength = 200;
+    const maxLength = 150; // Shorter for faster response
     const truncatedText = text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
 
     // Get ElevenLabs config
@@ -2706,19 +2706,27 @@ router.post('/simli/demo-tts', async (req, res) => {
       return res.status(503).json({ error: 'Demo not available' });
     }
 
-    // Use default voice for demo (Rachel)
-    const voiceId = '21m00Tcm4TlvDq8ikWAM';
-
-    const defaultSettings = {
-      stability: 0.65,
-      similarity_boost: 0.75,
-      style: 0.0,
-      use_speaker_boost: true
+    // Character-specific voices from ElevenLabs
+    // Mark (male): Adam - deep, professional male voice
+    // Kate (female): Rachel - warm, professional female voice
+    const DEMO_VOICES = {
+      '804c347a-26c9-4dcf-bb49-13df4bed61e8': 'pNInz6obpgDQGcFmaJgB', // Mark -> Adam (male)
+      'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103': '21m00Tcm4TlvDq8ikWAM', // Kate -> Rachel (female)
     };
 
-    const finalVoiceSettings = voiceSettings || defaultSettings;
+    // Use character-specific voice or default to Rachel
+    const voiceId = DEMO_VOICES[characterId] || '21m00Tcm4TlvDq8ikWAM';
 
-    // Call ElevenLabs TTS API
+    const defaultSettings = {
+      stability: 0.5,
+      similarity_boost: 0.75,
+      style: 0.0,
+      use_speaker_boost: false // Faster without boost
+    };
+
+    const finalVoiceSettings = { ...defaultSettings, ...voiceSettings };
+
+    // Call ElevenLabs TTS API with PCM output
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
       headers: {
@@ -2728,23 +2736,19 @@ router.post('/simli/demo-tts', async (req, res) => {
       body: JSON.stringify({
         text: truncatedText,
         model_id: 'eleven_turbo_v2_5',
-        output_format: 'pcm_16000',
+        output_format: 'pcm_16000', // Direct PCM output - no conversion needed
         voice_settings: finalVoiceSettings
       })
     });
 
     if (!response.ok) {
-      console.error('Demo TTS error');
+      console.error('Demo TTS error:', response.status);
       return res.status(response.status).json({ error: 'TTS generation failed' });
     }
 
+    // ElevenLabs returns raw PCM when output_format is pcm_16000
     const audioBuffer = await response.arrayBuffer();
-    const mp3Data = Buffer.from(audioBuffer);
-
-    // Convert to PCM
-    const rawPCM = await convertMp3ToPcm16(mp3Data);
-
-    const base64Audio = rawPCM.toString('base64');
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
 
     res.json({
       audio: base64Audio,

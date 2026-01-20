@@ -108,7 +108,7 @@ export function SimliDemo({ className = '' }) {
             const ttsResponse = await api.getSimliDemoTTS(greeting, {
               stability: 0.5,
               similarity_boost: 0.75
-            });
+            }, selectedCharacter.id);
 
             if (ttsResponse.audio && simliClientRef.current) {
               queueAudio(ttsResponse.audio);
@@ -250,7 +250,7 @@ export function SimliDemo({ className = '' }) {
       const ttsResponse = await api.getSimliDemoTTS(response, {
         stability: 0.5,
         similarity_boost: 0.75
-      });
+      }, selectedCharacter.id);
 
       if (ttsResponse.audio && simliClientRef.current) {
         queueAudio(ttsResponse.audio);
