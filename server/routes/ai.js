@@ -2746,9 +2746,14 @@ router.post('/simli/demo-tts', async (req, res) => {
       return res.status(response.status).json({ error: 'TTS generation failed' });
     }
 
-    // ElevenLabs returns raw PCM when output_format is pcm_16000
+    // ElevenLabs returns MP3 even when pcm_16000 is requested
+    // We need to convert it to raw PCM16 for Simli
     const audioBuffer = await response.arrayBuffer();
-    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+    const mp3Data = Buffer.from(audioBuffer);
+
+    // Convert MP3 to PCM16 16kHz using ffmpeg (same as authenticated endpoint)
+    const rawPCM = await convertMp3ToPcm16(mp3Data);
+    const base64Audio = rawPCM.toString('base64');
 
     res.json({
       audio: base64Audio,
