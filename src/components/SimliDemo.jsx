@@ -19,7 +19,7 @@ let SimliClient = null;
 // Available demo characters (using Simli preset face IDs from docs.simli.com)
 const DEMO_CHARACTERS = [
   { id: 'afdb6a3e-3939-40aa-92df-01604c23101c', name: 'Ms Patel', gender: 'female', description: 'Professional female' },
-  { id: 'f0ba4efe-7946-45de-9955-c04a04c367b9', name: 'Dr Anderson', gender: 'male', description: 'Doctor' },
+  { id: 'f0ba4efe-7946-45de-9955-c04a04c367b9', name: 'Chad', gender: 'male', description: 'Professional male' },
   { id: '121cd5ae-7df7-4ea3-a389-401a9463db52', name: 'Edna', gender: 'female', description: 'Elderly woman' },
   { id: 'b1f6ad8f-ed78-430b-85ef-2ec672728104', name: 'Tiffany', gender: 'female', description: 'Young female' },
   { id: 'b9e5fba3-071a-4e35-896e-211c4d6eaa7b', name: 'Luna', gender: 'female', description: 'Friendly female' },

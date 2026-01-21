@@ -2713,7 +2713,7 @@ router.post('/simli/demo-tts', async (req, res) => {
     // Using diverse voices for each demo character
     const DEMO_VOICES = {
       'afdb6a3e-3939-40aa-92df-01604c23101c': '21m00Tcm4TlvDq8ikWAM', // Ms Patel -> Rachel (female, professional)
-      'f0ba4efe-7946-45de-9955-c04a04c367b9': 'pNInz6obpgDQGcFmaJgB', // Dr Anderson -> Adam (male, professional)
+      'f0ba4efe-7946-45de-9955-c04a04c367b9': 'pNInz6obpgDQGcFmaJgB', // Chad -> Adam (male, professional)
       '121cd5ae-7df7-4ea3-a389-401a9463db52': 'XrExE9yKIg1WjnnlVkGX', // Edna -> Matilda (female, elderly)
       'b1f6ad8f-ed78-430b-85ef-2ec672728104': 'EXAVITQu4vr4xnSDxMaL', // Tiffany -> Sarah (female, young)
       'b9e5fba3-071a-4e35-896e-211c4d6eaa7b': 'jBpfuIE2acCO8z3wKNLl', // Luna -> Emily (female, friendly)
