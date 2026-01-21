@@ -191,7 +191,7 @@ export function SimliDemo({ className = '', autoStart = false }) {
     }
   };
 
-  // Send audio to Simli - optimized for lower latency
+  // Send audio to Simli - using chunked sending like main component
   const sendAudioToSimli = (base64Audio) => {
     if (!simliClientRef.current) return;
 
@@ -207,14 +207,38 @@ export function SimliDemo({ className = '', autoStart = false }) {
       uint8Array[i] = binaryString.charCodeAt(i);
     }
 
-    // Convert Uint8Array to Int16Array (PCM16 format - little endian)
+    // Convert Uint8Array to Int16Array (PCM16 format)
     const int16Array = new Int16Array(uint8Array.buffer);
 
-    console.log('[SimliDemo] Sending audio:', int16Array.length, 'samples');
+    console.log('[SimliDemo] Sending audio:', int16Array.length, 'samples (', evenLength, 'bytes)');
 
-    // For demo: Send all audio at once using immediate method for lower latency
-    // This sends the entire buffer immediately without chunking delay
-    simliClientRef.current.sendAudioData(uint8Array);
+    // Send in chunks (6000 bytes = 3000 Int16 samples per chunk)
+    const CHUNK_SIZE = 6000;
+    const samplesPerChunk = CHUNK_SIZE / 2;
+    const sampleRate = 16000;
+    const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000;
+
+    let chunkIndex = 0;
+    const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
+
+    const sendNextChunk = () => {
+      if (chunkIndex >= totalChunks || !simliClientRef.current) {
+        return;
+      }
+
+      const start = chunkIndex * samplesPerChunk;
+      const end = Math.min(start + samplesPerChunk, int16Array.length);
+      const chunk = int16Array.slice(start, end);
+
+      simliClientRef.current.sendAudioData(chunk);
+      chunkIndex++;
+
+      if (chunkIndex < totalChunks) {
+        setTimeout(sendNextChunk, chunkDurationMs);
+      }
+    };
+
+    sendNextChunk();
   };
 
   const cleanup = () => {
