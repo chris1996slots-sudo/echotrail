@@ -100,13 +100,15 @@ export function SimliDemo({ className = '' }) {
         // Send welcome greeting after connection is fully established
         setTimeout(async () => {
           try {
-            const greeting = "Hello! I'm your AI avatar demo. Type a message to chat!";
+            const greeting = "Hi! I'm an AI demo. Try chatting with me!";
             setLastMessage(greeting);
 
+            console.log('[SimliDemo] Sending greeting TTS...');
             const ttsResponse = await api.getSimliDemoTTS(greeting, {
               stability: 0.5,
               similarity_boost: 0.75
             }, selectedCharacter.id);
+            console.log('[SimliDemo] TTS received, sending to Simli...');
 
             if (ttsResponse.audio && simliClientRef.current) {
               sendAudioToSimli(ttsResponse.audio);
@@ -114,7 +116,7 @@ export function SimliDemo({ className = '' }) {
           } catch (err) {
             console.error('Greeting error:', err);
           }
-        }, 1000); // Match SimliAvatar timing
+        }, 500); // Shorter delay
       });
 
       client.on('disconnected', () => setStatus('ended'));
@@ -206,21 +208,23 @@ export function SimliDemo({ className = '' }) {
     setIsProcessing(true);
 
     try {
-      // Simple demo responses - shorter for better performance
+      // Very short demo responses for speed
       const demoResponses = [
-        `Thanks for your message! This is a demo of what your AI avatar can do.`,
-        `I heard you! In the full version, I'll know your personality and stories.`,
-        `Great! Create an account to customize my voice and appearance.`,
-        `Interesting! Your future AI avatar will remember our conversations.`
+        `Thanks! This is a demo of your future AI avatar.`,
+        `I heard you! Create an account to customize me.`,
+        `Great question! Sign up to learn more.`,
+        `Interesting! Your avatar will remember this.`
       ];
 
       const response = demoResponses[Math.floor(Math.random() * demoResponses.length)];
       setLastMessage(response);
 
+      console.log('[SimliDemo] Sending message TTS...');
       const ttsResponse = await api.getSimliDemoTTS(response, {
         stability: 0.5,
         similarity_boost: 0.75
       }, selectedCharacter.id);
+      console.log('[SimliDemo] TTS received, audio length:', ttsResponse.audio?.length);
 
       if (ttsResponse.audio && simliClientRef.current) {
         sendAudioToSimli(ttsResponse.audio);

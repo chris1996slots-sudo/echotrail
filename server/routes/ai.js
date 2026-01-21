@@ -2682,15 +2682,18 @@ router.get('/simli/faces', authenticate, async (req, res) => {
 // Public demo TTS endpoint - Generate TTS for demo without authentication
 router.post('/simli/demo-tts', async (req, res) => {
   try {
+    const startTime = Date.now();
     const { text, voiceSettings, characterId } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
 
-    // Limit text length for demo
-    const maxLength = 150; // Shorter for faster response
+    // Limit text length for demo - shorter = faster
+    const maxLength = 100;
     const truncatedText = text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+
+    console.log('[Demo TTS] Starting for text:', truncatedText.slice(0, 50) + '...');
 
     // Get ElevenLabs config
     let voiceConfig = await req.prisma.apiConfig.findUnique({
@@ -2716,17 +2719,17 @@ router.post('/simli/demo-tts', async (req, res) => {
 
     // Use character-specific voice or default to Rachel
     const voiceId = DEMO_VOICES[characterId] || '21m00Tcm4TlvDq8ikWAM';
+    console.log('[Demo TTS] Using voice:', voiceId, 'for character:', characterId);
 
-    const defaultSettings = {
+    const finalVoiceSettings = {
       stability: 0.5,
       similarity_boost: 0.75,
       style: 0.0,
-      use_speaker_boost: false // Faster without boost
+      use_speaker_boost: false
     };
 
-    const finalVoiceSettings = { ...defaultSettings, ...voiceSettings };
-
-    // Call ElevenLabs TTS API with PCM output
+    // Call ElevenLabs TTS API
+    const ttsStartTime = Date.now();
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
       headers: {
@@ -2736,24 +2739,32 @@ router.post('/simli/demo-tts', async (req, res) => {
       body: JSON.stringify({
         text: truncatedText,
         model_id: 'eleven_turbo_v2_5',
-        output_format: 'pcm_16000', // Direct PCM output - no conversion needed
+        output_format: 'pcm_16000',
         voice_settings: finalVoiceSettings
       })
     });
 
+    console.log('[Demo TTS] ElevenLabs response in', Date.now() - ttsStartTime, 'ms, status:', response.status);
+
     if (!response.ok) {
-      console.error('Demo TTS error:', response.status);
+      const errorText = await response.text();
+      console.error('[Demo TTS] ElevenLabs error:', errorText);
       return res.status(response.status).json({ error: 'TTS generation failed' });
     }
 
-    // ElevenLabs returns MP3 even when pcm_16000 is requested
-    // We need to convert it to raw PCM16 for Simli
+    // Get audio buffer
     const audioBuffer = await response.arrayBuffer();
     const mp3Data = Buffer.from(audioBuffer);
+    console.log('[Demo TTS] Received', mp3Data.length, 'bytes from ElevenLabs');
 
-    // Convert MP3 to PCM16 16kHz using ffmpeg (same as authenticated endpoint)
+    // Convert MP3 to PCM16 16kHz using ffmpeg
+    const convertStartTime = Date.now();
     const rawPCM = await convertMp3ToPcm16(mp3Data);
+    console.log('[Demo TTS] FFmpeg conversion in', Date.now() - convertStartTime, 'ms, output:', rawPCM.length, 'bytes');
+
     const base64Audio = rawPCM.toString('base64');
+
+    console.log('[Demo TTS] Total time:', Date.now() - startTime, 'ms');
 
     res.json({
       audio: base64Audio,
@@ -2763,7 +2774,7 @@ router.post('/simli/demo-tts', async (req, res) => {
       isDemo: true
     });
   } catch (error) {
-    console.error('Demo TTS error:', error);
+    console.error('[Demo TTS] Error:', error);
     res.status(500).json({ error: 'Demo TTS failed' });
   }
 });
