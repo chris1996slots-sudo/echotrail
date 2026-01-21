@@ -84,31 +84,33 @@ export function SimliDemo({ className = '' }) {
         apiKey: config.simliApiKey,
         faceID: selectedCharacter.id || config.defaultFaceId,
         handleSilence: true,
-        syncAudio: true,
-        maxSessionLength: 300,
-        maxIdleTime: 120,
+        syncAudio: true,          // Enable audio synchronization for better lip-sync
+        maxSessionLength: 600,    // 10 minutes for demo
+        maxIdleTime: 300,         // 5 minutes idle timeout
         videoRef: videoRef.current,
         audioRef: audioRef.current,
-        enableConsoleLogs: true // Enable for debugging
+        enableConsoleLogs: true
       };
 
       client.Initialize(initConfig);
 
       client.on('connected', async () => {
+        console.log('[SimliDemo] Simli connected');
         setStatus('connected');
 
-        // Send welcome greeting after connection is fully established
+        // Send welcome greeting after connection is FULLY established
+        // Use 1500ms delay to ensure Simli WebRTC is ready (same as main app)
         setTimeout(async () => {
           try {
-            const greeting = "Hi! I'm an AI demo. Try chatting with me!";
+            const greeting = "Hello! I'm your AI demo avatar. Ask me anything!";
             setLastMessage(greeting);
 
             console.log('[SimliDemo] Sending greeting TTS...');
             const ttsResponse = await api.getSimliDemoTTS(greeting, {
-              stability: 0.5,
+              stability: 0.65,  // Higher stability for smoother speech
               similarity_boost: 0.75
             }, selectedCharacter.id);
-            console.log('[SimliDemo] TTS received, sending to Simli...');
+            console.log('[SimliDemo] TTS received, audio length:', ttsResponse.audio?.length);
 
             if (ttsResponse.audio && simliClientRef.current) {
               sendAudioToSimli(ttsResponse.audio);
@@ -116,7 +118,7 @@ export function SimliDemo({ className = '' }) {
           } catch (err) {
             console.error('Greeting error:', err);
           }
-        }, 500); // Shorter delay
+        }, 1500); // Increased delay to match SimliAvatar.jsx timing
       });
 
       client.on('disconnected', () => setStatus('ended'));
@@ -221,7 +223,7 @@ export function SimliDemo({ className = '' }) {
 
       console.log('[SimliDemo] Sending message TTS...');
       const ttsResponse = await api.getSimliDemoTTS(response, {
-        stability: 0.5,
+        stability: 0.65,       // Higher stability for smoother speech
         similarity_boost: 0.75
       }, selectedCharacter.id);
       console.log('[SimliDemo] TTS received, audio length:', ttsResponse.audio?.length);
