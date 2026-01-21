@@ -2712,12 +2712,12 @@ router.post('/simli/demo-tts', async (req, res) => {
     // Character-specific voices from ElevenLabs
     // Using diverse voices for each demo character
     const DEMO_VOICES = {
-      '804c347a-26c9-4dcf-bb49-13df4bed61e8': 'pNInz6obpgDQGcFmaJgB', // Mark -> Adam (male, deep)
-      'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103': '21m00Tcm4TlvDq8ikWAM', // Kate -> Rachel (female, warm)
-      '1c6aa65c-d858-4721-a4d9-bda9fde03141': 'ErXwobaYiN019PkySvjV', // Fred -> Antoni (male, friendly)
-      '5fc23ea5-8175-4a82-aaaf-cdd8c88543dc': 'EXAVITQu4vr4xnSDxMaL', // Madison -> Sarah (female, young)
-      'c2f1d5d7-074b-405d-be4c-df52cd52166a': 'XrExE9yKIg1WjnnlVkGX', // Nonna -> Matilda (female, elderly)
-      'f1abe833-b44c-4650-a01c-191b9c3c43b8': 'VR6AewLTigWG4xSOukaG', // Tony -> Arnold (male, crisp)
+      'afdb6a3e-3939-40aa-92df-01604c23101c': '21m00Tcm4TlvDq8ikWAM', // Ms Patel -> Rachel (female, professional)
+      'f0ba4efe-7946-45de-9955-c04a04c367b9': 'pNInz6obpgDQGcFmaJgB', // Dr Anderson -> Adam (male, professional)
+      '121cd5ae-7df7-4ea3-a389-401a9463db52': 'XrExE9yKIg1WjnnlVkGX', // Edna -> Matilda (female, elderly)
+      'b1f6ad8f-ed78-430b-85ef-2ec672728104': 'EXAVITQu4vr4xnSDxMaL', // Tiffany -> Sarah (female, young)
+      'b9e5fba3-071a-4e35-896e-211c4d6eaa7b': 'jBpfuIE2acCO8z3wKNLl', // Luna -> Emily (female, friendly)
+      '14de6eb1-0ea6-4fde-9522-8552ce691cb6': 'jsCqWAovK2LkecY7zXl4', // Baby -> Freya (female, soft)
     };
 
     // Use character-specific voice or default to Rachel

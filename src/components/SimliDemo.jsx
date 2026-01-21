@@ -18,12 +18,12 @@ let SimliClient = null;
 
 // Available demo characters (using Simli preset face IDs from docs.simli.com)
 const DEMO_CHARACTERS = [
-  { id: '804c347a-26c9-4dcf-bb49-13df4bed61e8', name: 'Mark', gender: 'male', description: 'Professional male' },
-  { id: 'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103', name: 'Kate', gender: 'female', description: 'Professional female' },
-  { id: '1c6aa65c-d858-4721-a4d9-bda9fde03141', name: 'Fred', gender: 'male', description: 'Friendly male' },
-  { id: '5fc23ea5-8175-4a82-aaaf-cdd8c88543dc', name: 'Madison', gender: 'female', description: 'Young female' },
-  { id: 'c2f1d5d7-074b-405d-be4c-df52cd52166a', name: 'Nonna', gender: 'female', description: 'Elderly woman' },
-  { id: 'f1abe833-b44c-4650-a01c-191b9c3c43b8', name: 'Tony', gender: 'male', description: 'Classic male' },
+  { id: 'afdb6a3e-3939-40aa-92df-01604c23101c', name: 'Ms Patel', gender: 'female', description: 'Professional female' },
+  { id: 'f0ba4efe-7946-45de-9955-c04a04c367b9', name: 'Dr Anderson', gender: 'male', description: 'Doctor' },
+  { id: '121cd5ae-7df7-4ea3-a389-401a9463db52', name: 'Edna', gender: 'female', description: 'Elderly woman' },
+  { id: 'b1f6ad8f-ed78-430b-85ef-2ec672728104', name: 'Tiffany', gender: 'female', description: 'Young female' },
+  { id: 'b9e5fba3-071a-4e35-896e-211c4d6eaa7b', name: 'Luna', gender: 'female', description: 'Friendly female' },
+  { id: '14de6eb1-0ea6-4fde-9522-8552ce691cb6', name: 'Baby', gender: 'neutral', description: 'Baby' },
 ];
 
 /**
