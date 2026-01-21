@@ -2710,11 +2710,14 @@ router.post('/simli/demo-tts', async (req, res) => {
     }
 
     // Character-specific voices from ElevenLabs
-    // Mark (male): Adam - deep, professional male voice
-    // Kate (female): Rachel - warm, professional female voice
+    // Using diverse voices for each demo character
     const DEMO_VOICES = {
-      '804c347a-26c9-4dcf-bb49-13df4bed61e8': 'pNInz6obpgDQGcFmaJgB', // Mark -> Adam (male)
-      'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103': '21m00Tcm4TlvDq8ikWAM', // Kate -> Rachel (female)
+      '804c347a-26c9-4dcf-bb49-13df4bed61e8': 'pNInz6obpgDQGcFmaJgB', // Mark -> Adam (male, deep)
+      'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103': '21m00Tcm4TlvDq8ikWAM', // Kate -> Rachel (female, warm)
+      '1c6aa65c-d858-4721-a4d9-bda9fde03141': 'ErXwobaYiN019PkySvjV', // Fred -> Antoni (male, friendly)
+      '5fc23ea5-8175-4a82-aaaf-cdd8c88543dc': 'EXAVITQu4vr4xnSDxMaL', // Madison -> Sarah (female, young)
+      'c2f1d5d7-074b-405d-be4c-df52cd52166a': 'XrExE9yKIg1WjnnlVkGX', // Nonna -> Matilda (female, elderly)
+      'f1abe833-b44c-4650-a01c-191b9c3c43b8': 'VR6AewLTigWG4xSOukaG', // Tony -> Arnold (male, crisp)
     };
 
     // Use character-specific voice or default to Rachel

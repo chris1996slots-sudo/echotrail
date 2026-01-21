@@ -19,6 +19,10 @@ let SimliClient = null;
 const DEMO_CHARACTERS = [
   { id: '804c347a-26c9-4dcf-bb49-13df4bed61e8', name: 'Mark', gender: 'male', description: 'Professional male' },
   { id: 'd2a5c7c6-fed9-4f55-bcb3-062f7cd20103', name: 'Kate', gender: 'female', description: 'Professional female' },
+  { id: '1c6aa65c-d858-4721-a4d9-bda9fde03141', name: 'Fred', gender: 'male', description: 'Friendly male' },
+  { id: '5fc23ea5-8175-4a82-aaaf-cdd8c88543dc', name: 'Madison', gender: 'female', description: 'Young female' },
+  { id: 'c2f1d5d7-074b-405d-be4c-df52cd52166a', name: 'Nonna', gender: 'female', description: 'Elderly woman' },
+  { id: 'f1abe833-b44c-4650-a01c-191b9c3c43b8', name: 'Tony', gender: 'male', description: 'Classic male' },
 ];
 
 /**
@@ -234,13 +238,13 @@ export function SimliDemo({ className = '' }) {
             <h3 className="text-cream font-medium mb-2">Live AI Avatar Demo</h3>
             <p className="text-cream/60 text-sm mb-4">Choose a character and start chatting!</p>
 
-            {/* Character Selection */}
-            <div className="flex justify-center gap-2 mb-4">
+            {/* Character Selection - 3x2 Grid */}
+            <div className="grid grid-cols-3 gap-2 mb-4 max-w-xs mx-auto">
               {DEMO_CHARACTERS.map((char) => (
                 <button
                   key={char.name}
                   onClick={() => setSelectedCharacter(char)}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1 ${
                     selectedCharacter.name === char.name
                       ? 'bg-gold text-navy'
                       : 'bg-navy-light border border-gold/30 text-cream/70 hover:border-gold/50'
