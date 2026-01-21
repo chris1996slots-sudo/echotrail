@@ -8,7 +8,8 @@ import {
   VolumeX,
   MessageCircle,
   Play,
-  User
+  User,
+  RefreshCw
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -54,7 +55,10 @@ export function SimliDemo({ className = '' }) {
     await initializeSimli();
   };
 
-  const initializeSimli = async () => {
+  const initializeSimli = async (characterOverride = null) => {
+    // Use override if provided (for character switching), otherwise use state
+    const character = characterOverride || selectedCharacter;
+
     try {
       setStatus('initializing');
       setError(null);
@@ -86,7 +90,7 @@ export function SimliDemo({ className = '' }) {
 
       const initConfig = {
         apiKey: config.simliApiKey,
-        faceID: selectedCharacter.id || config.defaultFaceId,
+        faceID: character.id || config.defaultFaceId,
         handleSilence: true,
         syncAudio: true,          // Enable audio synchronization for better lip-sync
         maxSessionLength: 600,    // 10 minutes for demo
@@ -100,21 +104,21 @@ export function SimliDemo({ className = '' }) {
       client.Initialize(initConfig);
 
       client.on('connected', async () => {
-        console.log('[SimliDemo] Simli connected');
+        console.log('[SimliDemo] Simli connected with character:', character.name);
         setStatus('connected');
 
         // Send welcome greeting after connection is FULLY established
         // Use 1500ms delay to ensure Simli WebRTC is ready (same as main app)
         setTimeout(async () => {
           try {
-            const greeting = "Hello! I'm your AI demo avatar. Ask me anything!";
+            const greeting = `Hello! I'm ${character.name}. Ask me anything!`;
             setLastMessage(greeting);
 
             console.log('[SimliDemo] Sending greeting TTS...');
             const ttsResponse = await api.getSimliDemoTTS(greeting, {
               stability: 0.65,  // Higher stability for smoother speech
               similarity_boost: 0.75
-            }, selectedCharacter.id);
+            }, character.id);
             console.log('[SimliDemo] TTS received, audio length:', ttsResponse.audio?.length);
 
             if (ttsResponse.audio && simliClientRef.current) {
@@ -180,6 +184,20 @@ export function SimliDemo({ className = '' }) {
         simliClientRef.current.close();
       } catch (e) {}
     }
+  };
+
+  // Switch to a different character - closes current session and starts new one
+  const switchCharacter = async (newCharacter) => {
+    if (newCharacter.id === selectedCharacter.id) return;
+
+    setSelectedCharacter(newCharacter);
+    setLastMessage('');
+    cleanup();
+
+    // Small delay before reinitializing with the new character
+    setTimeout(() => {
+      initializeSimli(newCharacter);
+    }, 100);
   };
 
   const handleSendMessage = async () => {
@@ -373,6 +391,30 @@ export function SimliDemo({ className = '' }) {
             <p className="text-cream/90 text-xs line-clamp-2">{lastMessage}</p>
           </div>
         )}
+      </div>
+
+      {/* Character Switcher */}
+      <div className="px-3 py-2 bg-navy-dark/80 border-t border-gold/10">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-3 h-3 text-cream/40 flex-shrink-0" />
+          <span className="text-cream/40 text-xs">Switch:</span>
+          <div className="flex gap-1 overflow-x-auto">
+            {DEMO_CHARACTERS.map((char) => (
+              <button
+                key={char.name}
+                onClick={() => switchCharacter(char)}
+                disabled={status === 'initializing' || status === 'connecting'}
+                className={`px-2 py-0.5 rounded text-xs whitespace-nowrap transition-all ${
+                  selectedCharacter.name === char.name
+                    ? 'bg-gold/30 text-gold'
+                    : 'bg-navy-light/50 text-cream/50 hover:text-cream/80 hover:bg-navy-light'
+                } disabled:opacity-50`}
+              >
+                {char.name}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Chat Input */}
