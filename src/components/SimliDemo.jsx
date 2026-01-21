@@ -89,7 +89,8 @@ export function SimliDemo({ className = '' }) {
         maxIdleTime: 300,         // 5 minutes idle timeout
         videoRef: videoRef.current,
         audioRef: audioRef.current,
-        enableConsoleLogs: true
+        enableConsoleLogs: true,
+        model: 'fasttalk'         // Use faster model for lower latency
       };
 
       client.Initialize(initConfig);
@@ -143,7 +144,7 @@ export function SimliDemo({ className = '' }) {
     }
   };
 
-  // Send audio to Simli - simplified version matching SimliAvatar.jsx
+  // Send audio to Simli - optimized for lower latency
   const sendAudioToSimli = (base64Audio) => {
     if (!simliClientRef.current) return;
 
@@ -162,35 +163,11 @@ export function SimliDemo({ className = '' }) {
     // Convert Uint8Array to Int16Array (PCM16 format - little endian)
     const int16Array = new Int16Array(uint8Array.buffer);
 
-    // Send audio in chunks with proper timing for better lip-sync
-    const CHUNK_SIZE = 6000;
-    const samplesPerChunk = CHUNK_SIZE / 2; // 3000 samples per chunk
-    const sampleRate = 16000; // 16kHz
-    const chunkDurationMs = (samplesPerChunk / sampleRate) * 1000;
+    console.log('[SimliDemo] Sending audio:', int16Array.length, 'samples');
 
-    // Send chunks with timing to match audio playback
-    let chunkIndex = 0;
-    const totalChunks = Math.ceil(int16Array.length / samplesPerChunk);
-
-    const sendNextChunk = () => {
-      if (chunkIndex >= totalChunks) {
-        return;
-      }
-
-      const start = chunkIndex * samplesPerChunk;
-      const end = Math.min(start + samplesPerChunk, int16Array.length);
-      const chunk = int16Array.slice(start, end);
-
-      simliClientRef.current.sendAudioData(chunk);
-      chunkIndex++;
-
-      if (chunkIndex < totalChunks) {
-        setTimeout(sendNextChunk, chunkDurationMs);
-      }
-    };
-
-    // Start sending chunks
-    sendNextChunk();
+    // For demo: Send all audio at once using immediate method for lower latency
+    // This sends the entire buffer immediately without chunking delay
+    simliClientRef.current.sendAudioData(uint8Array);
   };
 
   const cleanup = () => {

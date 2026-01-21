@@ -162,9 +162,6 @@ export function OnboardingPage({ onNavigate }) {
                 <Heart className="w-5 h-5" />
                 <span className="text-sm">This is a journey of love and legacy</span>
               </div>
-              <p className="text-cream/50 text-sm hidden lg:block">
-                Try chatting with the AI demo on the right to see what your future avatar can do!
-              </p>
             </div>
 
             {/* Right: Live Simli Demo */}
