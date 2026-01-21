@@ -143,36 +143,26 @@ export function OnboardingPage({ onNavigate }) {
     switch (step.id) {
       case 'welcome':
         return (
-          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16 max-w-7xl mx-auto">
-            {/* Left: Text Content */}
-            <div className="flex-1 text-center lg:text-left lg:max-w-lg">
-              <motion.div
-                className="w-16 h-16 mx-auto lg:mx-0 mb-5 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center pulse-glow"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Sparkles className="w-8 h-8 text-navy" />
-              </motion.div>
-              <p className="text-cream/70 text-lg mb-5">
-                In the next few moments, you'll take the first steps toward creating a digital
-                version of yourself that will carry your wisdom, your values, and your stories
-                into the future.
-              </p>
-              <div className="flex items-center justify-center lg:justify-start gap-2 text-gold mb-4">
-                <Heart className="w-5 h-5" />
-                <span className="text-sm">This is a journey of love and legacy</span>
-              </div>
-            </div>
+          <div className="flex flex-col items-center gap-6 max-w-2xl mx-auto">
+            {/* Center: Live Simli Demo (Auto-starts with Luna) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="w-full max-w-md"
+            >
+              <SimliDemo className="w-full" autoStart={true} />
+            </motion.div>
 
-            {/* Right: Live Simli Demo */}
-            <div className="flex-1 w-full max-w-lg lg:max-w-xl">
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-              >
-                <SimliDemo className="w-full" />
-              </motion.div>
+            {/* Below: Text Content */}
+            <div className="text-center">
+              <p className="text-cream/70 text-base mb-3">
+                Create a digital version of yourself that carries your wisdom and stories into the future.
+              </p>
+              <div className="flex items-center justify-center gap-2 text-gold">
+                <Heart className="w-4 h-4" />
+                <span className="text-sm">A journey of love and legacy</span>
+              </div>
             </div>
           </div>
         );
@@ -365,7 +355,7 @@ export function OnboardingPage({ onNavigate }) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-4 pt-8">
-        <div className={`w-full ${currentStep === 0 ? 'max-w-7xl' : 'max-w-2xl'}`}>
+        <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               {steps.map((_, index) => (

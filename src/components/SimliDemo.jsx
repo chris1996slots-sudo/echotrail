@@ -30,8 +30,8 @@ const DEMO_CHARACTERS = [
  * SimliDemo - A compact demo avatar for the registration/landing page
  * Works without authentication, uses default face and voice
  */
-export function SimliDemo({ className = '' }) {
-  const [status, setStatus] = useState('idle'); // Start with idle to require user interaction
+export function SimliDemo({ className = '', autoStart = false }) {
+  const [status, setStatus] = useState('idle');
   const [error, setError] = useState(null);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,16 +39,23 @@ export function SimliDemo({ className = '' }) {
   const [lastMessage, setLastMessage] = useState('');
   const [simliConfig, setSimliConfig] = useState(null);
   const [selectedCharacter, setSelectedCharacter] = useState(DEMO_CHARACTERS[0]);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(autoStart);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const simliClientRef = useRef(null);
 
-  // Don't auto-initialize - wait for user interaction
+  // Auto-start if enabled (with Luna as default)
   useEffect(() => {
+    if (autoStart) {
+      // Small delay to ensure component is mounted
+      const timer = setTimeout(() => {
+        initializeSimli(DEMO_CHARACTERS[0]); // Luna
+      }, 500);
+      return () => clearTimeout(timer);
+    }
     return () => cleanup();
-  }, []);
+  }, [autoStart]);
 
   const startDemo = async () => {
     setHasUserInteracted(true);
