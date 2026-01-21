@@ -2710,14 +2710,14 @@ router.post('/simli/demo-tts', async (req, res) => {
     }
 
     // Character-specific voices from ElevenLabs
-    // Using diverse voices for each demo character
+    // Matching voice personalities to avatar appearances
     const DEMO_VOICES = {
-      'afdb6a3e-3939-40aa-92df-01604c23101c': '21m00Tcm4TlvDq8ikWAM', // Ms Patel -> Rachel (female, professional)
-      'c65af549-9105-442a-92a3-dc6c89e34149': 'pNInz6obpgDQGcFmaJgB', // DJ -> Adam (male, trendy)
-      '121cd5ae-7df7-4ea3-a389-401a9463db52': 'XrExE9yKIg1WjnnlVkGX', // Edna -> Matilda (female, elderly)
-      'b1f6ad8f-ed78-430b-85ef-2ec672728104': 'EXAVITQu4vr4xnSDxMaL', // Tiffany -> Sarah (female, young)
-      'b9e5fba3-071a-4e35-896e-211c4d6eaa7b': 'jBpfuIE2acCO8z3wKNLl', // Luna -> Emily (female, friendly)
-      '14de6eb1-0ea6-4fde-9522-8552ce691cb6': 'jsCqWAovK2LkecY7zXl4', // Baby -> Freya (female, soft)
+      'b9e5fba3-071a-4e35-896e-211c4d6eaa7b': 'jBpfuIE2acCO8z3wKNLl', // Luna -> Gigi (young, friendly, childish)
+      'afdb6a3e-3939-40aa-92df-01604c23101c': 'Xb7hH8MSUJpSbSDYk0k2', // Ms Patel -> Alice (British, confident, professional)
+      'c65af549-9105-442a-92a3-dc6c89e34149': 'ErXwobaYiN019PkySvjV', // DJ -> Antoni (young, well-rounded, American)
+      '121cd5ae-7df7-4ea3-a389-401a9463db52': 'pFZP5JQG7iQjIQuC4Bku', // Edna -> Lily (British, raspy, older sounding)
+      'b1f6ad8f-ed78-430b-85ef-2ec672728104': 'ThT5KcBeYPX3keUQqHPh', // Tiffany -> Dorothy (British, pleasant, young)
+      '14de6eb1-0ea6-4fde-9522-8552ce691cb6': 'zrHiDhphv9ZnVXBqCLjz', // Baby -> Mimi (childish, Swedish accent)
     };
 
     // Use character-specific voice or default to Rachel
