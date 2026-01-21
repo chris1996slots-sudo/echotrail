@@ -40,6 +40,7 @@ export function SimliDemo({ className = '', autoStart = false }) {
   const [simliConfig, setSimliConfig] = useState(null);
   const [selectedCharacter, setSelectedCharacter] = useState(DEMO_CHARACTERS[0]);
   const [hasUserInteracted, setHasUserInteracted] = useState(autoStart);
+  const [needsAudioUnlock, setNeedsAudioUnlock] = useState(autoStart); // Track if we need user to unlock audio
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -56,6 +57,38 @@ export function SimliDemo({ className = '', autoStart = false }) {
     }
     return () => cleanup();
   }, [autoStart]);
+
+  // Function to unlock audio after user interaction and replay greeting
+  const unlockAudio = async () => {
+    if (audioRef.current) {
+      // Play to unlock audio context
+      try {
+        await audioRef.current.play();
+      } catch (e) {
+        console.log('[SimliDemo] Audio play attempt:', e);
+      }
+      setNeedsAudioUnlock(false);
+
+      // Re-send the greeting now that audio is unlocked
+      if (simliClientRef.current && selectedCharacter) {
+        try {
+          const greeting = `Hello! I'm ${selectedCharacter.name}. Ask me anything!`;
+          setLastMessage(greeting);
+
+          const ttsResponse = await api.getSimliDemoTTS(greeting, {
+            stability: 0.65,
+            similarity_boost: 0.75
+          }, selectedCharacter.id);
+
+          if (ttsResponse.audio) {
+            sendAudioToSimli(ttsResponse.audio);
+          }
+        } catch (err) {
+          console.error('Greeting replay error:', err);
+        }
+      }
+    }
+  };
 
   const startDemo = async () => {
     setHasUserInteracted(true);
@@ -392,8 +425,30 @@ export function SimliDemo({ className = '', autoStart = false }) {
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
 
+        {/* Audio Unlock Overlay - shown when autoStart but user hasn't interacted */}
+        {needsAudioUnlock && status === 'connected' && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={unlockAudio}
+            className="absolute inset-0 flex items-center justify-center bg-black/60 cursor-pointer"
+          >
+            <div className="text-center">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="w-16 h-16 mx-auto mb-3 rounded-full bg-gold/20 flex items-center justify-center border-2 border-gold"
+              >
+                <Volume2 className="w-8 h-8 text-gold" />
+              </motion.div>
+              <p className="text-cream font-medium">Tap to hear Luna</p>
+              <p className="text-cream/60 text-sm">Enable audio</p>
+            </div>
+          </motion.button>
+        )}
+
         {/* Last Message */}
-        {lastMessage && (
+        {lastMessage && !needsAudioUnlock && (
           <div className="absolute bottom-3 left-3 right-14 p-2 bg-navy/90 rounded-lg">
             <p className="text-cream/90 text-xs line-clamp-2">{lastMessage}</p>
           </div>
