@@ -20,7 +20,6 @@ let SimliClient = null;
 const DEMO_CHARACTERS = [
   { id: 'b9e5fba3-071a-4e35-896e-211c4d6eaa7b', name: 'Luna', gender: 'female', description: 'Friendly female' },
   { id: 'afdb6a3e-3939-40aa-92df-01604c23101c', name: 'Ms Patel', gender: 'female', description: 'Professional female' },
-  { id: 'c65af549-9105-442a-92a3-dc6c89e34149', name: 'DJ', gender: 'male', description: 'Trendy male' },
   { id: '121cd5ae-7df7-4ea3-a389-401a9463db52', name: 'Edna', gender: 'female', description: 'Elderly woman' },
   { id: 'b1f6ad8f-ed78-430b-85ef-2ec672728104', name: 'Tiffany', gender: 'female', description: 'Young female' },
   { id: '14de6eb1-0ea6-4fde-9522-8552ce691cb6', name: 'Baby', gender: 'neutral', description: 'Baby' },
