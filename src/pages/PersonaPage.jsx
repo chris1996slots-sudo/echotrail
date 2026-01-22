@@ -398,7 +398,7 @@ export function PersonaPage({ onNavigate }) {
 
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
-    { id: 'family', label: 'Family Members' },
+    { id: 'family-members', label: 'Family Members' },
     { id: 'stories', label: 'Life Stories' },
     { id: 'interview', label: 'Deep Interview' },
     { id: 'values', label: 'Value Store' },
@@ -1728,7 +1728,7 @@ export function PersonaPage({ onNavigate }) {
                 </div>
               );
 
-            case 'family':
+            case 'family-members':
               return (
                 <div className="space-y-6">
                   <div className="text-center mb-6">
