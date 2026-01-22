@@ -3874,80 +3874,115 @@ export function PersonaPage({ onNavigate }) {
 
                 {/* Mission Cards */}
                 <div className="grid md:grid-cols-2 gap-4">
-                  {legacyProgress.missions.map((mission, index) => (
-                    <motion.div
-                      key={mission.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      onClick={() => !mission.completed && handleMissionClick(mission.id)}
-                      className={`glass-card p-6 border-2 transition-all ${
-                        mission.completed
-                          ? 'bg-green-500/5 border-green-500/30'
-                          : 'bg-navy-dark/30 border-cream/10 cursor-pointer hover:border-gold/40 hover:bg-gold/5'
-                      }`}
-                      whileHover={!mission.completed ? { scale: 1.02, y: -4 } : {}}
-                      whileTap={!mission.completed ? { scale: 0.98 } : {}}
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Icon */}
-                        <div
-                          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            mission.completed
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-cream/10 text-cream/40'
-                          }`}
-                        >
-                          {mission.completed ? (
-                            <CheckCircle2 className="w-6 h-6" />
-                          ) : (
-                            <Target className="w-6 h-6" />
-                          )}
-                        </div>
+                  {legacyProgress.missions.map((mission, index) => {
+                    // Parse progress like "0/5" to get percentage
+                    const progressMatch = mission.progress?.match(/(\d+)\/(\d+)/);
+                    const progressCurrent = progressMatch ? parseInt(progressMatch[1]) : 0;
+                    const progressTotal = progressMatch ? parseInt(progressMatch[2]) : 0;
+                    const progressPercent = progressTotal > 0 ? (progressCurrent / progressTotal) * 100 : 0;
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3
-                              className={`font-medium ${
-                                mission.completed ? 'text-cream' : 'text-cream/70'
-                              }`}
-                            >
-                              {mission.name}
-                            </h3>
-                            <span
-                              className={`text-lg font-serif ${
-                                mission.completed ? 'text-green-400' : 'text-cream/40'
-                              }`}
-                            >
-                              {mission.points}%
-                            </span>
+                    return (
+                      <motion.div
+                        key={mission.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        onClick={() => !mission.completed && handleMissionClick(mission.id)}
+                        className={`glass-card p-5 border-2 transition-all ${
+                          mission.completed
+                            ? 'bg-green-500/5 border-green-500/30'
+                            : 'bg-navy-dark/30 border-cream/10 cursor-pointer hover:border-gold/40 hover:bg-gold/5'
+                        }`}
+                        whileHover={!mission.completed ? { scale: 1.02, y: -4 } : {}}
+                        whileTap={!mission.completed ? { scale: 0.98 } : {}}
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Icon */}
+                          <div
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              mission.completed
+                                ? 'bg-green-500/20 text-green-400'
+                                : progressPercent > 0
+                                ? 'bg-gold/20 text-gold'
+                                : 'bg-cream/10 text-cream/40'
+                            }`}
+                          >
+                            {mission.completed ? (
+                              <CheckCircle2 className="w-6 h-6" />
+                            ) : (
+                              <Target className="w-6 h-6" />
+                            )}
                           </div>
 
-                          <p className="text-cream/50 text-sm mb-2">{mission.description}</p>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-1">
+                              <h3
+                                className={`font-medium ${
+                                  mission.completed ? 'text-cream' : 'text-cream/80'
+                                }`}
+                              >
+                                {mission.name}
+                              </h3>
+                              <span
+                                className={`text-sm font-medium px-2 py-0.5 rounded ${
+                                  mission.completed
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-cream/10 text-cream/50'
+                                }`}
+                              >
+                                +{mission.points}%
+                              </span>
+                            </div>
 
-                          {/* Progress indicator if available */}
-                          {mission.progress && (
-                            <div className="inline-block px-3 py-1 bg-gold/10 text-gold text-xs rounded-full border border-gold/30">
-                              {mission.progress}
-                            </div>
-                          )}
+                            <p className="text-cream/50 text-sm mb-3">{mission.description}</p>
 
-                          {/* Completion badge */}
-                          {mission.completed ? (
-                            <div className="inline-block px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-400/30 mt-2">
-                              ✓ Completed
-                            </div>
-                          ) : (
-                            <div className="inline-block px-3 py-1 bg-gold/10 text-gold text-xs rounded-full border border-gold/30 mt-2 flex items-center gap-1">
-                              <ArrowRight className="w-3 h-3" />
-                              Click to start
-                            </div>
-                          )}
+                            {/* Progress Bar for incomplete missions with progress */}
+                            {!mission.completed && mission.progress && progressTotal > 0 && (
+                              <div className="mb-3">
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-cream/40">Progress</span>
+                                  <span className={progressPercent > 0 ? 'text-gold' : 'text-cream/40'}>
+                                    {progressCurrent} of {progressTotal}
+                                  </span>
+                                </div>
+                                <div className="h-2 bg-navy-dark rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${progressPercent}%` }}
+                                    transition={{ duration: 0.5 }}
+                                    className={`h-full rounded-full ${
+                                      progressPercent > 0
+                                        ? 'bg-gradient-to-r from-gold to-gold-light'
+                                        : 'bg-cream/20'
+                                    }`}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Status */}
+                            {mission.completed ? (
+                              <div className="flex items-center gap-1.5 text-green-400 text-sm">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Completed</span>
+                              </div>
+                            ) : (
+                              <motion.div
+                                className="flex items-center gap-2 text-gold text-sm group"
+                                whileHover={{ x: 3 }}
+                              >
+                                <div className="w-6 h-6 rounded-full bg-gold/20 flex items-center justify-center group-hover:bg-gold/30 transition-colors">
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </div>
+                                <span>{progressPercent > 0 ? 'Continue' : 'Start mission'}</span>
+                              </motion.div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </>
             ) : (
