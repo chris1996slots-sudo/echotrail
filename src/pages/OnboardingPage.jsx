@@ -32,11 +32,6 @@ const steps = [
     subtitle: 'Let us know the name your legacy will carry',
   },
   {
-    id: 'purpose',
-    title: 'Why Are You Here?',
-    subtitle: 'Understanding your motivation helps us guide you',
-  },
-  {
     id: 'account',
     title: 'Secure Your Legacy',
     subtitle: 'Create your account to begin preserving your essence',
@@ -48,13 +43,6 @@ const steps = [
   },
 ];
 
-const purposes = [
-  { id: 'family', label: 'For My Family', description: 'Preserve wisdom for future generations', icon: '👨‍👩‍👧‍👦' },
-  { id: 'children', label: 'For My Children', description: 'Guide them even when I cannot', icon: '👶' },
-  { id: 'grandchildren', label: 'For Future Grandchildren', description: 'Stories for those not yet born', icon: '🌱' },
-  { id: 'self', label: 'For Myself', description: 'Create a digital time capsule', icon: '💫' },
-];
-
 export function OnboardingPage({ onNavigate }) {
   const { setUser, setSubscription } = useApp();
   const [currentStep, setCurrentStep] = useState(0);
@@ -62,7 +50,6 @@ export function OnboardingPage({ onNavigate }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    purposes: [],
     email: '',
     password: '',
   });
@@ -81,10 +68,6 @@ export function OnboardingPage({ onNavigate }) {
     }
 
     if (currentStep === 2) {
-      if (formData.purposes.length === 0) newErrors.purposes = 'Please select at least one purpose';
-    }
-
-    if (currentStep === 3) {
       if (!formData.email.trim()) newErrors.email = 'Email is required';
       else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
       if (!formData.password) newErrors.password = 'Password is required';
@@ -114,7 +97,6 @@ export function OnboardingPage({ onNavigate }) {
           lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
-          purposes: formData.purposes,
         });
 
         // Set user from API response
@@ -211,52 +193,6 @@ export function OnboardingPage({ onNavigate }) {
                 <p className="text-red-400 text-sm mt-1">{errors.lastName}</p>
               )}
             </div>
-          </div>
-        );
-
-      case 'purpose':
-        const togglePurpose = (purposeId) => {
-          const current = formData.purposes;
-          if (current.includes(purposeId)) {
-            setFormData({ ...formData, purposes: current.filter(p => p !== purposeId) });
-          } else {
-            setFormData({ ...formData, purposes: [...current, purposeId] });
-          }
-        };
-
-        return (
-          <div className="max-w-lg mx-auto">
-            <p className="text-cream/50 text-sm text-center mb-6">Select all that apply</p>
-            <div className="grid grid-cols-2 gap-4">
-              {purposes.map((purpose) => {
-                const isSelected = formData.purposes.includes(purpose.id);
-                return (
-                  <motion.button
-                    key={purpose.id}
-                    onClick={() => togglePurpose(purpose.id)}
-                    className={`p-6 rounded-xl border-2 text-left transition-all relative ${
-                      isSelected
-                        ? 'border-gold bg-gold/10'
-                        : 'border-gold/20 hover:border-gold/40 bg-navy-light/30'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {isSelected && (
-                      <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-navy" />
-                      </div>
-                    )}
-                    <span className="text-3xl mb-3 block">{purpose.icon}</span>
-                    <h4 className="text-cream font-medium mb-1">{purpose.label}</h4>
-                    <p className="text-cream/50 text-sm">{purpose.description}</p>
-                  </motion.button>
-                );
-              })}
-            </div>
-            {errors.purposes && (
-              <p className="text-red-400 text-sm mt-4 text-center">{errors.purposes}</p>
-            )}
           </div>
         );
 
