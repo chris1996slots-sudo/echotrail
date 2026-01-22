@@ -58,6 +58,7 @@ const purposes = [
 export function OnboardingPage({ onNavigate }) {
   const { setUser, setSubscription } = useApp();
   const [currentStep, setCurrentStep] = useState(0);
+  const [showDemo, setShowDemo] = useState(true); // Track if demo should be shown
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -96,6 +97,11 @@ export function OnboardingPage({ onNavigate }) {
 
   const nextStep = async () => {
     if (!validateStep()) return;
+
+    // Close demo when leaving welcome step
+    if (currentStep === 0 && showDemo) {
+      setShowDemo(false);
+    }
 
     // Handle registration on account step
     if (currentStep === steps.length - 2) {
@@ -144,15 +150,18 @@ export function OnboardingPage({ onNavigate }) {
       case 'welcome':
         return (
           <div className="flex flex-col items-center gap-6 max-w-2xl mx-auto">
-            {/* Center: Live Simli Demo (Auto-starts with Luna) */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="w-full max-w-md"
-            >
-              <SimliDemo className="w-full" autoStart={true} />
-            </motion.div>
+            {/* Center: Live Simli Demo (Auto-starts with Luna) - unmounts when leaving step */}
+            {showDemo && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+                className="w-full max-w-md"
+              >
+                <SimliDemo className="w-full" autoStart={true} />
+              </motion.div>
+            )}
 
             {/* Below: Text Content */}
             <div className="text-center">
