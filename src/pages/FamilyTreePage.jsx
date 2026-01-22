@@ -67,6 +67,12 @@ const RELATIONSHIP_TYPES = {
     icon: '🎩',
     color: 'from-gray-500/20 to-slate-500/10'
   },
+  greatGreatGrandparents: {
+    label: 'Great-Great-Grandparents',
+    options: ['Great-Great-Grandfather', 'Great-Great-Grandmother', 'Great-Great-Grandparent'],
+    icon: '📜',
+    color: 'from-amber-800/20 to-stone-600/10'
+  },
 };
 
 export function FamilyTreePage({ onNavigate }) {
@@ -80,7 +86,8 @@ export function FamilyTreePage({ onNavigate }) {
   const [selectedRelationship, setSelectedRelationship] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showChildren, setShowChildren] = useState(true);
-  const [showGrandchildren, setShowGrandchildren] = useState(true);
+  const [showGrandchildren, setShowGrandchildren] = useState(false); // Hidden by default
+  const [showGreatGreatGrandparents, setShowGreatGreatGrandparents] = useState(false); // Expand ancestors
 
   // Chat state
   const [showChat, setShowChat] = useState(false);
@@ -946,104 +953,135 @@ export function FamilyTreePage({ onNavigate }) {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-4"
         >
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <h1 className="text-2xl font-serif text-cream flex items-center gap-2">
-              <Users className="w-6 h-6 text-gold" />
-              Family Tree
-            </h1>
+          <h1 className="text-2xl font-serif text-cream flex items-center justify-center gap-2 mb-3">
+            <Users className="w-6 h-6 text-gold" />
+            Family Tree
+          </h1>
 
-            {/* Toggle Options - inline */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowGrandchildren(!showGrandchildren)}
-                className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                  showGrandchildren
-                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                    : 'bg-cream/5 text-cream/40 border border-cream/10'
-                }`}
-              >
-                👼 Grandchildren
-              </button>
-              <button
-                onClick={() => setShowChildren(!showChildren)}
-                className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                  showChildren
-                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                    : 'bg-cream/5 text-cream/40 border border-cream/10'
-                }`}
-              >
-                👶 Children
-              </button>
-            </div>
+          {/* Expand Options */}
+          <div className="flex justify-center gap-3 flex-wrap">
+            {/* Expand Descendants */}
+            <button
+              onClick={() => setShowGrandchildren(!showGrandchildren)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                showGrandchildren
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                  : 'bg-cream/5 text-cream/50 border border-cream/10 hover:border-cream/30'
+              }`}
+            >
+              <span>👼</span>
+              {showGrandchildren ? 'Hide Grandchildren' : 'Show Grandchildren'}
+            </button>
+
+            {/* Toggle Children */}
+            <button
+              onClick={() => setShowChildren(!showChildren)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                showChildren
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                  : 'bg-cream/5 text-cream/50 border border-cream/10 hover:border-cream/30'
+              }`}
+            >
+              <span>👶</span>
+              {showChildren ? 'Hide Children' : 'Show Children'}
+            </button>
+
+            {/* Expand Ancestors */}
+            <button
+              onClick={() => setShowGreatGreatGrandparents(!showGreatGreatGrandparents)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                showGreatGreatGrandparents
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-cream/5 text-cream/50 border border-cream/10 hover:border-cream/30'
+              }`}
+            >
+              <span>📜</span>
+              {showGreatGreatGrandparents ? 'Hide Deep Ancestors' : 'Show Deep Ancestors'}
+            </button>
           </div>
         </motion.div>
 
         {/* Family Tree Structure - Compact Layout */}
-        <div className="space-y-4">
-          {/* ROW 1: Descendants (Grandchildren & Children) */}
-          {(showGrandchildren || showChildren) && (
-            <div className="flex flex-wrap justify-center gap-6 pb-3 border-b border-cream/10">
-              {showGrandchildren && renderCategory('grandchildren')}
-              {showChildren && renderCategory('children')}
+        <div className="space-y-3">
+          {/* DESCENDANTS SECTION (expandable) */}
+          {showGrandchildren && (
+            <div className="pb-3 border-b border-teal-500/20">
+              {renderCategory('grandchildren')}
             </div>
           )}
 
-          {/* ROW 2: User (You) + Siblings - side by side */}
-          <div className="flex flex-wrap justify-center items-start gap-6 py-3">
-            {/* Siblings left */}
+          {showChildren && (
+            <div className="pb-3 border-b border-green-500/20">
+              {renderCategory('children')}
+            </div>
+          )}
+
+          {/* USER ROW: You + Siblings */}
+          <div className="flex flex-wrap justify-center items-start gap-4 py-3">
+            {/* Siblings left (desktop) */}
             <div className="hidden md:block">
               {renderCategory('siblings')}
             </div>
 
-            {/* User Card (You) - Center, prominent */}
+            {/* User Card (You) - Center */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
               className="flex flex-col items-center"
             >
-              <div className="relative glass-card p-4 bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/40">
+              <div className="relative glass-card p-3 bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/40">
                 <div className="flex flex-col items-center gap-2">
-                  {/* User avatar */}
                   {(() => {
                     const activeAvatar = persona?.avatarImages?.find(img => img.isActive) || persona?.avatarImages?.[0];
                     return activeAvatar?.imageData ? (
                       <img
                         src={activeAvatar.imageData}
                         alt={user?.firstName}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-gold"
+                        className="w-14 h-14 rounded-full object-cover border-2 border-gold"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-2 border-gold">
-                        <UserIcon className="w-8 h-8 text-navy" />
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-2 border-gold">
+                        <UserIcon className="w-7 h-7 text-navy" />
                       </div>
                     );
                   })()}
                   <div className="text-center">
-                    <h2 className="text-lg font-medium text-gold">{user?.firstName} {user?.lastName}</h2>
-                    <p className="text-cream/50 text-xs">You</p>
+                    <h2 className="text-base font-medium text-gold">{user?.firstName} {user?.lastName}</h2>
+                    <p className="text-cream/50 text-[10px]">You</p>
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* Siblings right (on mobile: below) */}
+            {/* Siblings (mobile) */}
             <div className="md:hidden">
               {renderCategory('siblings')}
             </div>
           </div>
 
-          {/* ROW 3: Parents & Aunts/Uncles - side by side */}
-          <div className="flex flex-wrap justify-center gap-6 py-3 border-t border-cream/10">
+          {/* PARENTS ROW */}
+          <div className="flex flex-wrap justify-center gap-6 py-2 border-t border-cream/10">
             {renderCategory('parents')}
             {renderCategory('auntsUncles')}
           </div>
 
-          {/* ROW 4: Grandparents & Great-Grandparents - side by side */}
-          <div className="flex flex-wrap justify-center gap-6 py-3 border-t border-cream/10">
+          {/* GRANDPARENTS ROW */}
+          <div className="py-2 border-t border-cream/10">
             {renderCategory('grandparents')}
+          </div>
+
+          {/* GREAT-GRANDPARENTS ROW */}
+          <div className="py-2 border-t border-cream/10">
             {renderCategory('greatGrandparents')}
           </div>
+
+          {/* GREAT-GREAT-GRANDPARENTS (expandable ancestors) */}
+          {showGreatGreatGrandparents && (
+            <div className="py-2 border-t border-amber-500/20">
+              {renderCategory('greatGreatGrandparents')}
+            </div>
+          )}
         </div>
       </div>
 
