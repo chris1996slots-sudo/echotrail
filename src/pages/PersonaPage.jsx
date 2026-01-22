@@ -47,7 +47,8 @@ import {
   RefreshCw,
   Info,
   Shield,
-  Lock
+  Lock,
+  MessageCircle
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
@@ -3488,6 +3489,82 @@ export function PersonaPage({ onNavigate }) {
           </div>
 
           <div className="space-y-6">
+            {/* My Digital Avatar Card */}
+            <FadeIn delay={0.2}>
+              <div className="glass-card p-4">
+                <h3 className="text-lg font-serif text-cream mb-3 flex items-center gap-2">
+                  <Video className="w-5 h-5 text-gold" />
+                  My Digital Echo
+                </h3>
+
+                {/* Avatar Preview or Placeholder */}
+                <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-navy-dark to-navy mb-4">
+                  {persona?.simliFaceId || persona?.heygenAvatarId ? (
+                    <>
+                      {/* Show active avatar image if available */}
+                      {(() => {
+                        const activeAvatar = persona?.avatarImages?.find(img => img.isActive || persona?.activeAvatarId === img.id);
+                        return activeAvatar ? (
+                          <img
+                            src={activeAvatar.imageUrl}
+                            alt="Your Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center">
+                              <UserIcon className="w-10 h-10 text-gold" />
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {/* Status badge */}
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-green-500/90 rounded-full flex items-center gap-1">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        <span className="text-white text-xs font-medium">Avatar Ready</span>
+                      </div>
+                    </>
+                  ) : (
+                    /* Placeholder when no avatar */
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                      <div className="w-16 h-16 rounded-full bg-gold/10 border-2 border-dashed border-gold/30 flex items-center justify-center mb-3">
+                        <UserIcon className="w-8 h-8 text-gold/40" />
+                      </div>
+                      <p className="text-cream/60 text-sm text-center">
+                        Your digital echo will appear here
+                      </p>
+                      <p className="text-cream/40 text-xs text-center mt-1">
+                        Create an avatar in the Avatar tab below
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                {persona?.simliFaceId || persona?.heygenAvatarId ? (
+                  <motion.button
+                    onClick={() => onNavigate('echo-sim')}
+                    className="w-full py-3 bg-gradient-to-r from-gold to-gold-light text-navy font-medium rounded-xl flex items-center justify-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Chat with Your Echo
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    onClick={() => setActiveTab('avatar')}
+                    className="w-full py-3 bg-navy-light border border-gold/30 text-cream/70 font-medium rounded-xl flex items-center justify-center gap-2 hover:border-gold/50 hover:text-cream transition-all"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Camera className="w-5 h-5" />
+                    Create Your Avatar
+                  </motion.button>
+                )}
+              </div>
+            </FadeIn>
+
             <FadeIn delay={0.3}>
               <LegacyScoreCard />
             </FadeIn>
