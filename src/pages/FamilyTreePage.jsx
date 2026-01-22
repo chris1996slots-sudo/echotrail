@@ -555,123 +555,387 @@ export function FamilyTreePage({ onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light pt-16 pb-12 px-4 relative overflow-hidden">
-      {/* Animated Tree Background */}
-      <div className="absolute inset-0 pointer-events-none opacity-30">
-        <svg className="w-full h-full" viewBox="0 0 1000 1200" preserveAspectRatio="xMidYMax meet">
-          {/* Tree Trunk */}
-          <motion.path
-            d="M 500 1200 Q 480 1000 490 800 Q 495 600 500 400"
-            stroke="url(#trunkGradient)"
-            strokeWidth="20"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
+      {/* Ultra-Realistic Tree Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Atmospheric glow behind tree */}
+        <div className="absolute inset-0 bg-gradient-radial from-gold/5 via-transparent to-transparent" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 70%, rgba(212,175,55,0.08) 0%, transparent 70%)' }} />
+
+        <svg className="w-full h-full" viewBox="0 0 1000 1400" preserveAspectRatio="xMidYMax slice">
+          <defs>
+            {/* Realistic bark texture gradient */}
+            <linearGradient id="barkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#2d1810" />
+              <stop offset="20%" stopColor="#4a2c1a" />
+              <stop offset="40%" stopColor="#3d2316" />
+              <stop offset="60%" stopColor="#5c3a24" />
+              <stop offset="80%" stopColor="#3d2316" />
+              <stop offset="100%" stopColor="#2d1810" />
+            </linearGradient>
+
+            {/* Trunk center highlight */}
+            <linearGradient id="trunkHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="transparent" />
+              <stop offset="30%" stopColor="rgba(212,175,55,0.15)" />
+              <stop offset="50%" stopColor="rgba(212,175,55,0.25)" />
+              <stop offset="70%" stopColor="rgba(212,175,55,0.15)" />
+              <stop offset="100%" stopColor="transparent" />
+            </linearGradient>
+
+            {/* Branch gradient - darker to lighter */}
+            <linearGradient id="branchGradientL" x1="100%" y1="50%" x2="0%" y2="50%">
+              <stop offset="0%" stopColor="#4a2c1a" />
+              <stop offset="100%" stopColor="#2d1810" stopOpacity="0.3" />
+            </linearGradient>
+
+            <linearGradient id="branchGradientR" x1="0%" y1="50%" x2="100%" y2="50%">
+              <stop offset="0%" stopColor="#4a2c1a" />
+              <stop offset="100%" stopColor="#2d1810" stopOpacity="0.3" />
+            </linearGradient>
+
+            {/* Root gradient */}
+            <linearGradient id="rootGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#4a2c1a" />
+              <stop offset="100%" stopColor="#1a0f08" stopOpacity="0.2" />
+            </linearGradient>
+
+            {/* Golden leaf glow */}
+            <radialGradient id="leafGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.6" />
+              <stop offset="70%" stopColor="#D4AF37" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
+            </radialGradient>
+
+            {/* Filters for realistic effects */}
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="#000" floodOpacity="0.3"/>
+            </filter>
+          </defs>
+
+          {/* Ground fog/mist effect */}
+          <motion.ellipse
+            cx="500" cy="1350" rx="600" ry="100"
+            fill="url(#rootGradient)"
+            opacity="0.3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            transition={{ duration: 2 }}
           />
 
-          {/* Main Branches - spreading upward */}
+          {/* ===== MAIN TRUNK ===== */}
+          {/* Trunk shadow */}
+          <motion.path
+            d="M 520 1400
+               C 525 1300, 530 1200, 525 1100
+               C 520 1000, 515 900, 520 800
+               C 525 700, 520 600, 515 500
+               C 510 450, 505 400, 500 350
+               L 500 350
+               C 495 400, 490 450, 485 500
+               C 480 600, 475 700, 480 800
+               C 485 900, 480 1000, 475 1100
+               C 470 1200, 475 1300, 480 1400
+               Z"
+            fill="#1a0f08"
+            opacity="0.4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 0.4, scale: 1 }}
+            transition={{ duration: 1.5 }}
+            style={{ transformOrigin: '500px 900px' }}
+          />
+
+          {/* Main trunk body */}
+          <motion.path
+            d="M 515 1400
+               C 520 1300, 525 1200, 520 1100
+               C 515 1000, 510 900, 515 800
+               C 520 700, 515 600, 510 500
+               C 505 450, 502 400, 500 350
+               L 500 350
+               C 498 400, 495 450, 490 500
+               C 485 600, 480 700, 485 800
+               C 490 900, 485 1000, 480 1100
+               C 475 1200, 480 1300, 485 1400
+               Z"
+            fill="url(#barkGradient)"
+            filter="url(#shadow)"
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={{ duration: 2, ease: "easeOut" }}
+            style={{ transformOrigin: '500px 1400px' }}
+          />
+
+          {/* Trunk highlight/depth */}
+          <motion.path
+            d="M 505 1400
+               C 508 1300, 510 1200, 508 1100
+               C 505 1000, 503 900, 505 800
+               C 508 700, 505 600, 502 500
+               C 500 450, 500 400, 500 350
+               L 500 350
+               C 500 400, 500 450, 498 500
+               C 495 600, 492 700, 495 800
+               C 498 900, 495 1000, 492 1100
+               C 490 1200, 492 1300, 495 1400
+               Z"
+            fill="url(#trunkHighlight)"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 2, delay: 0.5 }}
+          />
+
+          {/* Bark texture lines */}
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <motion.path
+              key={`bark-${i}`}
+              d={`M ${493 + i * 3} ${1350 - i * 150} Q ${495 + i * 2} ${1300 - i * 150} ${492 + i * 3} ${1250 - i * 150}`}
+              stroke="#1a0f08"
+              strokeWidth="1"
+              fill="none"
+              opacity="0.3"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1, delay: 1 + i * 0.1 }}
+            />
+          ))}
+
+          {/* ===== MAIN BRANCHES ===== */}
           {/* Left main branch */}
           <motion.path
-            d="M 500 600 Q 400 550 300 500"
-            stroke="url(#branchGradient)"
-            strokeWidth="12"
+            d="M 490 550
+               C 450 520, 400 500, 340 480
+               C 300 465, 250 455, 200 450
+               C 180 448, 160 450, 140 455"
+            stroke="url(#branchGradientL)"
+            strokeWidth="18"
+            strokeLinecap="round"
             fill="none"
+            filter="url(#shadow)"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, delay: 0.5 }}
+            transition={{ duration: 1.5, delay: 1.5, ease: "easeOut" }}
           />
 
           {/* Right main branch */}
           <motion.path
-            d="M 500 600 Q 600 550 700 500"
-            stroke="url(#branchGradient)"
+            d="M 510 550
+               C 550 520, 600 500, 660 480
+               C 700 465, 750 455, 800 450
+               C 820 448, 840 450, 860 455"
+            stroke="url(#branchGradientR)"
+            strokeWidth="18"
+            strokeLinecap="round"
+            fill="none"
+            filter="url(#shadow)"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 1.5, ease: "easeOut" }}
+          />
+
+          {/* Upper left branch */}
+          <motion.path
+            d="M 495 450
+               C 460 420, 420 400, 370 380
+               C 330 365, 280 355, 230 350"
+            stroke="url(#branchGradientL)"
             strokeWidth="12"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, delay: 1.8 }}
+          />
+
+          {/* Upper right branch */}
+          <motion.path
+            d="M 505 450
+               C 540 420, 580 400, 630 380
+               C 670 365, 720 355, 770 350"
+            stroke="url(#branchGradientR)"
+            strokeWidth="12"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, delay: 1.8 }}
+          />
+
+          {/* Secondary branches - left side */}
+          <motion.path
+            d="M 340 480 C 310 450, 280 430, 240 420"
+            stroke="url(#branchGradientL)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 2.2 }}
+          />
+          <motion.path
+            d="M 370 380 C 340 350, 300 330, 260 320"
+            stroke="url(#branchGradientL)"
+            strokeWidth="6"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 2.4 }}
+          />
+
+          {/* Secondary branches - right side */}
+          <motion.path
+            d="M 660 480 C 690 450, 720 430, 760 420"
+            stroke="url(#branchGradientR)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 2.2 }}
+          />
+          <motion.path
+            d="M 630 380 C 660 350, 700 330, 740 320"
+            stroke="url(#branchGradientR)"
+            strokeWidth="6"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1, delay: 2.4 }}
+          />
+
+          {/* Small twigs */}
+          {[
+            { d: "M 200 450 C 180 440, 160 435, 130 440", delay: 2.6 },
+            { d: "M 230 350 C 210 340, 190 335, 160 340", delay: 2.7 },
+            { d: "M 240 420 C 220 405, 195 400, 170 405", delay: 2.8 },
+            { d: "M 800 450 C 820 440, 840 435, 870 440", delay: 2.6 },
+            { d: "M 770 350 C 790 340, 810 335, 840 340", delay: 2.7 },
+            { d: "M 760 420 C 780 405, 805 400, 830 405", delay: 2.8 },
+          ].map((twig, i) => (
+            <motion.path
+              key={`twig-${i}`}
+              d={twig.d}
+              stroke={i < 3 ? "url(#branchGradientL)" : "url(#branchGradientR)"}
+              strokeWidth="3"
+              strokeLinecap="round"
+              fill="none"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.8, delay: twig.delay }}
+            />
+          ))}
+
+          {/* ===== ROOTS ===== */}
+          {/* Main roots spreading */}
+          <motion.path
+            d="M 485 1400 C 470 1380, 440 1370, 380 1380 C 320 1390, 250 1395, 180 1400"
+            stroke="url(#rootGradient)"
+            strokeWidth="14"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 0.5 }}
+          />
+          <motion.path
+            d="M 515 1400 C 530 1380, 560 1370, 620 1380 C 680 1390, 750 1395, 820 1400"
+            stroke="url(#rootGradient)"
+            strokeWidth="14"
+            strokeLinecap="round"
             fill="none"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 1.5, delay: 0.5 }}
           />
 
-          {/* Upper branches */}
+          {/* Secondary roots */}
           <motion.path
-            d="M 500 400 Q 420 350 350 300"
-            stroke="url(#branchGradient)"
-            strokeWidth="10"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.2, delay: 0.8 }}
-          />
-
-          <motion.path
-            d="M 500 400 Q 580 350 650 300"
-            stroke="url(#branchGradient)"
-            strokeWidth="10"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.2, delay: 0.8 }}
-          />
-
-          {/* Smaller branches */}
-          <motion.path
-            d="M 350 300 Q 320 250 280 200"
-            stroke="url(#branchGradient)"
-            strokeWidth="6"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 1.2 }}
-          />
-
-          <motion.path
-            d="M 650 300 Q 680 250 720 200"
-            stroke="url(#branchGradient)"
-            strokeWidth="6"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 1.2 }}
-          />
-
-          {/* Root system */}
-          <motion.path
-            d="M 490 1200 Q 450 1250 400 1300"
+            d="M 480 1395 C 450 1400, 420 1395, 350 1400"
             stroke="url(#rootGradient)"
             strokeWidth="8"
+            strokeLinecap="round"
             fill="none"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, delay: 0.3 }}
+            transition={{ duration: 1, delay: 0.8 }}
           />
-
           <motion.path
-            d="M 510 1200 Q 550 1250 600 1300"
+            d="M 520 1395 C 550 1400, 580 1395, 650 1400"
             stroke="url(#rootGradient)"
             strokeWidth="8"
+            strokeLinecap="round"
             fill="none"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, delay: 0.3 }}
+            transition={{ duration: 1, delay: 0.8 }}
           />
 
-          {/* Gradients */}
-          <defs>
-            <linearGradient id="trunkGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#8B7355" stopOpacity="0.8" />
-            </linearGradient>
+          {/* ===== GOLDEN LEAVES / PARTICLES ===== */}
+          {[
+            { cx: 150, cy: 445, r: 8, delay: 3 },
+            { cx: 180, cy: 400, r: 6, delay: 3.1 },
+            { cx: 220, cy: 360, r: 7, delay: 3.2 },
+            { cx: 260, cy: 420, r: 5, delay: 3.3 },
+            { cx: 280, cy: 330, r: 6, delay: 3.4 },
+            { cx: 850, cy: 445, r: 8, delay: 3 },
+            { cx: 820, cy: 400, r: 6, delay: 3.1 },
+            { cx: 780, cy: 360, r: 7, delay: 3.2 },
+            { cx: 740, cy: 420, r: 5, delay: 3.3 },
+            { cx: 720, cy: 330, r: 6, delay: 3.4 },
+            { cx: 170, cy: 440, r: 4, delay: 3.5 },
+            { cx: 830, cy: 440, r: 4, delay: 3.5 },
+          ].map((leaf, i) => (
+            <motion.circle
+              key={`leaf-${i}`}
+              cx={leaf.cx}
+              cy={leaf.cy}
+              r={leaf.r}
+              fill="url(#leafGlow)"
+              filter="url(#glow)"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{
+                opacity: [0, 0.8, 0.6],
+                scale: [0, 1.2, 1]
+              }}
+              transition={{
+                duration: 1.5,
+                delay: leaf.delay,
+                repeat: Infinity,
+                repeatType: "reverse",
+                repeatDelay: 2 + Math.random() * 2
+              }}
+            />
+          ))}
 
-            <linearGradient id="branchGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#9E8B6F" stopOpacity="0.3" />
-            </linearGradient>
-
-            <linearGradient id="rootGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="#8B7355" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#654321" stopOpacity="0.5" />
-            </linearGradient>
-          </defs>
+          {/* Floating particles */}
+          {[...Array(15)].map((_, i) => (
+            <motion.circle
+              key={`particle-${i}`}
+              cx={200 + Math.random() * 600}
+              cy={300 + Math.random() * 200}
+              r={1 + Math.random() * 2}
+              fill="#D4AF37"
+              initial={{ opacity: 0, y: 0 }}
+              animate={{
+                opacity: [0, 0.6, 0],
+                y: [-20, -60]
+              }}
+              transition={{
+                duration: 3 + Math.random() * 2,
+                delay: 3 + i * 0.3,
+                repeat: Infinity,
+                repeatDelay: Math.random() * 3
+              }}
+            />
+          ))}
         </svg>
       </div>
 
