@@ -393,10 +393,101 @@ export function FamilyTreePage({ onNavigate }) {
     }
   };
 
+  // Define placeholder slots for specific categories
+  const PLACEHOLDER_SLOTS = {
+    parents: [
+      { relationship: 'Mother', label: 'Mama', icon: '👩' },
+      { relationship: 'Father', label: 'Papa', icon: '👨' },
+    ],
+    grandparents: [
+      { relationship: 'Grandmother', label: 'Oma (Mutter)', icon: '👵', side: 'maternal' },
+      { relationship: 'Grandfather', label: 'Opa (Mutter)', icon: '👴', side: 'maternal' },
+      { relationship: 'Grandmother', label: 'Oma (Vater)', icon: '👵', side: 'paternal' },
+      { relationship: 'Grandfather', label: 'Opa (Vater)', icon: '👴', side: 'paternal' },
+    ],
+  };
+
+  // Check if member exists by relationship (and optionally side for grandparents)
+  const getMemberByRelationshipAndSide = (relationship, side = null) => {
+    return familyMembers.find(m => {
+      if (m.relationship !== relationship) return false;
+      // For grandparents, we'd need to track which side they're on
+      // For now, just match by relationship
+      return true;
+    });
+  };
+
+  // Render placeholder slot
+  const renderPlaceholderSlot = (slot, categoryDef, index) => {
+    // Check if this slot is filled
+    const existingMembers = familyMembers.filter(m => m.relationship === slot.relationship);
+    const member = existingMembers[slot.side === 'paternal' ? 1 : 0] || (slot.side ? null : existingMembers[0]);
+
+    if (member) {
+      // Filled slot - show member
+      return (
+        <motion.div
+          key={`${slot.relationship}-${slot.side || index}`}
+          onClick={() => handleMemberClick(member)}
+          className={`relative glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.98 }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="flex flex-col items-center gap-1.5 w-16">
+            <div className="relative">
+              {member.imageData ? (
+                <img
+                  src={member.imageData}
+                  alt={member.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-gold/40"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-2 border-gold/40">
+                  <UserIcon className="w-6 h-6 text-gold/60" />
+                </div>
+              )}
+              {member.voiceData && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center border border-navy">
+                  <Mic className="w-2 h-2 text-white" />
+                </div>
+              )}
+            </div>
+            <div className="text-center w-full">
+              <h4 className="text-cream font-medium text-xs truncate">{member.name}</h4>
+              <p className="text-cream/40 text-[10px]">{slot.label}</p>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    // Empty slot - show placeholder
+    return (
+      <motion.div
+        key={`${slot.relationship}-${slot.side || index}`}
+        onClick={() => handleEmptySlotClick(slot.relationship, slot.label)}
+        className="glass-card p-2 cursor-pointer hover:bg-gold/5 transition-all border border-dashed border-gold/30 hover:border-gold"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className="flex flex-col items-center gap-1 w-16 justify-center">
+          <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center border border-dashed border-gold/30 text-2xl">
+            {slot.icon}
+          </div>
+          <p className="text-gold/60 text-[10px] font-medium text-center">{slot.label}</p>
+        </div>
+      </motion.div>
+    );
+  };
+
   // Render compact category section
   const renderCategory = (categoryKey, compact = false) => {
     const categoryDef = RELATIONSHIP_TYPES[categoryKey];
     const members = getMembersByCategory(categoryKey);
+    const placeholders = PLACEHOLDER_SLOTS[categoryKey];
 
     return (
       <div key={categoryKey} className="flex flex-col items-center">
@@ -409,66 +500,121 @@ export function FamilyTreePage({ onNavigate }) {
 
         {/* Members Grid - compact */}
         <div className="flex flex-wrap justify-center gap-2">
-          {/* Existing Members - smaller cards */}
-          {members.map((member) => (
-            <motion.div
-              key={member.id}
-              onClick={() => handleMemberClick(member)}
-              className={`relative glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="flex flex-col items-center gap-1.5 w-16">
-                {/* Avatar - smaller */}
-                <div className="relative">
-                  {member.imageData ? (
-                    <img
-                      src={member.imageData}
-                      alt={member.name}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-gold/40"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-2 border-gold/40">
-                      <UserIcon className="w-6 h-6 text-gold/60" />
+          {/* If this category has placeholders, render them */}
+          {placeholders ? (
+            <>
+              {placeholders.map((slot, index) => renderPlaceholderSlot(slot, categoryDef, index))}
+              {/* Also show any additional members that don't fit the placeholders */}
+              {members.filter(m => {
+                const placeholderCount = placeholders.filter(p => p.relationship === m.relationship).length;
+                const memberIndex = members.filter(mem => mem.relationship === m.relationship).indexOf(m);
+                return memberIndex >= placeholderCount;
+              }).map((member) => (
+                <motion.div
+                  key={member.id}
+                  onClick={() => handleMemberClick(member)}
+                  className={`relative glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex flex-col items-center gap-1.5 w-16">
+                    <div className="relative">
+                      {member.imageData ? (
+                        <img src={member.imageData} alt={member.name} className="w-12 h-12 rounded-full object-cover border-2 border-gold/40" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-2 border-gold/40">
+                          <UserIcon className="w-6 h-6 text-gold/60" />
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {/* Status indicator - smaller */}
-                  {member.voiceData && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center border border-navy">
-                      <Mic className="w-2 h-2 text-white" />
+                    <div className="text-center w-full">
+                      <h4 className="text-cream font-medium text-xs truncate">{member.name}</h4>
                     </div>
-                  )}
+                  </div>
+                </motion.div>
+              ))}
+              {/* Add button for extra members */}
+              <motion.div
+                onClick={() => handleAddMember(categoryKey)}
+                className="glass-card p-2 cursor-pointer hover:bg-gold/5 transition-all border border-dashed border-gold/30 hover:border-gold"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center gap-1 w-16 justify-center">
+                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center border border-dashed border-gold/30">
+                    <Plus className="w-6 h-6 text-gold/60" />
+                  </div>
+                  <p className="text-gold/60 text-[10px] font-medium">Add</p>
                 </div>
+              </motion.div>
+            </>
+          ) : (
+            <>
+              {/* Existing Members - smaller cards */}
+              {members.map((member) => (
+                <motion.div
+                  key={member.id}
+                  onClick={() => handleMemberClick(member)}
+                  className={`relative glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex flex-col items-center gap-1.5 w-16">
+                    {/* Avatar - smaller */}
+                    <div className="relative">
+                      {member.imageData ? (
+                        <img
+                          src={member.imageData}
+                          alt={member.name}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gold/40"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-2 border-gold/40">
+                          <UserIcon className="w-6 h-6 text-gold/60" />
+                        </div>
+                      )}
 
-                {/* Name only - truncated */}
-                <div className="text-center w-full">
-                  <h4 className="text-cream font-medium text-xs truncate">{member.name}</h4>
-                  {member.isDeceased && (
-                    <p className="text-cream/30 text-[10px]">†{member.deathYear}</p>
-                  )}
+                      {/* Status indicator - smaller */}
+                      {member.voiceData && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center border border-navy">
+                          <Mic className="w-2 h-2 text-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name only - truncated */}
+                    <div className="text-center w-full">
+                      <h4 className="text-cream font-medium text-xs truncate">{member.name}</h4>
+                      {member.isDeceased && (
+                        <p className="text-cream/30 text-[10px]">†{member.deathYear}</p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Add Member Button - smaller */}
+              <motion.div
+                onClick={() => handleAddMember(categoryKey)}
+                className="glass-card p-2 cursor-pointer hover:bg-gold/5 transition-all border border-dashed border-gold/30 hover:border-gold"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center gap-1 w-16 justify-center">
+                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center border border-dashed border-gold/30">
+                    <Plus className="w-6 h-6 text-gold/60" />
+                  </div>
+                  <p className="text-gold/60 text-[10px] font-medium">Add</p>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-
-          {/* Add Member Button - smaller */}
-          <motion.div
-            onClick={() => handleAddMember(categoryKey)}
-            className="glass-card p-2 cursor-pointer hover:bg-gold/5 transition-all border border-dashed border-gold/30 hover:border-gold"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="flex flex-col items-center gap-1 w-16 justify-center">
-              <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center border border-dashed border-gold/30">
-                <Plus className="w-6 h-6 text-gold/60" />
-              </div>
-              <p className="text-gold/60 text-[10px] font-medium">Add</p>
-            </div>
-          </motion.div>
+              </motion.div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -562,396 +708,6 @@ export function FamilyTreePage({ onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light pt-16 pb-12 px-4 relative overflow-hidden">
-      {/* Classic Genealogy Tree with Oval Frames */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Vintage parchment background */}
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(180deg, rgba(45,30,20,0.3) 0%, rgba(30,20,15,0.5) 50%, rgba(20,15,10,0.7) 100%)',
-        }} />
-
-        <svg className="w-full h-full" viewBox="0 0 1000 1400" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            {/* Rich brown trunk gradient */}
-            <linearGradient id="trunkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#2a1a0a" />
-              <stop offset="20%" stopColor="#4a3020" />
-              <stop offset="50%" stopColor="#5c3d28" />
-              <stop offset="80%" stopColor="#4a3020" />
-              <stop offset="100%" stopColor="#2a1a0a" />
-            </linearGradient>
-
-            {/* Branch gradient */}
-            <linearGradient id="branchGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#3d2818" />
-              <stop offset="50%" stopColor="#5a3d28" />
-              <stop offset="100%" stopColor="#3d2818" />
-            </linearGradient>
-
-            {/* Twig gradient - fades out */}
-            <linearGradient id="twigGradientL" x1="100%" y1="0%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="#4a3020" />
-              <stop offset="100%" stopColor="#3d2818" stopOpacity="0.3" />
-            </linearGradient>
-            <linearGradient id="twigGradientR" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#4a3020" />
-              <stop offset="100%" stopColor="#3d2818" stopOpacity="0.3" />
-            </linearGradient>
-
-            {/* Gold frame gradient */}
-            <linearGradient id="frameGold" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#D4AF37" />
-              <stop offset="30%" stopColor="#F4D03F" />
-              <stop offset="50%" stopColor="#D4AF37" />
-              <stop offset="70%" stopColor="#B8860B" />
-              <stop offset="100%" stopColor="#8B6914" />
-            </linearGradient>
-
-            {/* Frame inner gradient */}
-            <radialGradient id="frameInner" cx="50%" cy="40%" r="60%">
-              <stop offset="0%" stopColor="rgba(212,175,55,0.15)" />
-              <stop offset="100%" stopColor="rgba(139,105,20,0.08)" />
-            </radialGradient>
-
-            {/* Green leaf gradient */}
-            <radialGradient id="leafGreen" cx="50%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#7a9a4a" />
-              <stop offset="50%" stopColor="#5a7a3a" />
-              <stop offset="100%" stopColor="#3a5a2a" />
-            </radialGradient>
-
-            {/* Soft shadow */}
-            <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="3" dy="5" stdDeviation="5" floodColor="#0a0805" floodOpacity="0.5"/>
-            </filter>
-
-            {/* Frame shadow */}
-            <filter id="frameShadow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="2" dy="3" stdDeviation="3" floodColor="#0a0805" floodOpacity="0.4"/>
-            </filter>
-
-            {/* Golden glow */}
-            <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* ===== MAIN TRUNK ===== */}
-          <motion.path
-            d="M 500 1400
-               Q 495 1300, 500 1200
-               Q 505 1100, 500 1000
-               Q 495 900, 500 800
-               Q 505 700, 500 600
-               Q 495 500, 500 420"
-            stroke="url(#trunkGradient)"
-            strokeWidth="55"
-            strokeLinecap="round"
-            fill="none"
-            filter="url(#softShadow)"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, ease: "easeOut" }}
-          />
-
-          {/* Trunk bark texture */}
-          <motion.path
-            d="M 480 1350 Q 478 1100, 482 850 Q 478 600, 480 450"
-            stroke="rgba(20,10,5,0.4)"
-            strokeWidth="3"
-            fill="none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5, duration: 1 }}
-          />
-          <motion.path
-            d="M 520 1350 Q 522 1100, 518 850 Q 522 600, 520 450"
-            stroke="rgba(20,10,5,0.4)"
-            strokeWidth="3"
-            fill="none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5, duration: 1 }}
-          />
-
-          {/* ===== MAIN BRANCHES with frames at ends ===== */}
-
-          {/* LEFT BRANCH - curves up and left */}
-          <motion.path
-            d="M 500 500 Q 400 450, 280 380 Q 180 320, 100 280"
-            stroke="url(#branchGradient)"
-            strokeWidth="28"
-            strokeLinecap="round"
-            fill="none"
-            filter="url(#softShadow)"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.2, delay: 1.8 }}
-          />
-
-          {/* RIGHT BRANCH - curves up and right */}
-          <motion.path
-            d="M 500 500 Q 600 450, 720 380 Q 820 320, 900 280"
-            stroke="url(#branchGradient)"
-            strokeWidth="28"
-            strokeLinecap="round"
-            fill="none"
-            filter="url(#softShadow)"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.2, delay: 1.8 }}
-          />
-
-          {/* UPPER LEFT BRANCH */}
-          <motion.path
-            d="M 280 380 Q 200 320, 140 240"
-            stroke="url(#branchGradient)"
-            strokeWidth="18"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 2.2 }}
-          />
-
-          {/* UPPER RIGHT BRANCH */}
-          <motion.path
-            d="M 720 380 Q 800 320, 860 240"
-            stroke="url(#branchGradient)"
-            strokeWidth="18"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 2.2 }}
-          />
-
-          {/* TOP CENTER BRANCHES */}
-          <motion.path
-            d="M 500 450 Q 450 350, 380 260"
-            stroke="url(#branchGradient)"
-            strokeWidth="20"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 2 }}
-          />
-          <motion.path
-            d="M 500 450 Q 550 350, 620 260"
-            stroke="url(#branchGradient)"
-            strokeWidth="20"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 2 }}
-          />
-
-          {/* CENTER TOP BRANCH */}
-          <motion.path
-            d="M 500 420 Q 500 320, 500 200"
-            stroke="url(#branchGradient)"
-            strokeWidth="16"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 2.1 }}
-          />
-
-          {/* Small twigs */}
-          {[
-            { d: "M 100 280 Q 60 220, 40 160", delay: 2.6 },
-            { d: "M 140 240 Q 100 180, 80 120", delay: 2.7 },
-            { d: "M 900 280 Q 940 220, 960 160", delay: 2.6 },
-            { d: "M 860 240 Q 900 180, 920 120", delay: 2.7 },
-            { d: "M 380 260 Q 340 200, 300 140", delay: 2.8 },
-            { d: "M 620 260 Q 660 200, 700 140", delay: 2.8 },
-            { d: "M 500 200 Q 460 140, 440 80", delay: 2.9 },
-            { d: "M 500 200 Q 540 140, 560 80", delay: 2.9 },
-          ].map((twig, i) => (
-            <motion.path
-              key={`twig-${i}`}
-              d={twig.d}
-              stroke={i < 4 ? (i % 2 === 0 ? "url(#twigGradientL)" : "url(#twigGradientR)") : "url(#branchGradient)"}
-              strokeWidth={i < 4 ? "8" : "10"}
-              strokeLinecap="round"
-              fill="none"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.8, delay: twig.delay }}
-            />
-          ))}
-
-          {/* ===== OVAL FRAMES at branch ends - for family members ===== */}
-          {[
-            // Top row - Great-Grandparents
-            { cx: 40, cy: 130, rx: 32, ry: 40, delay: 3 },
-            { cx: 80, cy: 90, rx: 28, ry: 35, delay: 3.1 },
-            { cx: 300, cy: 110, rx: 30, ry: 38, delay: 3.2 },
-            { cx: 440, cy: 50, rx: 28, ry: 35, delay: 3.3 },
-            { cx: 560, cy: 50, rx: 28, ry: 35, delay: 3.3 },
-            { cx: 700, cy: 110, rx: 30, ry: 38, delay: 3.2 },
-            { cx: 920, cy: 90, rx: 28, ry: 35, delay: 3.1 },
-            { cx: 960, cy: 130, rx: 32, ry: 40, delay: 3 },
-            // Middle row - Grandparents
-            { cx: 100, cy: 260, rx: 35, ry: 44, delay: 2.8 },
-            { cx: 380, cy: 230, rx: 35, ry: 44, delay: 2.9 },
-            { cx: 500, cy: 170, rx: 38, ry: 48, delay: 2.85 },
-            { cx: 620, cy: 230, rx: 35, ry: 44, delay: 2.9 },
-            { cx: 900, cy: 260, rx: 35, ry: 44, delay: 2.8 },
-            // Lower row - Parents
-            { cx: 280, cy: 360, rx: 38, ry: 48, delay: 2.5 },
-            { cx: 720, cy: 360, rx: 38, ry: 48, delay: 2.5 },
-            // Center - You
-            { cx: 500, cy: 480, rx: 45, ry: 56, delay: 2.2, isMain: true },
-          ].map((frame, i) => (
-            <motion.g key={`frame-${i}`}>
-              {/* Frame outer border (gold) */}
-              <motion.ellipse
-                cx={frame.cx}
-                cy={frame.cy}
-                rx={frame.rx}
-                ry={frame.ry}
-                fill="none"
-                stroke="url(#frameGold)"
-                strokeWidth={frame.isMain ? "5" : "3"}
-                filter="url(#frameShadow)"
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: frame.delay }}
-              />
-              {/* Frame inner glow */}
-              <motion.ellipse
-                cx={frame.cx}
-                cy={frame.cy}
-                rx={frame.rx - 4}
-                ry={frame.ry - 4}
-                fill="url(#frameInner)"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
-                transition={{ duration: 0.8, delay: frame.delay + 0.2 }}
-              />
-              {/* Decorative inner ring */}
-              <motion.ellipse
-                cx={frame.cx}
-                cy={frame.cy}
-                rx={frame.rx - 6}
-                ry={frame.ry - 6}
-                fill="none"
-                stroke="rgba(212,175,55,0.3)"
-                strokeWidth="1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: frame.delay + 0.3 }}
-              />
-            </motion.g>
-          ))}
-
-          {/* ===== LEAVES scattered around frames ===== */}
-          {[
-            { cx: 60, cy: 180, rx: 10, ry: 6, rotate: -25 },
-            { cx: 120, cy: 200, rx: 8, ry: 5, rotate: 35 },
-            { cx: 180, cy: 300, rx: 9, ry: 5, rotate: -15 },
-            { cx: 240, cy: 280, rx: 7, ry: 4, rotate: 40 },
-            { cx: 340, cy: 180, rx: 8, ry: 5, rotate: -30 },
-            { cx: 420, cy: 120, rx: 9, ry: 5, rotate: 20 },
-            { cx: 580, cy: 120, rx: 9, ry: 5, rotate: -20 },
-            { cx: 660, cy: 180, rx: 8, ry: 5, rotate: 30 },
-            { cx: 760, cy: 280, rx: 7, ry: 4, rotate: -40 },
-            { cx: 820, cy: 300, rx: 9, ry: 5, rotate: 15 },
-            { cx: 880, cy: 200, rx: 8, ry: 5, rotate: -35 },
-            { cx: 940, cy: 180, rx: 10, ry: 6, rotate: 25 },
-            { cx: 200, cy: 140, rx: 7, ry: 4, rotate: -20 },
-            { cx: 800, cy: 140, rx: 7, ry: 4, rotate: 20 },
-            { cx: 500, cy: 100, rx: 8, ry: 5, rotate: 0 },
-          ].map((leaf, i) => (
-            <motion.ellipse
-              key={`leaf-${i}`}
-              cx={leaf.cx}
-              cy={leaf.cy}
-              rx={leaf.rx}
-              ry={leaf.ry}
-              fill="url(#leafGreen)"
-              transform={`rotate(${leaf.rotate} ${leaf.cx} ${leaf.cy})`}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: [0, 0.85, 0.75], scale: [0, 1.1, 1] }}
-              transition={{ duration: 0.8, delay: 3.2 + i * 0.08 }}
-            />
-          ))}
-
-          {/* ===== ROOTS ===== */}
-          <motion.path
-            d="M 500 1350 Q 400 1380, 280 1370 Q 160 1360, 60 1380"
-            stroke="url(#branchGradient)"
-            strokeWidth="22"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-          />
-          <motion.path
-            d="M 500 1350 Q 600 1380, 720 1370 Q 840 1360, 940 1380"
-            stroke="url(#branchGradient)"
-            strokeWidth="22"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-          />
-          <motion.path
-            d="M 380 1370 Q 300 1390, 200 1400"
-            stroke="url(#branchGradient)"
-            strokeWidth="12"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          />
-          <motion.path
-            d="M 620 1370 Q 700 1390, 800 1400"
-            stroke="url(#branchGradient)"
-            strokeWidth="12"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          />
-
-          {/* ===== FALLING LEAVES ===== */}
-          {[...Array(6)].map((_, i) => (
-            <motion.ellipse
-              key={`fall-${i}`}
-              cx={150 + i * 150}
-              cy={100}
-              rx={5}
-              ry={3}
-              fill="url(#leafGreen)"
-              initial={{ opacity: 0, y: 0, rotate: 0 }}
-              animate={{
-                opacity: [0, 0.7, 0.5, 0],
-                y: [0, 200, 400, 600],
-                rotate: [0, 90, 180, 270],
-                x: [0, 20, -10, 30]
-              }}
-              transition={{
-                duration: 8,
-                delay: 4 + i * 0.8,
-                repeat: Infinity,
-                repeatDelay: 6
-              }}
-            />
-          ))}
-        </svg>
-      </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Compact Header */}
