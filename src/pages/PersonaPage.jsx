@@ -18,6 +18,7 @@ import {
   Upload,
   Image as ImageIcon,
   User as UserIcon,
+  UserPlus,
   Home,
   Globe,
   Sparkles,
@@ -397,6 +398,7 @@ export function PersonaPage({ onNavigate }) {
 
   const tabs = [
     { id: 'avatar', label: 'My Avatar' },
+    { id: 'family', label: 'Family Members' },
     { id: 'stories', label: 'Life Stories' },
     { id: 'interview', label: 'Deep Interview' },
     { id: 'values', label: 'Value Store' },
@@ -1723,509 +1725,489 @@ export function PersonaPage({ onNavigate }) {
                       <p className="text-cream/70">Upload at least one photo to continue</p>
                     </div>
                   )}
+                </div>
+              );
 
-                  {/* Family Members Quick Add */}
-                  <div className="mt-6 p-4 bg-navy-dark/50 rounded-xl border border-gold/10">
-                    <div className="flex items-start gap-3">
-                      <Users className="w-5 h-5 text-gold/70 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-cream/90 font-medium text-sm">
-                            Creating for a family member?
-                          </h4>
-                          <motion.button
-                            onClick={() => setShowQuickAddFamily(!showQuickAddFamily)}
-                            className="text-gold text-xs flex items-center gap-1 hover:text-gold-light transition-colors"
-                            whileHover={{ scale: 1.02 }}
-                          >
-                            {showQuickAddFamily ? (
-                              <>
-                                <ChevronUp className="w-3 h-3" />
-                                Close
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="w-3 h-3" />
-                                Quick Add
-                              </>
-                            )}
-                          </motion.button>
-                        </div>
-                        <p className="text-cream/50 text-xs mb-3">
-                          Add family members here or manage your full Family Tree.
-                        </p>
+            case 'family':
+              return (
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-serif text-cream mb-2">Family Members</h3>
+                    <p className="text-cream/60 text-sm">
+                      Add family members to preserve their legacy alongside yours
+                    </p>
+                  </div>
 
-                        {/* Quick Add Form */}
-                        <AnimatePresence>
-                          {showQuickAddFamily && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="space-y-3 pt-3 border-t border-gold/10 max-h-[60vh] overflow-y-auto"
-                            >
-                              {/* Name */}
-                              <div>
-                                <label className="block text-cream/60 text-xs mb-1">Name *</label>
-                                <input
-                                  type="text"
-                                  value={familyMemberForm.name}
-                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, name: e.target.value })}
-                                  placeholder="Enter name"
-                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                />
-                              </div>
-
-                              {/* Relationship */}
-                              <div>
-                                <label className="block text-cream/60 text-xs mb-1">Relationship</label>
-                                <select
-                                  value={familyMemberForm.relationship}
-                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, relationship: e.target.value })}
-                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                >
-                                  <optgroup label="Grandparents">
-                                    <option value="Grandfather">Grandfather</option>
-                                    <option value="Grandmother">Grandmother</option>
-                                  </optgroup>
-                                  <optgroup label="Great-Grandparents">
-                                    <option value="Great-Grandfather">Great-Grandfather</option>
-                                    <option value="Great-Grandmother">Great-Grandmother</option>
-                                  </optgroup>
-                                  <optgroup label="Parents">
-                                    <option value="Father">Father</option>
-                                    <option value="Mother">Mother</option>
-                                  </optgroup>
-                                  <optgroup label="Aunts & Uncles">
-                                    <option value="Uncle">Uncle</option>
-                                    <option value="Aunt">Aunt</option>
-                                  </optgroup>
-                                  <optgroup label="Siblings">
-                                    <option value="Brother">Brother</option>
-                                    <option value="Sister">Sister</option>
-                                  </optgroup>
-                                  <optgroup label="Children">
-                                    <option value="Son">Son</option>
-                                    <option value="Daughter">Daughter</option>
-                                  </optgroup>
-                                  <optgroup label="Grandchildren">
-                                    <option value="Grandson">Grandson</option>
-                                    <option value="Granddaughter">Granddaughter</option>
-                                  </optgroup>
-                                </select>
-                              </div>
-
-                              {/* Photo Upload */}
-                              <div>
-                                <label className="block text-cream/60 text-xs mb-1">Photo</label>
-                                <div className="flex items-center gap-2">
-                                  {familyMemberForm.imageData && (
-                                    <img
-                                      src={familyMemberForm.imageData}
-                                      alt="Preview"
-                                      className="w-10 h-10 rounded-lg object-cover"
-                                    />
-                                  )}
-                                  <label className="flex-1 px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream/50 cursor-pointer hover:border-gold/30 transition-colors flex items-center justify-center gap-2 text-xs">
-                                    <Upload className="w-3 h-3" />
-                                    <span>{familyMemberForm.imageData ? 'Change' : 'Upload Photo'}</span>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      ref={familyImageInputRef}
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file && file.type.startsWith('image/')) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            setFamilyMemberForm({ ...familyMemberForm, imageData: reader.result });
-                                          };
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                      className="hidden"
-                                    />
-                                  </label>
-                                </div>
-                              </div>
-
-                              {/* Voice Upload */}
-                              <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
-                                <div className="flex items-center justify-between mb-1">
-                                  <label className="text-cream/70 text-xs font-medium flex items-center gap-1">
-                                    <Mic className="w-3 h-3 text-purple-400" />
-                                    Voice Recording
-                                  </label>
-                                  <span className="text-purple-300/60 text-[10px]">For AI voice clone</span>
-                                </div>
-                                <p className="text-cream/50 text-[10px] mb-2 leading-relaxed">
-                                  Upload a clear voice recording of this person speaking naturally.
-                                  Ideal: them telling a story, sharing memories, or just talking freely.
-                                </p>
-                                <div className="grid grid-cols-3 gap-1 mb-2 text-[9px] text-cream/40">
-                                  <div className="bg-navy-dark/50 rounded px-1.5 py-1 text-center">
-                                    <span className="text-purple-300">30s - 5min</span>
-                                    <br />Duration
-                                  </div>
-                                  <div className="bg-navy-dark/50 rounded px-1.5 py-1 text-center">
-                                    <span className="text-purple-300">Quiet</span>
-                                    <br />Background
-                                  </div>
-                                  <div className="bg-navy-dark/50 rounded px-1.5 py-1 text-center">
-                                    <span className="text-purple-300">Clear</span>
-                                    <br />Speech
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {familyMemberForm.voiceData && (
-                                    <div className="flex items-center gap-1 text-purple-400 bg-purple-500/20 px-2 py-1 rounded">
-                                      <Mic className="w-3 h-3" />
-                                      <span className="text-xs">Uploaded</span>
-                                    </div>
-                                  )}
-                                  <label className="flex-1 px-3 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-300 cursor-pointer hover:bg-purple-500/20 transition-colors flex items-center justify-center gap-2 text-xs">
-                                    <Upload className="w-3 h-3" />
-                                    <span>{familyMemberForm.voiceData ? 'Change Recording' : 'Upload Voice Recording'}</span>
-                                    <input
-                                      type="file"
-                                      accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm"
-                                      ref={familyVoiceInputRef}
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file && (file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|m4a|ogg|webm)$/i))) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            setFamilyMemberForm({ ...familyMemberForm, voiceData: reader.result });
-                                          };
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                      className="hidden"
-                                    />
-                                  </label>
-                                </div>
-                                <p className="text-cream/30 text-[9px] mt-1.5 text-center">
-                                  Formats: MP3, WAV, M4A, OGG, WebM
-                                </p>
-                              </div>
-
-                              {/* Birth Year & Birthplace */}
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="block text-cream/60 text-xs mb-1">Birth Year</label>
-                                  <input
-                                    type="text"
-                                    value={familyMemberForm.birthYear}
-                                    onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthYear: e.target.value })}
-                                    placeholder="e.g., 1945"
-                                    className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-cream/60 text-xs mb-1">Birthplace</label>
-                                  <input
-                                    type="text"
-                                    value={familyMemberForm.birthplace}
-                                    onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthplace: e.target.value })}
-                                    placeholder="e.g., Berlin"
-                                    className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Deceased checkbox */}
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  id="familyIsDeceased"
-                                  checked={familyMemberForm.isDeceased}
-                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, isDeceased: e.target.checked })}
-                                  className="w-4 h-4 bg-navy-light border border-cream/20 rounded cursor-pointer"
-                                />
-                                <label htmlFor="familyIsDeceased" className="text-cream/60 text-xs cursor-pointer">
-                                  This person is deceased
-                                </label>
-                              </div>
-
-                              {/* Death Year (if deceased) */}
-                              {familyMemberForm.isDeceased && (
-                                <div>
-                                  <label className="block text-cream/60 text-xs mb-1">Death Year</label>
-                                  <input
-                                    type="text"
-                                    value={familyMemberForm.deathYear}
-                                    onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, deathYear: e.target.value })}
-                                    placeholder="e.g., 2020"
-                                    className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                  />
-                                </div>
-                              )}
-
-                              {/* Bio */}
-                              <div>
-                                <label className="block text-cream/60 text-xs mb-1">Biography / Story</label>
-                                <textarea
-                                  value={familyMemberForm.bio}
-                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, bio: e.target.value })}
-                                  placeholder="Share their story, memories, important details..."
-                                  rows={3}
-                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50 resize-none"
-                                />
-                              </div>
-
-                              {/* Extended Fields Toggle */}
-                              <motion.button
-                                type="button"
-                                onClick={() => setShowExtendedFields(!showExtendedFields)}
-                                className="w-full py-2 text-cream/50 text-xs flex items-center justify-center gap-1 hover:text-cream/70 transition-colors"
-                              >
-                                {showExtendedFields ? (
-                                  <>
-                                    <ChevronUp className="w-3 h-3" />
-                                    Hide Additional Details
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="w-3 h-3" />
-                                    Show Additional Details
-                                  </>
-                                )}
-                              </motion.button>
-
-                              {/* Extended Fields */}
-                              <AnimatePresence>
-                                {showExtendedFields && (
-                                  <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="space-y-3 pt-2 border-t border-cream/5"
-                                  >
-                                    {/* Nickname */}
-                                    <div>
-                                      <label className="block text-cream/60 text-xs mb-1">Nickname</label>
-                                      <input
-                                        type="text"
-                                        value={familyMemberForm.nickname}
-                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, nickname: e.target.value })}
-                                        placeholder="e.g., Grandpa Joe"
-                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                      />
-                                    </div>
-
-                                    {/* Occupation & Education */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <label className="block text-cream/60 text-xs mb-1">Occupation</label>
-                                        <input
-                                          type="text"
-                                          value={familyMemberForm.occupation}
-                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, occupation: e.target.value })}
-                                          placeholder="e.g., Teacher"
-                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-cream/60 text-xs mb-1">Education</label>
-                                        <input
-                                          type="text"
-                                          value={familyMemberForm.education}
-                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, education: e.target.value })}
-                                          placeholder="e.g., PhD"
-                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    {/* Hobbies */}
-                                    <div>
-                                      <label className="block text-cream/60 text-xs mb-1">Hobbies & Interests</label>
-                                      <input
-                                        type="text"
-                                        value={familyMemberForm.hobbies}
-                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, hobbies: e.target.value })}
-                                        placeholder="e.g., Gardening, reading, cooking"
-                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                      />
-                                    </div>
-
-                                    {/* Contact Info */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <label className="block text-cream/60 text-xs mb-1">Phone</label>
-                                        <input
-                                          type="tel"
-                                          value={familyMemberForm.phoneNumber}
-                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, phoneNumber: e.target.value })}
-                                          placeholder="+49 123..."
-                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-cream/60 text-xs mb-1">Email</label>
-                                        <input
-                                          type="email"
-                                          value={familyMemberForm.email}
-                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, email: e.target.value })}
-                                          placeholder="email@..."
-                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    {/* Spouse & Marriage */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <label className="block text-cream/60 text-xs mb-1">Spouse</label>
-                                        <input
-                                          type="text"
-                                          value={familyMemberForm.spouse}
-                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, spouse: e.target.value })}
-                                          placeholder="Spouse name"
-                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-cream/60 text-xs mb-1">Marriage Date</label>
-                                        <input
-                                          type="text"
-                                          value={familyMemberForm.marriageDate}
-                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, marriageDate: e.target.value })}
-                                          placeholder="e.g., June 1975"
-                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    {/* Physical Description */}
-                                    <div>
-                                      <label className="block text-cream/60 text-xs mb-1">Physical Description</label>
-                                      <input
-                                        type="text"
-                                        value={familyMemberForm.physicalDescription}
-                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, physicalDescription: e.target.value })}
-                                        placeholder="e.g., Tall with blue eyes"
-                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                      />
-                                    </div>
-
-                                    {/* Personality Traits */}
-                                    <div>
-                                      <label className="block text-cream/60 text-xs mb-1">Personality Traits</label>
-                                      <input
-                                        type="text"
-                                        value={familyMemberForm.personalityTraits}
-                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, personalityTraits: e.target.value })}
-                                        placeholder="e.g., Kind, patient, funny"
-                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                      />
-                                    </div>
-
-                                    {/* Favorite Memories */}
-                                    <div>
-                                      <label className="block text-cream/60 text-xs mb-1">Favorite Memories</label>
-                                      <textarea
-                                        value={familyMemberForm.favoriteMemories}
-                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, favoriteMemories: e.target.value })}
-                                        placeholder="Share cherished moments..."
-                                        rows={2}
-                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50 resize-none"
-                                      />
-                                    </div>
-
-                                    {/* Important Dates */}
-                                    <div>
-                                      <label className="block text-cream/60 text-xs mb-1">Important Dates</label>
-                                      <input
-                                        type="text"
-                                        value={familyMemberForm.importantDates}
-                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, importantDates: e.target.value })}
-                                        placeholder="e.g., Anniversary: May 15"
-                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                      />
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-
-                              {/* Buttons */}
-                              <div className="flex gap-2 pt-2">
-                                <motion.button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!familyMemberForm.name.trim()) {
-                                      showToast('Please enter a name', 'error');
-                                      return;
-                                    }
-                                    setIsSubmittingFamilyMember(true);
-                                    try {
-                                      await api.createFamilyMember(familyMemberForm);
-                                      showToast('Family member added successfully!', 'success');
-                                      setFamilyMemberForm({
-                                        name: '',
-                                        relationship: 'Grandfather',
-                                        birthYear: '',
-                                        birthplace: '',
-                                        bio: '',
-                                        imageData: null,
-                                        voiceData: null,
-                                        isDeceased: false,
-                                        deathYear: '',
-                                        nickname: '',
-                                        occupation: '',
-                                        education: '',
-                                        hobbies: '',
-                                        phoneNumber: '',
-                                        email: '',
-                                        spouse: '',
-                                        marriageDate: '',
-                                        physicalDescription: '',
-                                        personalityTraits: '',
-                                        favoriteMemories: '',
-                                        importantDates: ''
-                                      });
-                                      setShowQuickAddFamily(false);
-                                      setShowExtendedFields(false);
-                                    } catch (err) {
-                                      showToast(err.message || 'Failed to add family member', 'error');
-                                    } finally {
-                                      setIsSubmittingFamilyMember(false);
-                                    }
-                                  }}
-                                  disabled={isSubmittingFamilyMember || !familyMemberForm.name.trim()}
-                                  className="flex-1 px-3 py-2 bg-gradient-to-r from-gold to-gold-light text-navy rounded-lg text-xs font-medium hover:from-gold-light hover:to-gold transition-all disabled:opacity-50 flex items-center justify-center gap-1"
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  {isSubmittingFamilyMember ? (
-                                    <>
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                      Adding...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="w-3 h-3" />
-                                      Add to Family Tree
-                                    </>
-                                  )}
-                                </motion.button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        {/* Link to full Family Tree */}
-                        <motion.button
-                          onClick={() => onNavigate('family-tree')}
-                          className="text-gold text-xs flex items-center gap-1 hover:text-gold-light transition-colors mt-2"
-                          whileHover={{ x: 3 }}
-                        >
-                          View Full Family Tree
-                          <ArrowRight className="w-3 h-3" />
-                        </motion.button>
+                  {/* Add Family Member Form */}
+                  <div className="bg-navy-dark/30 rounded-xl p-6 border border-gold/10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                        <UserPlus className="w-5 h-5 text-gold" />
+                      </div>
+                      <div>
+                        <h4 className="text-cream font-medium">Add New Family Member</h4>
+                        <p className="text-cream/50 text-xs">Fill in the details below</p>
                       </div>
                     </div>
+
+                    <div className="space-y-4">
+                      {/* Name */}
+                      <div>
+                        <label className="block text-cream/70 text-sm mb-2">Name *</label>
+                        <input
+                          type="text"
+                          value={familyMemberForm.name}
+                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, name: e.target.value })}
+                          placeholder="Enter full name"
+                          className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                        />
+                      </div>
+
+                      {/* Relationship */}
+                      <div>
+                        <label className="block text-cream/70 text-sm mb-2">Relationship</label>
+                        <select
+                          value={familyMemberForm.relationship}
+                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, relationship: e.target.value })}
+                          className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                        >
+                          <optgroup label="Grandparents">
+                            <option value="Grandfather">Grandfather</option>
+                            <option value="Grandmother">Grandmother</option>
+                          </optgroup>
+                          <optgroup label="Great-Grandparents">
+                            <option value="Great-Grandfather">Great-Grandfather</option>
+                            <option value="Great-Grandmother">Great-Grandmother</option>
+                          </optgroup>
+                          <optgroup label="Parents">
+                            <option value="Father">Father</option>
+                            <option value="Mother">Mother</option>
+                          </optgroup>
+                          <optgroup label="Aunts & Uncles">
+                            <option value="Uncle">Uncle</option>
+                            <option value="Aunt">Aunt</option>
+                          </optgroup>
+                          <optgroup label="Siblings">
+                            <option value="Brother">Brother</option>
+                            <option value="Sister">Sister</option>
+                          </optgroup>
+                          <optgroup label="Children">
+                            <option value="Son">Son</option>
+                            <option value="Daughter">Daughter</option>
+                          </optgroup>
+                          <optgroup label="Grandchildren">
+                            <option value="Grandson">Grandson</option>
+                            <option value="Granddaughter">Granddaughter</option>
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      {/* Photo Upload */}
+                      <div>
+                        <label className="block text-cream/70 text-sm mb-2">Photo</label>
+                        <div className="flex items-center gap-4">
+                          {familyMemberForm.imageData && (
+                            <img
+                              src={familyMemberForm.imageData}
+                              alt="Preview"
+                              className="w-16 h-16 rounded-xl object-cover border border-gold/20"
+                            />
+                          )}
+                          <label className="flex-1 px-4 py-3 bg-navy-light/50 border border-cream/10 border-dashed rounded-lg text-cream/50 cursor-pointer hover:border-gold/30 transition-colors flex items-center justify-center gap-2">
+                            <Upload className="w-4 h-4" />
+                            <span>{familyMemberForm.imageData ? 'Change Photo' : 'Upload Photo'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={familyImageInputRef}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file && file.type.startsWith('image/')) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setFamilyMemberForm({ ...familyMemberForm, imageData: reader.result });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Voice Upload */}
+                      <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-cream/80 text-sm font-medium flex items-center gap-2">
+                            <Mic className="w-4 h-4 text-purple-400" />
+                            Voice Recording
+                          </label>
+                          <span className="text-purple-300/70 text-xs">For AI voice clone</span>
+                        </div>
+                        <p className="text-cream/50 text-xs mb-3 leading-relaxed">
+                          Upload a clear voice recording of this person speaking naturally.
+                          Ideal: them telling a story, sharing memories, or just talking freely.
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="bg-navy-dark/50 rounded-lg px-2 py-2 text-center">
+                            <span className="text-purple-300 text-sm font-medium">30s - 5min</span>
+                            <p className="text-cream/40 text-xs">Duration</p>
+                          </div>
+                          <div className="bg-navy-dark/50 rounded-lg px-2 py-2 text-center">
+                            <span className="text-purple-300 text-sm font-medium">Quiet</span>
+                            <p className="text-cream/40 text-xs">Background</p>
+                          </div>
+                          <div className="bg-navy-dark/50 rounded-lg px-2 py-2 text-center">
+                            <span className="text-purple-300 text-sm font-medium">Clear</span>
+                            <p className="text-cream/40 text-xs">Speech</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {familyMemberForm.voiceData && (
+                            <div className="flex items-center gap-2 text-purple-400 bg-purple-500/20 px-3 py-2 rounded-lg">
+                              <Mic className="w-4 h-4" />
+                              <span className="text-sm">Uploaded</span>
+                            </div>
+                          )}
+                          <label className="flex-1 px-4 py-3 bg-purple-500/20 border border-purple-500/40 rounded-lg text-purple-300 cursor-pointer hover:bg-purple-500/30 transition-colors flex items-center justify-center gap-2">
+                            <Upload className="w-4 h-4" />
+                            <span>{familyMemberForm.voiceData ? 'Change Recording' : 'Upload Voice Recording'}</span>
+                            <input
+                              type="file"
+                              accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm"
+                              ref={familyVoiceInputRef}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file && (file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|m4a|ogg|webm)$/i))) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setFamilyMemberForm({ ...familyMemberForm, voiceData: reader.result });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                        <p className="text-cream/30 text-xs mt-2 text-center">
+                          Formats: MP3, WAV, M4A, OGG, WebM
+                        </p>
+                      </div>
+
+                      {/* Birth Year & Birthplace */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-cream/70 text-sm mb-2">Birth Year</label>
+                          <input
+                            type="text"
+                            value={familyMemberForm.birthYear}
+                            onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthYear: e.target.value })}
+                            placeholder="e.g., 1945"
+                            className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-cream/70 text-sm mb-2">Birthplace</label>
+                          <input
+                            type="text"
+                            value={familyMemberForm.birthplace}
+                            onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthplace: e.target.value })}
+                            placeholder="e.g., Berlin"
+                            className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Deceased checkbox */}
+                      <div className="flex items-center gap-3 py-2">
+                        <input
+                          type="checkbox"
+                          id="familyIsDeceasedTab"
+                          checked={familyMemberForm.isDeceased}
+                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, isDeceased: e.target.checked })}
+                          className="w-5 h-5 bg-navy-light border border-cream/20 rounded cursor-pointer"
+                        />
+                        <label htmlFor="familyIsDeceasedTab" className="text-cream/70 text-sm cursor-pointer">
+                          This person is deceased
+                        </label>
+                      </div>
+
+                      {/* Death Year (if deceased) */}
+                      {familyMemberForm.isDeceased && (
+                        <div>
+                          <label className="block text-cream/70 text-sm mb-2">Death Year</label>
+                          <input
+                            type="text"
+                            value={familyMemberForm.deathYear}
+                            onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, deathYear: e.target.value })}
+                            placeholder="e.g., 2020"
+                            className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                          />
+                        </div>
+                      )}
+
+                      {/* Bio */}
+                      <div>
+                        <label className="block text-cream/70 text-sm mb-2">Biography / Story</label>
+                        <textarea
+                          value={familyMemberForm.bio}
+                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, bio: e.target.value })}
+                          placeholder="Share their story, memories, important life details..."
+                          rows={4}
+                          className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                        />
+                      </div>
+
+                      {/* Extended Fields Toggle */}
+                      <motion.button
+                        type="button"
+                        onClick={() => setShowExtendedFields(!showExtendedFields)}
+                        className="w-full py-3 text-cream/60 text-sm flex items-center justify-center gap-2 hover:text-cream/80 transition-colors border border-cream/10 rounded-lg hover:border-cream/20"
+                      >
+                        {showExtendedFields ? (
+                          <>
+                            <ChevronUp className="w-4 h-4" />
+                            Hide Additional Details
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4" />
+                            Show Additional Details (Nickname, Occupation, Contact, etc.)
+                          </>
+                        )}
+                      </motion.button>
+
+                      {/* Extended Fields */}
+                      <AnimatePresence>
+                        {showExtendedFields && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="space-y-4 pt-4 border-t border-cream/10"
+                          >
+                            {/* Nickname */}
+                            <div>
+                              <label className="block text-cream/70 text-sm mb-2">Nickname</label>
+                              <input
+                                type="text"
+                                value={familyMemberForm.nickname}
+                                onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, nickname: e.target.value })}
+                                placeholder="e.g., Grandpa Joe, Oma"
+                                className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                              />
+                            </div>
+
+                            {/* Occupation & Education */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-cream/70 text-sm mb-2">Occupation</label>
+                                <input
+                                  type="text"
+                                  value={familyMemberForm.occupation}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, occupation: e.target.value })}
+                                  placeholder="e.g., Teacher, Engineer"
+                                  className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-cream/70 text-sm mb-2">Education</label>
+                                <input
+                                  type="text"
+                                  value={familyMemberForm.education}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, education: e.target.value })}
+                                  placeholder="e.g., PhD, High School"
+                                  className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Hobbies */}
+                            <div>
+                              <label className="block text-cream/70 text-sm mb-2">Hobbies & Interests</label>
+                              <input
+                                type="text"
+                                value={familyMemberForm.hobbies}
+                                onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, hobbies: e.target.value })}
+                                placeholder="e.g., Gardening, reading, cooking, traveling"
+                                className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                              />
+                            </div>
+
+                            {/* Contact Info */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-cream/70 text-sm mb-2">Phone Number</label>
+                                <input
+                                  type="tel"
+                                  value={familyMemberForm.phoneNumber}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, phoneNumber: e.target.value })}
+                                  placeholder="+49 123 456789"
+                                  className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-cream/70 text-sm mb-2">Email</label>
+                                <input
+                                  type="email"
+                                  value={familyMemberForm.email}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, email: e.target.value })}
+                                  placeholder="email@example.com"
+                                  className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Spouse & Marriage */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-cream/70 text-sm mb-2">Spouse</label>
+                                <input
+                                  type="text"
+                                  value={familyMemberForm.spouse}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, spouse: e.target.value })}
+                                  placeholder="Spouse's name"
+                                  className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-cream/70 text-sm mb-2">Marriage Date</label>
+                                <input
+                                  type="text"
+                                  value={familyMemberForm.marriageDate}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, marriageDate: e.target.value })}
+                                  placeholder="e.g., June 1975"
+                                  className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Physical Description */}
+                            <div>
+                              <label className="block text-cream/70 text-sm mb-2">Physical Description</label>
+                              <input
+                                type="text"
+                                value={familyMemberForm.physicalDescription}
+                                onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, physicalDescription: e.target.value })}
+                                placeholder="e.g., Tall with blue eyes and gray hair"
+                                className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                              />
+                            </div>
+
+                            {/* Personality Traits */}
+                            <div>
+                              <label className="block text-cream/70 text-sm mb-2">Personality Traits</label>
+                              <input
+                                type="text"
+                                value={familyMemberForm.personalityTraits}
+                                onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, personalityTraits: e.target.value })}
+                                placeholder="e.g., Kind, patient, funny, wise"
+                                className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                              />
+                            </div>
+
+                            {/* Favorite Memories */}
+                            <div>
+                              <label className="block text-cream/70 text-sm mb-2">Favorite Memories</label>
+                              <textarea
+                                value={familyMemberForm.favoriteMemories}
+                                onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, favoriteMemories: e.target.value })}
+                                placeholder="Share cherished moments you remember with them..."
+                                rows={3}
+                                className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50 resize-none"
+                              />
+                            </div>
+
+                            {/* Important Dates */}
+                            <div>
+                              <label className="block text-cream/70 text-sm mb-2">Important Dates</label>
+                              <input
+                                type="text"
+                                value={familyMemberForm.importantDates}
+                                onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, importantDates: e.target.value })}
+                                placeholder="e.g., Anniversary: May 15, Birthday: March 3"
+                                className="w-full px-4 py-3 bg-navy-light/50 border border-cream/10 rounded-lg text-cream focus:outline-none focus:border-gold/50"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Submit Button */}
+                      <motion.button
+                        type="button"
+                        onClick={async () => {
+                          if (!familyMemberForm.name.trim()) {
+                            showToast('Please enter a name', 'error');
+                            return;
+                          }
+                          setIsSubmittingFamilyMember(true);
+                          try {
+                            await api.createFamilyMember(familyMemberForm);
+                            showToast('Family member added successfully!', 'success');
+                            setFamilyMemberForm({
+                              name: '',
+                              relationship: 'Grandfather',
+                              birthYear: '',
+                              birthplace: '',
+                              bio: '',
+                              imageData: null,
+                              voiceData: null,
+                              isDeceased: false,
+                              deathYear: '',
+                              nickname: '',
+                              occupation: '',
+                              education: '',
+                              hobbies: '',
+                              phoneNumber: '',
+                              email: '',
+                              spouse: '',
+                              marriageDate: '',
+                              physicalDescription: '',
+                              personalityTraits: '',
+                              favoriteMemories: '',
+                              importantDates: ''
+                            });
+                            setShowExtendedFields(false);
+                          } catch (err) {
+                            showToast(err.message || 'Failed to add family member', 'error');
+                          } finally {
+                            setIsSubmittingFamilyMember(false);
+                          }
+                        }}
+                        disabled={isSubmittingFamilyMember || !familyMemberForm.name.trim()}
+                        className="w-full py-4 bg-gradient-to-r from-gold to-gold-light text-navy rounded-xl font-medium hover:from-gold-light hover:to-gold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        {isSubmittingFamilyMember ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-5 h-5" />
+                            Add to Family Tree
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
                   </div>
+
+                  {/* Link to full Family Tree */}
+                  <motion.button
+                    onClick={() => onNavigate('family-tree')}
+                    className="w-full py-4 bg-navy-light/30 border border-gold/20 rounded-xl text-gold flex items-center justify-center gap-2 hover:bg-navy-light/50 transition-colors"
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <Users className="w-5 h-5" />
+                    View Full Family Tree
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
                 </div>
               );
 
