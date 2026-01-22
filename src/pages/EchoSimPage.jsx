@@ -828,16 +828,36 @@ export function EchoSimPage({ onNavigate }) {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-                <span className={`px-2.5 py-1 rounded-lg text-xs ${
-                  hasPhotoAvatar ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                }`}>
-                  {hasPhotoAvatar ? '✓' : '✗'} Photo Avatar
-                </span>
-                <span className={`px-2.5 py-1 rounded-lg text-xs ${
-                  hasVoiceClone ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-                }`}>
-                  {hasVoiceClone ? '✓' : '○'} Voice Clone
-                </span>
+                {hasPhotoAvatar ? (
+                  <span className="px-2.5 py-1 rounded-lg text-xs bg-green-500/20 text-green-400">
+                    ✓ Photo Avatar
+                  </span>
+                ) : (
+                  <motion.button
+                    onClick={() => onNavigate('persona')}
+                    className="px-2.5 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-1"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    ✗ Photo Avatar
+                    <ChevronRight className="w-3 h-3" />
+                  </motion.button>
+                )}
+                {hasVoiceClone ? (
+                  <span className="px-2.5 py-1 rounded-lg text-xs bg-green-500/20 text-green-400">
+                    ✓ Voice Clone
+                  </span>
+                ) : (
+                  <motion.button
+                    onClick={() => onNavigate('persona')}
+                    className="px-2.5 py-1 rounded-lg text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors flex items-center gap-1"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    ○ Voice Clone
+                    <ChevronRight className="w-3 h-3" />
+                  </motion.button>
+                )}
               </div>
             </div>
           </div>
