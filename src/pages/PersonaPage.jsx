@@ -1850,25 +1850,49 @@ export function PersonaPage({ onNavigate }) {
                               </div>
 
                               {/* Voice Upload */}
-                              <div>
-                                <label className="block text-cream/60 text-xs mb-1">Voice Recording</label>
+                              <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-1">
+                                  <label className="text-cream/70 text-xs font-medium flex items-center gap-1">
+                                    <Mic className="w-3 h-3 text-purple-400" />
+                                    Voice Recording
+                                  </label>
+                                  <span className="text-purple-300/60 text-[10px]">For AI voice clone</span>
+                                </div>
+                                <p className="text-cream/50 text-[10px] mb-2 leading-relaxed">
+                                  Upload a clear voice recording of this person speaking naturally.
+                                  Ideal: them telling a story, sharing memories, or just talking freely.
+                                </p>
+                                <div className="grid grid-cols-3 gap-1 mb-2 text-[9px] text-cream/40">
+                                  <div className="bg-navy-dark/50 rounded px-1.5 py-1 text-center">
+                                    <span className="text-purple-300">30s - 5min</span>
+                                    <br />Duration
+                                  </div>
+                                  <div className="bg-navy-dark/50 rounded px-1.5 py-1 text-center">
+                                    <span className="text-purple-300">Quiet</span>
+                                    <br />Background
+                                  </div>
+                                  <div className="bg-navy-dark/50 rounded px-1.5 py-1 text-center">
+                                    <span className="text-purple-300">Clear</span>
+                                    <br />Speech
+                                  </div>
+                                </div>
                                 <div className="flex items-center gap-2">
                                   {familyMemberForm.voiceData && (
-                                    <div className="flex items-center gap-1 text-purple-400">
-                                      <Mic className="w-4 h-4" />
-                                      <span className="text-xs">Audio</span>
+                                    <div className="flex items-center gap-1 text-purple-400 bg-purple-500/20 px-2 py-1 rounded">
+                                      <Mic className="w-3 h-3" />
+                                      <span className="text-xs">Uploaded</span>
                                     </div>
                                   )}
-                                  <label className="flex-1 px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream/50 cursor-pointer hover:border-gold/30 transition-colors flex items-center justify-center gap-2 text-xs">
-                                    <Mic className="w-3 h-3" />
-                                    <span>{familyMemberForm.voiceData ? 'Change' : 'Upload Voice'}</span>
+                                  <label className="flex-1 px-3 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-300 cursor-pointer hover:bg-purple-500/20 transition-colors flex items-center justify-center gap-2 text-xs">
+                                    <Upload className="w-3 h-3" />
+                                    <span>{familyMemberForm.voiceData ? 'Change Recording' : 'Upload Voice Recording'}</span>
                                     <input
                                       type="file"
-                                      accept="audio/*"
+                                      accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm"
                                       ref={familyVoiceInputRef}
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (file && file.type.startsWith('audio/')) {
+                                        if (file && (file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|m4a|ogg|webm)$/i))) {
                                           const reader = new FileReader();
                                           reader.onloadend = () => {
                                             setFamilyMemberForm({ ...familyMemberForm, voiceData: reader.result });
@@ -1880,6 +1904,9 @@ export function PersonaPage({ onNavigate }) {
                                     />
                                   </label>
                                 </div>
+                                <p className="text-cream/30 text-[9px] mt-1.5 text-center">
+                                  Formats: MP3, WAV, M4A, OGG, WebM
+                                </p>
                               </div>
 
                               {/* Birth Year & Birthplace */}
