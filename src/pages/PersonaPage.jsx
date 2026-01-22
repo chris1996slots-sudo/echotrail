@@ -1692,6 +1692,29 @@ export function PersonaPage({ onNavigate }) {
                       <p className="text-cream/70">Upload at least one photo to continue</p>
                     </div>
                   )}
+
+                  {/* Family Members Info */}
+                  <div className="mt-6 p-4 bg-navy-dark/50 rounded-xl border border-gold/10">
+                    <div className="flex items-start gap-3">
+                      <Users className="w-5 h-5 text-gold/70 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-cream/90 font-medium text-sm mb-1">
+                          Creating for a family member?
+                        </h4>
+                        <p className="text-cream/50 text-xs mb-3">
+                          You can create digital echoes for parents, grandparents, or other loved ones in the Family Tree section.
+                        </p>
+                        <motion.button
+                          onClick={() => onNavigate('family-tree')}
+                          className="text-gold text-xs flex items-center gap-1 hover:text-gold-light transition-colors"
+                          whileHover={{ x: 3 }}
+                        >
+                          Go to Family Tree
+                          <ArrowRight className="w-3 h-3" />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
 
