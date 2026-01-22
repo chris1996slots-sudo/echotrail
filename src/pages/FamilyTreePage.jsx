@@ -800,8 +800,23 @@ export function FamilyTreePage({ onNavigate }) {
               <h3 className="text-cream/70 text-sm font-medium">Parents</h3>
             </div>
 
-            {/* Mom and Dad side by side */}
-            <div className="flex items-start gap-8">
+            {/* Uncle/Aunt (left) - Mom - Dad - Uncle/Aunt (right) */}
+            <div className="flex items-start gap-4">
+              {/* Add Uncle/Aunt (Mom's side - maternal) */}
+              <motion.div
+                onClick={() => handleEmptySlotClick('Aunt', 'Aunt (Mom\'s side)')}
+                className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all border border-dashed border-teal-500/30 hover:border-teal-500 self-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center gap-1 w-14">
+                  <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-teal-400/70" />
+                  </div>
+                  <span className="text-[9px] text-teal-400/60 text-center leading-tight">Uncle/<br/>Aunt</span>
+                </div>
+              </motion.div>
+
               {/* Mom */}
               <div className="flex flex-col items-center">
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[0], RELATIONSHIP_TYPES.parents, 0)}
@@ -817,12 +832,55 @@ export function FamilyTreePage({ onNavigate }) {
                 <div className="w-0.5 h-4 bg-blue-500/40 mt-1" />
                 <div className="text-blue-400/60 text-[9px]">↓</div>
               </div>
+
+              {/* Add Uncle/Aunt (Dad's side - paternal) */}
+              <motion.div
+                onClick={() => handleEmptySlotClick('Uncle', 'Uncle (Dad\'s side)')}
+                className="glass-card p-2 cursor-pointer hover:bg-blue-500/10 transition-all border border-dashed border-blue-500/30 hover:border-blue-500 self-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center gap-1 w-14">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-blue-400/70" />
+                  </div>
+                  <span className="text-[9px] text-blue-400/60 text-center leading-tight">Uncle/<br/>Aunt</span>
+                </div>
+              </motion.div>
             </div>
 
-            {/* Aunts & Uncles - separate section */}
+            {/* Existing Aunts & Uncles */}
             {familyMembers.some(m => ['Uncle', 'Aunt'].includes(m.relationship)) && (
-              <div className="mt-4 pt-4 border-t border-cream/10 opacity-70">
-                {renderCategory('auntsUncles')}
+              <div className="mt-3 pt-3 border-t border-cream/10">
+                <div className="flex flex-wrap justify-center gap-2">
+                  {familyMembers
+                    .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
+                    .map((member) => (
+                      <motion.div
+                        key={member.id}
+                        onClick={() => handleMemberClick(member)}
+                        className="glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          {member.imageData ? (
+                            <img
+                              src={member.imageData}
+                              alt={member.name}
+                              className="w-10 h-10 rounded-full object-cover border border-gold/30"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center border border-gold/30">
+                              <span className="text-lg">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
+                            </div>
+                          )}
+                          <span className="text-[10px] text-cream/70">{member.name}</span>
+                          <span className="text-[8px] text-cream/40">{member.relationship}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                </div>
               </div>
             )}
           </div>
