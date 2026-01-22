@@ -120,7 +120,7 @@ export function SettingsPage({ onNavigate }) {
       features: [
         '2 Memory Anchors',
         '3 Time Capsules',
-        'Basic Echo Sim',
+        'Basic Live Avatar',
         'Browser voice only',
       ],
       current: user?.subscription === 'FREE',
@@ -132,7 +132,7 @@ export function SettingsPage({ onNavigate }) {
       features: [
         '5 Memory Anchors',
         '10 Time Capsules',
-        'Full Echo Sim',
+        'Full Live Avatar',
         'Voice cloning (5 samples)',
         '100 AI tokens/month',
       ],
@@ -146,7 +146,7 @@ export function SettingsPage({ onNavigate }) {
       features: [
         'Unlimited Memory Anchors',
         'Unlimited Time Capsules',
-        'Priority Echo Sim',
+        'Priority Live Avatar',
         'Unlimited voice samples',
         'Unlimited AI tokens',
         'Priority support',

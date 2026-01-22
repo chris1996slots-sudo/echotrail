@@ -81,7 +81,7 @@ const pricingPlans = [
       'Advanced Personality Traits',
       'Unlimited Memory Anchors',
       'Unlimited Time Capsules',
-      'Echo Simulator Events',
+      'Live Avatar Events',
       'Priority AI Processing',
       'Family Sharing (up to 5)',
       '500 AI Tokens included',
@@ -381,7 +381,7 @@ export function LandingPage({ onNavigate }) {
                   Need More AI Power?
                 </h3>
                 <p className="text-cream/60 text-sm max-w-xl mx-auto">
-                  Top up your tokens anytime. Use them for Echo Simulator conversations,
+                  Top up your tokens anytime. Use them for Live Avatar conversations,
                   Wisdom GPT chats, and AI-powered features.
                 </p>
               </div>

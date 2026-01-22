@@ -3492,7 +3492,7 @@ export function PersonaPage({ onNavigate }) {
                       <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
                         <p className="text-green-400 text-sm flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4" />
-                          Your Video Avatar is ready! Go to Echo Sim → Live Conversation to use it.
+                          Your Video Avatar is ready! Go to Live Avatar → Live Conversation to use it.
                         </p>
                       </div>
                     )}
@@ -4128,10 +4128,10 @@ export function PersonaPage({ onNavigate }) {
               >
                 <h3 className="text-lg font-serif text-cream mb-2">Ready to Test?</h3>
                 <p className="text-cream/60 text-sm mb-4">
-                  See your digital persona in action with the Echo Simulator.
+                  See your digital persona in action with the Live Avatar.
                 </p>
                 <span className="text-gold text-sm flex items-center">
-                  Launch Echo Sim
+                  Launch Live Avatar
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </span>
               </motion.button>

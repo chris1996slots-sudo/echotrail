@@ -25,7 +25,7 @@ import { NotificationBell } from './NotificationBell';
 const navItems = [
   { id: 'landing', label: 'Home', icon: Home, requiresAuth: false, guestOnly: true },
   { id: 'persona', label: 'My Persona', icon: User, requiresAuth: true, userOnly: true },
-  { id: 'echo-sim', label: 'Echo Sim', icon: Sparkles, requiresAuth: true, userOnly: true },
+  { id: 'echo-sim', label: 'Live Avatar', icon: Sparkles, requiresAuth: true, userOnly: true },
   { id: 'family-tree', label: 'Family Tree', icon: Users, requiresAuth: true, userOnly: true },
   {
     id: 'experiences',

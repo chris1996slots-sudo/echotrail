@@ -176,7 +176,7 @@ export function VideoArchivePage() {
               className="inline-flex items-center gap-2 text-cream/60 hover:text-gold transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Echo Simulator
+              Back to Live Avatar
             </Link>
           </FadeIn>
 
@@ -253,7 +253,7 @@ export function VideoArchivePage() {
                 <Video className="w-16 h-16 text-cream/30 mx-auto mb-4" />
                 <h3 className="text-xl font-serif text-cream mb-2">No Videos Yet</h3>
                 <p className="text-cream/50">
-                  Generate your first video in the Echo Simulator to see it here.
+                  Generate your first video in the Live Avatar to see it here.
                 </p>
               </div>
             </FadeIn>

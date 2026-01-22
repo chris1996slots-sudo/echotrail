@@ -104,7 +104,7 @@ const serviceCategories = {
   },
   simli: {
     name: 'Real-Time Avatar (Simli)',
-    description: 'Live Conversation in Echo Sim - Real-time avatar with YOUR voice clone!',
+    description: 'Live Conversation in Live Avatar - Real-time avatar with YOUR voice clone!',
     icon: Video,
     color: 'from-cyan-500 to-blue-500',
     providers: [
@@ -292,7 +292,7 @@ CORE PRINCIPLES:
 5. If asked about topics outside your scope, politely redirect to appropriate channels
 
 PLATFORM CONTEXT:
-- EchoTrail preserves digital legacies through: Memory Anchors, Time Capsules, WisdomGPT conversations, and Echo Simulations
+- EchoTrail preserves digital legacies through: Memory Anchors, Time Capsules, WisdomGPT conversations, and Live Avatar
 - Users are typically creating content for loved ones and future generations
 - The emotional tone should be warm, personal, and meaningful
 
@@ -332,8 +332,8 @@ INSTRUCTIONS:
     },
     {
       key: 'echo_sim',
-      name: 'Echo Simulator Prompt',
-      description: 'Prompt for the Echo Simulation/Avatar feature with voice and video',
+      name: 'Live Avatar Prompt',
+      description: 'Prompt for the Live Avatar feature with voice and video',
       defaultValue: `You are simulating a live conversation with the preserved echo of {userName}.
 
 PERSONA:

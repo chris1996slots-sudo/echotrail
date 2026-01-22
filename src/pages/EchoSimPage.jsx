@@ -794,7 +794,7 @@ export function EchoSimPage({ onNavigate }) {
         <FadeIn>
           <div className="text-center mb-8 sm:mb-10">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-cream mb-3">
-              Echo Simulator
+              Live Avatar
             </h1>
             <p className="text-cream/60 max-w-2xl mx-auto text-sm sm:text-base">
               Interact with your digital echo - create videos or chat in real-time
@@ -1049,7 +1049,7 @@ export function EchoSimPage({ onNavigate }) {
                   {/* Icon */}
                   <motion.div
                     className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
-                    animate={{ boxShadow: ['0 0 0 0 rgba(168, 85, 247, 0)', '0 0 0 20px rgba(168, 85, 247, 0)', '0 0 0 0 rgba(168, 85, 247, 0)'] }}
+                    animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
                     <Radio className="w-10 h-10 text-purple-400" />
