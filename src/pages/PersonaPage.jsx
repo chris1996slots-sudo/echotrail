@@ -365,11 +365,30 @@ export function PersonaPage({ onNavigate }) {
     name: '',
     relationship: 'Grandfather',
     birthYear: '',
+    birthplace: '',
     bio: '',
     imageData: null,
+    voiceData: null,
+    isDeceased: false,
+    deathYear: '',
+    // Extended fields
+    nickname: '',
+    occupation: '',
+    education: '',
+    hobbies: '',
+    phoneNumber: '',
+    email: '',
+    spouse: '',
+    marriageDate: '',
+    physicalDescription: '',
+    personalityTraits: '',
+    favoriteMemories: '',
+    importantDates: ''
   });
   const [isSubmittingFamilyMember, setIsSubmittingFamilyMember] = useState(false);
+  const [showExtendedFields, setShowExtendedFields] = useState(false);
   const familyImageInputRef = useRef(null);
+  const familyVoiceInputRef = useRef(null);
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
@@ -1743,7 +1762,7 @@ export function PersonaPage({ onNavigate }) {
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
-                              className="space-y-3 pt-3 border-t border-gold/10"
+                              className="space-y-3 pt-3 border-t border-gold/10 max-h-[60vh] overflow-y-auto"
                             >
                               {/* Name */}
                               <div>
@@ -1798,7 +1817,7 @@ export function PersonaPage({ onNavigate }) {
 
                               {/* Photo Upload */}
                               <div>
-                                <label className="block text-cream/60 text-xs mb-1">Photo (optional)</label>
+                                <label className="block text-cream/60 text-xs mb-1">Photo</label>
                                 <div className="flex items-center gap-2">
                                   {familyMemberForm.imageData && (
                                     <img
@@ -1830,29 +1849,277 @@ export function PersonaPage({ onNavigate }) {
                                 </div>
                               </div>
 
-                              {/* Birth Year */}
+                              {/* Voice Upload */}
                               <div>
-                                <label className="block text-cream/60 text-xs mb-1">Birth Year (optional)</label>
-                                <input
-                                  type="text"
-                                  value={familyMemberForm.birthYear}
-                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthYear: e.target.value })}
-                                  placeholder="e.g., 1945"
-                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
-                                />
+                                <label className="block text-cream/60 text-xs mb-1">Voice Recording</label>
+                                <div className="flex items-center gap-2">
+                                  {familyMemberForm.voiceData && (
+                                    <div className="flex items-center gap-1 text-purple-400">
+                                      <Mic className="w-4 h-4" />
+                                      <span className="text-xs">Audio</span>
+                                    </div>
+                                  )}
+                                  <label className="flex-1 px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream/50 cursor-pointer hover:border-gold/30 transition-colors flex items-center justify-center gap-2 text-xs">
+                                    <Mic className="w-3 h-3" />
+                                    <span>{familyMemberForm.voiceData ? 'Change' : 'Upload Voice'}</span>
+                                    <input
+                                      type="file"
+                                      accept="audio/*"
+                                      ref={familyVoiceInputRef}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file && file.type.startsWith('audio/')) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            setFamilyMemberForm({ ...familyMemberForm, voiceData: reader.result });
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                </div>
                               </div>
+
+                              {/* Birth Year & Birthplace */}
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-cream/60 text-xs mb-1">Birth Year</label>
+                                  <input
+                                    type="text"
+                                    value={familyMemberForm.birthYear}
+                                    onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthYear: e.target.value })}
+                                    placeholder="e.g., 1945"
+                                    className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-cream/60 text-xs mb-1">Birthplace</label>
+                                  <input
+                                    type="text"
+                                    value={familyMemberForm.birthplace}
+                                    onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthplace: e.target.value })}
+                                    placeholder="e.g., Berlin"
+                                    className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Deceased checkbox */}
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id="familyIsDeceased"
+                                  checked={familyMemberForm.isDeceased}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, isDeceased: e.target.checked })}
+                                  className="w-4 h-4 bg-navy-light border border-cream/20 rounded cursor-pointer"
+                                />
+                                <label htmlFor="familyIsDeceased" className="text-cream/60 text-xs cursor-pointer">
+                                  This person is deceased
+                                </label>
+                              </div>
+
+                              {/* Death Year (if deceased) */}
+                              {familyMemberForm.isDeceased && (
+                                <div>
+                                  <label className="block text-cream/60 text-xs mb-1">Death Year</label>
+                                  <input
+                                    type="text"
+                                    value={familyMemberForm.deathYear}
+                                    onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, deathYear: e.target.value })}
+                                    placeholder="e.g., 2020"
+                                    className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                  />
+                                </div>
+                              )}
 
                               {/* Bio */}
                               <div>
-                                <label className="block text-cream/60 text-xs mb-1">Short Bio (optional)</label>
+                                <label className="block text-cream/60 text-xs mb-1">Biography / Story</label>
                                 <textarea
                                   value={familyMemberForm.bio}
                                   onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, bio: e.target.value })}
-                                  placeholder="Share a brief description or memory..."
-                                  rows={2}
+                                  placeholder="Share their story, memories, important details..."
+                                  rows={3}
                                   className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50 resize-none"
                                 />
                               </div>
+
+                              {/* Extended Fields Toggle */}
+                              <motion.button
+                                type="button"
+                                onClick={() => setShowExtendedFields(!showExtendedFields)}
+                                className="w-full py-2 text-cream/50 text-xs flex items-center justify-center gap-1 hover:text-cream/70 transition-colors"
+                              >
+                                {showExtendedFields ? (
+                                  <>
+                                    <ChevronUp className="w-3 h-3" />
+                                    Hide Additional Details
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="w-3 h-3" />
+                                    Show Additional Details
+                                  </>
+                                )}
+                              </motion.button>
+
+                              {/* Extended Fields */}
+                              <AnimatePresence>
+                                {showExtendedFields && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="space-y-3 pt-2 border-t border-cream/5"
+                                  >
+                                    {/* Nickname */}
+                                    <div>
+                                      <label className="block text-cream/60 text-xs mb-1">Nickname</label>
+                                      <input
+                                        type="text"
+                                        value={familyMemberForm.nickname}
+                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, nickname: e.target.value })}
+                                        placeholder="e.g., Grandpa Joe"
+                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                      />
+                                    </div>
+
+                                    {/* Occupation & Education */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-cream/60 text-xs mb-1">Occupation</label>
+                                        <input
+                                          type="text"
+                                          value={familyMemberForm.occupation}
+                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, occupation: e.target.value })}
+                                          placeholder="e.g., Teacher"
+                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-cream/60 text-xs mb-1">Education</label>
+                                        <input
+                                          type="text"
+                                          value={familyMemberForm.education}
+                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, education: e.target.value })}
+                                          placeholder="e.g., PhD"
+                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Hobbies */}
+                                    <div>
+                                      <label className="block text-cream/60 text-xs mb-1">Hobbies & Interests</label>
+                                      <input
+                                        type="text"
+                                        value={familyMemberForm.hobbies}
+                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, hobbies: e.target.value })}
+                                        placeholder="e.g., Gardening, reading, cooking"
+                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                      />
+                                    </div>
+
+                                    {/* Contact Info */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-cream/60 text-xs mb-1">Phone</label>
+                                        <input
+                                          type="tel"
+                                          value={familyMemberForm.phoneNumber}
+                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, phoneNumber: e.target.value })}
+                                          placeholder="+49 123..."
+                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-cream/60 text-xs mb-1">Email</label>
+                                        <input
+                                          type="email"
+                                          value={familyMemberForm.email}
+                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, email: e.target.value })}
+                                          placeholder="email@..."
+                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Spouse & Marriage */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-cream/60 text-xs mb-1">Spouse</label>
+                                        <input
+                                          type="text"
+                                          value={familyMemberForm.spouse}
+                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, spouse: e.target.value })}
+                                          placeholder="Spouse name"
+                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-cream/60 text-xs mb-1">Marriage Date</label>
+                                        <input
+                                          type="text"
+                                          value={familyMemberForm.marriageDate}
+                                          onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, marriageDate: e.target.value })}
+                                          placeholder="e.g., June 1975"
+                                          className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Physical Description */}
+                                    <div>
+                                      <label className="block text-cream/60 text-xs mb-1">Physical Description</label>
+                                      <input
+                                        type="text"
+                                        value={familyMemberForm.physicalDescription}
+                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, physicalDescription: e.target.value })}
+                                        placeholder="e.g., Tall with blue eyes"
+                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                      />
+                                    </div>
+
+                                    {/* Personality Traits */}
+                                    <div>
+                                      <label className="block text-cream/60 text-xs mb-1">Personality Traits</label>
+                                      <input
+                                        type="text"
+                                        value={familyMemberForm.personalityTraits}
+                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, personalityTraits: e.target.value })}
+                                        placeholder="e.g., Kind, patient, funny"
+                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                      />
+                                    </div>
+
+                                    {/* Favorite Memories */}
+                                    <div>
+                                      <label className="block text-cream/60 text-xs mb-1">Favorite Memories</label>
+                                      <textarea
+                                        value={familyMemberForm.favoriteMemories}
+                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, favoriteMemories: e.target.value })}
+                                        placeholder="Share cherished moments..."
+                                        rows={2}
+                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50 resize-none"
+                                      />
+                                    </div>
+
+                                    {/* Important Dates */}
+                                    <div>
+                                      <label className="block text-cream/60 text-xs mb-1">Important Dates</label>
+                                      <input
+                                        type="text"
+                                        value={familyMemberForm.importantDates}
+                                        onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, importantDates: e.target.value })}
+                                        placeholder="e.g., Anniversary: May 15"
+                                        className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                      />
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
 
                               {/* Buttons */}
                               <div className="flex gap-2 pt-2">
@@ -1871,10 +2138,27 @@ export function PersonaPage({ onNavigate }) {
                                         name: '',
                                         relationship: 'Grandfather',
                                         birthYear: '',
+                                        birthplace: '',
                                         bio: '',
                                         imageData: null,
+                                        voiceData: null,
+                                        isDeceased: false,
+                                        deathYear: '',
+                                        nickname: '',
+                                        occupation: '',
+                                        education: '',
+                                        hobbies: '',
+                                        phoneNumber: '',
+                                        email: '',
+                                        spouse: '',
+                                        marriageDate: '',
+                                        physicalDescription: '',
+                                        personalityTraits: '',
+                                        favoriteMemories: '',
+                                        importantDates: ''
                                       });
                                       setShowQuickAddFamily(false);
+                                      setShowExtendedFields(false);
                                     } catch (err) {
                                       showToast(err.message || 'Failed to add family member', 'error');
                                     } finally {
