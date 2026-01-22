@@ -111,7 +111,7 @@ export function FamilyTreePage({ onNavigate }) {
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedRelationship, setSelectedRelationship] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [showChildren, setShowChildren] = useState(true);
+  const [showChildren, setShowChildren] = useState(false); // Hidden by default
   const [showGrandchildren, setShowGrandchildren] = useState(false); // Hidden by default
   const [showGreatGreatGrandparents, setShowGreatGreatGrandparents] = useState(false); // Expand ancestors
 
