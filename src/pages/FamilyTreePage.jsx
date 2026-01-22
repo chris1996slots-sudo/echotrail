@@ -75,6 +75,26 @@ const RELATIONSHIP_TYPES = {
   },
 };
 
+// Define placeholder slots for specific categories
+const PLACEHOLDER_SLOTS = {
+  parents: [
+    { relationship: 'Mother', label: 'Mama', icon: '👩' },
+    { relationship: 'Father', label: 'Papa', icon: '👨' },
+  ],
+  grandparents: [
+    { relationship: 'Grandmother', label: 'Oma (Mutter)', icon: '👵', side: 'maternal' },
+    { relationship: 'Grandfather', label: 'Opa (Mutter)', icon: '👴', side: 'maternal' },
+    { relationship: 'Grandmother', label: 'Oma (Vater)', icon: '👵', side: 'paternal' },
+    { relationship: 'Grandfather', label: 'Opa (Vater)', icon: '👴', side: 'paternal' },
+  ],
+  greatGrandparents: [
+    { relationship: 'Great-Grandmother', label: 'Uroma (Mutter)', icon: '👵', side: 'maternal' },
+    { relationship: 'Great-Grandfather', label: 'Uropa (Mutter)', icon: '👴', side: 'maternal' },
+    { relationship: 'Great-Grandmother', label: 'Uroma (Vater)', icon: '👵', side: 'paternal' },
+    { relationship: 'Great-Grandfather', label: 'Uropa (Vater)', icon: '👴', side: 'paternal' },
+  ],
+};
+
 export function FamilyTreePage({ onNavigate }) {
   const { user } = useApp();
   const [loading, setLoading] = useState(true);
@@ -391,20 +411,6 @@ export function FamilyTreePage({ onNavigate }) {
     } finally {
       setIsChatLoading(false);
     }
-  };
-
-  // Define placeholder slots for specific categories
-  const PLACEHOLDER_SLOTS = {
-    parents: [
-      { relationship: 'Mother', label: 'Mama', icon: '👩' },
-      { relationship: 'Father', label: 'Papa', icon: '👨' },
-    ],
-    grandparents: [
-      { relationship: 'Grandmother', label: 'Oma (Mutter)', icon: '👵', side: 'maternal' },
-      { relationship: 'Grandfather', label: 'Opa (Mutter)', icon: '👴', side: 'maternal' },
-      { relationship: 'Grandmother', label: 'Oma (Vater)', icon: '👵', side: 'paternal' },
-      { relationship: 'Grandfather', label: 'Opa (Vater)', icon: '👴', side: 'paternal' },
-    ],
   };
 
   // Check if member exists by relationship (and optionally side for grandparents)
@@ -780,7 +786,7 @@ export function FamilyTreePage({ onNavigate }) {
           )}
 
           {/* USER ROW: You + Siblings */}
-          <div className="flex flex-wrap justify-center items-start gap-4 py-3">
+          <div className="flex flex-wrap justify-center items-start gap-4 py-3 relative">
             {/* Siblings left (desktop) */}
             <div className="hidden md:block">
               {renderCategory('siblings')}
@@ -793,6 +799,9 @@ export function FamilyTreePage({ onNavigate }) {
               transition={{ delay: 0.2 }}
               className="flex flex-col items-center"
             >
+              {/* Connection line down to parents */}
+              <div className="absolute top-full left-1/2 w-0.5 h-6 bg-gradient-to-b from-gold/50 to-gold/20" />
+
               <div className="relative glass-card p-2 bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/40">
                 <div className="flex flex-col items-center gap-1.5 w-16">
                   {(() => {
@@ -823,20 +832,130 @@ export function FamilyTreePage({ onNavigate }) {
             </div>
           </div>
 
-          {/* PARENTS ROW */}
-          <div className="flex flex-wrap justify-center gap-6 py-2 border-t border-cream/10">
-            {renderCategory('parents')}
-            {renderCategory('auntsUncles')}
+          {/* PARENTS ROW - Direct lineage (Mama/Papa) separate from Aunts/Uncles */}
+          <div className="py-4 border-t border-cream/10 relative">
+            {/* Connection line from You */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-gradient-to-b from-gold/50 to-gold/30" />
+
+            <div className="flex flex-wrap justify-center items-start">
+              {/* Direct Parents - Mama & Papa */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-lg">👨‍👩</span>
+                  <h3 className="text-cream/60 text-sm font-medium">Parents</h3>
+                </div>
+                <div className="flex items-center gap-3 relative">
+                  {/* Horizontal connection line between parents */}
+                  <div className="absolute top-6 left-4 right-4 h-0.5 bg-gold/30" />
+                  {/* Vertical line down from center */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-0.5 h-4 bg-gold/30" />
+
+                  {PLACEHOLDER_SLOTS.parents.map((slot, index) => renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.parents, index))}
+                </div>
+              </div>
+
+              {/* Separator between direct lineage and side branches */}
+              <div className="flex items-center px-6 self-center">
+                <div className="w-px h-16 bg-cream/20" />
+              </div>
+
+              {/* Aunts & Uncles - Side branch */}
+              <div className="opacity-70">
+                {renderCategory('auntsUncles')}
+              </div>
+            </div>
           </div>
 
-          {/* GRANDPARENTS ROW */}
-          <div className="py-2 border-t border-cream/10">
-            {renderCategory('grandparents')}
+          {/* GRANDPARENTS ROW - Split by maternal/paternal */}
+          <div className="py-4 border-t border-cream/10 relative">
+            {/* Connection line from parents */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-gradient-to-b from-gold/30 to-gold/20" />
+
+            <div className="flex flex-wrap justify-center items-start">
+              {/* Maternal Grandparents (Mama's side) */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-lg">👵</span>
+                  <h3 className="text-teal-400/80 text-sm font-medium">Mama's Side</h3>
+                </div>
+                <div className="flex items-center gap-3 relative">
+                  {/* Horizontal connection line */}
+                  <div className="absolute top-6 left-4 right-4 h-0.5 bg-teal-500/30" />
+                  {/* Vertical line down */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-0.5 h-4 bg-teal-500/20" />
+
+                  {PLACEHOLDER_SLOTS.grandparents.filter(s => s.side === 'maternal').map((slot, index) =>
+                    renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.grandparents, index)
+                  )}
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="flex items-center px-6 self-center">
+                <div className="w-px h-16 bg-cream/20" />
+              </div>
+
+              {/* Paternal Grandparents (Papa's side) */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-lg">👴</span>
+                  <h3 className="text-blue-400/80 text-sm font-medium">Papa's Side</h3>
+                </div>
+                <div className="flex items-center gap-3 relative">
+                  {/* Horizontal connection line */}
+                  <div className="absolute top-6 left-4 right-4 h-0.5 bg-blue-500/30" />
+                  {/* Vertical line down */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-0.5 h-4 bg-blue-500/20" />
+
+                  {PLACEHOLDER_SLOTS.grandparents.filter(s => s.side === 'paternal').map((slot, index) =>
+                    renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.grandparents, index + 2)
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* GREAT-GRANDPARENTS ROW */}
-          <div className="py-2 border-t border-cream/10">
-            {renderCategory('greatGrandparents')}
+          {/* GREAT-GRANDPARENTS ROW - Split by maternal/paternal */}
+          <div className="py-4 border-t border-cream/10 relative">
+            {/* Connection line from grandparents */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-gradient-to-b from-gold/20 to-gold/10" />
+
+            <div className="flex flex-wrap justify-center items-start">
+              {/* Maternal Great-Grandparents (Mama's side) */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-lg">🎩</span>
+                  <h3 className="text-teal-400/60 text-xs font-medium">Mama's Ancestors</h3>
+                </div>
+                <div className="flex items-center gap-3 relative">
+                  <div className="absolute top-6 left-4 right-4 h-0.5 bg-teal-500/20" />
+
+                  {PLACEHOLDER_SLOTS.greatGrandparents.filter(s => s.side === 'maternal').map((slot, index) =>
+                    renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.greatGrandparents, index)
+                  )}
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="flex items-center px-6 self-center">
+                <div className="w-px h-16 bg-cream/15" />
+              </div>
+
+              {/* Paternal Great-Grandparents (Papa's side) */}
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-lg">🎩</span>
+                  <h3 className="text-blue-400/60 text-xs font-medium">Papa's Ancestors</h3>
+                </div>
+                <div className="flex items-center gap-3 relative">
+                  <div className="absolute top-6 left-4 right-4 h-0.5 bg-blue-500/20" />
+
+                  {PLACEHOLDER_SLOTS.greatGrandparents.filter(s => s.side === 'paternal').map((slot, index) =>
+                    renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.greatGrandparents, index + 2)
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* GREAT-GREAT-GRANDPARENTS (expandable ancestors) */}
