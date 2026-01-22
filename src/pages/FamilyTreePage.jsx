@@ -722,18 +722,6 @@ export function FamilyTreePage({ onNavigate }) {
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light pt-16 pb-12 px-4 relative overflow-hidden">
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Compact Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-2"
-        >
-          <h1 className="text-xl font-serif text-cream flex items-center justify-center gap-2">
-            <Users className="w-5 h-5 text-gold" />
-            Family Tree
-          </h1>
-        </motion.div>
-
         {/* Family Tree Structure - Centered Layout with Connection Lines */}
         <div className="space-y-0">
           {/* DESCENDANTS SECTION (expandable) */}
