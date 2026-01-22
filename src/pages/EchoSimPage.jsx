@@ -867,261 +867,347 @@ export function EchoSimPage({ onNavigate }) {
         <div className="mb-12">
           <h2 className="text-xl font-serif text-cream mb-6 text-center">Choose Your Experience</h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Option 1: Text Chat */}
-            <FadeIn delay={0.15}>
-              <motion.div
-                onClick={() => setExpandedOption(expandedOption === 'chat' ? null : 'chat')}
-                className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
-                  expandedOption === 'chat' ? 'ring-2 ring-blue-400' : ''
-                }`}
-                whileHover={{ y: -8, scale: 1.02 }}
-                transition={{ duration: 0.3 }}
-              >
-                {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-cyan-500/10 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+          {(() => {
+            // Calculate requirements
+            const storyCount = persona?.lifeStories?.length || 0;
+            const hasEnoughStories = storyCount >= 3;
+            const canUseTextChat = hasEnoughStories;
+            const canUseVideo = hasPhotoAvatar;
+            const canUseLive = hasPhotoAvatar && hasVoiceClone;
 
-                {/* Animated border */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-blue-500/30 group-hover:border-cyan-400/60 transition-colors" />
-
-                {/* Message bubbles animation */}
-                <motion.div
-                  className="absolute top-16 right-12 w-8 h-6 rounded-lg bg-blue-400/20 border border-blue-400/30"
-                  animate={{ x: [0, 5, 0], opacity: [0.2, 0.5, 0.2] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                />
-                <motion.div
-                  className="absolute top-28 right-16 w-10 h-6 rounded-lg bg-cyan-400/20 border border-cyan-400/30"
-                  animate={{ x: [0, -5, 0], opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
-                />
-
-                {/* Content */}
-                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
-                  {/* Icon */}
+            return (
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Option 1: Text Chat */}
+                <FadeIn delay={0.15}>
                   <motion.div
-                    className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
-                    whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                    transition={{ duration: 0.5 }}
+                    onClick={() => {
+                      if (!canUseTextChat) return;
+                      setExpandedOption(expandedOption === 'chat' ? null : 'chat');
+                    }}
+                    className={`relative overflow-hidden rounded-2xl group ${
+                      canUseTextChat ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                    } ${expandedOption === 'chat' ? 'ring-2 ring-blue-400' : ''}`}
+                    whileHover={canUseTextChat ? { y: -8, scale: 1.02 } : {}}
+                    transition={{ duration: 0.3 }}
                   >
-                    <MessageCircle className="w-10 h-10 text-blue-400" />
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-cyan-500/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                    {/* Animated border */}
+                    <div className="absolute inset-0 rounded-2xl border-2 border-blue-500/30 group-hover:border-cyan-400/60 transition-colors" />
+
+                    {/* Message bubbles animation */}
+                    <motion.div
+                      className="absolute top-16 right-12 w-8 h-6 rounded-lg bg-blue-400/20 border border-blue-400/30"
+                      animate={{ x: [0, 5, 0], opacity: [0.2, 0.5, 0.2] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    />
+                    <motion.div
+                      className="absolute top-28 right-16 w-10 h-6 rounded-lg bg-cyan-400/20 border border-cyan-400/30"
+                      animate={{ x: [0, -5, 0], opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
+                    />
+
+                    {/* Content */}
+                    <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                      {/* Icon */}
+                      <motion.div
+                        className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                        whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <MessageCircle className="w-10 h-10 text-blue-400" />
+                      </motion.div>
+
+                      {/* Title */}
+                      <h3 className="text-2xl font-serif text-cream mb-3">Text Chat</h3>
+                      <p className="text-cream/60 text-sm mb-6">Simple text-only conversation</p>
+
+                      {/* Features */}
+                      <div className="space-y-3 mb-auto">
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <span className="text-blue-400 text-xs">✓</span>
+                          </div>
+                          <span>Instant responses</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <span className="text-blue-400 text-xs">✓</span>
+                          </div>
+                          <span>Personal wisdom</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <span className="text-blue-400 text-xs">✓</span>
+                          </div>
+                          <span>Chat history</span>
+                        </div>
+                      </div>
+
+                      {/* Requirement Badge */}
+                      {canUseTextChat ? (
+                        <div className="mt-4 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs">
+                          Quick & Easy
+                        </div>
+                      ) : (
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigate('persona');
+                          }}
+                          className="mt-4 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/30 transition-colors flex items-center gap-1"
+                          whileHover={{ scale: 1.05 }}
+                        >
+                          ⚠ {storyCount}/3 Profile Stories
+                          <ChevronRight className="w-3 h-3" />
+                        </motion.button>
+                      )}
+
+                      {/* CTA */}
+                      <motion.div
+                        className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                          canUseTextChat
+                            ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
+                            : 'bg-navy/40 text-cream/40'
+                        }`}
+                        whileHover={canUseTextChat ? { scale: 1.05 } : {}}
+                      >
+                        {expandedOption === 'chat' ? 'Selected' : 'Select'}
+                      </motion.div>
+                    </div>
+
+                    {/* Decorative corner */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-bl-full" />
                   </motion.div>
+                </FadeIn>
 
-                  {/* Title */}
-                  <h3 className="text-2xl font-serif text-cream mb-3">Text Chat</h3>
-                  <p className="text-cream/60 text-sm mb-6">Simple text-only conversation</p>
-
-                  {/* Features */}
-                  <div className="space-y-3 mb-auto">
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-blue-400 text-xs">✓</span>
-                      </div>
-                      <span>Instant responses</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-blue-400 text-xs">✓</span>
-                      </div>
-                      <span>Personal wisdom</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-blue-400 text-xs">✓</span>
-                      </div>
-                      <span>Chat history</span>
-                    </div>
-                  </div>
-
-                  {/* Simple Badge */}
-                  <div className="mt-4 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs">
-                    Quick & Easy
-                  </div>
-
-                  {/* CTA */}
+                {/* Option 2: Talking Video */}
+                <FadeIn delay={0.2}>
                   <motion.div
-                    className="mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium"
-                    whileHover={{ scale: 1.05 }}
+                    onClick={() => {
+                      if (!canUseVideo) return;
+                      setExpandedOption(expandedOption === 'video' ? null : 'video');
+                    }}
+                    className={`relative overflow-hidden rounded-2xl group ${
+                      canUseVideo ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                    } ${expandedOption === 'video' ? 'ring-2 ring-gold' : ''}`}
+                    whileHover={canUseVideo ? { y: -8, scale: 1.02 } : {}}
+                    transition={{ duration: 0.3 }}
                   >
-                    {expandedOption === 'chat' ? 'Selected' : 'Select'}
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-gold/20 via-gold/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                    {/* Animated border */}
+                    <div className="absolute inset-0 rounded-2xl border-2 border-gold/30 group-hover:border-gold/60 transition-colors" />
+
+                    {/* Content */}
+                    <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                      {/* Icon */}
+                      <motion.div
+                        className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                        whileHover={{ rotate: 360 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <Film className="w-10 h-10 text-gold" />
+                      </motion.div>
+
+                      {/* Title */}
+                      <h3 className="text-2xl font-serif text-cream mb-3">Talking Video</h3>
+                      <p className="text-cream/60 text-sm mb-6">Create videos with perfect lip-sync</p>
+
+                      {/* Features */}
+                      <div className="space-y-3 mb-auto">
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
+                            <span className="text-gold text-xs">✓</span>
+                          </div>
+                          <span>Custom messages</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
+                            <span className="text-gold text-xs">✓</span>
+                          </div>
+                          <span>Event templates</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
+                            <span className="text-gold text-xs">✓</span>
+                          </div>
+                          <span>Download & share</span>
+                        </div>
+                      </div>
+
+                      {/* Requirement Badge */}
+                      {canUseVideo ? (
+                        <div className="mt-4 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
+                          ✓ Photo Avatar Ready
+                        </div>
+                      ) : (
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigate('persona');
+                          }}
+                          className="mt-4 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/30 transition-colors flex items-center gap-1"
+                          whileHover={{ scale: 1.05 }}
+                        >
+                          ⚠ Photo Avatar Required
+                          <ChevronRight className="w-3 h-3" />
+                        </motion.button>
+                      )}
+
+                      {/* CTA */}
+                      <motion.div
+                        className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                          canUseVideo
+                            ? 'bg-gradient-to-r from-gold to-gold-light text-navy'
+                            : 'bg-navy/40 text-cream/40'
+                        }`}
+                        whileHover={canUseVideo ? { scale: 1.05 } : {}}
+                      >
+                        {expandedOption === 'video' ? 'Selected' : 'Select'}
+                      </motion.div>
+                    </div>
+
+                    {/* Decorative corner */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gold/10 to-transparent rounded-bl-full" />
                   </motion.div>
-                </div>
+                </FadeIn>
 
-                {/* Decorative corner */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-bl-full" />
-              </motion.div>
-            </FadeIn>
-
-            {/* Option 2: Talking Video */}
-            <FadeIn delay={0.2}>
-              <motion.div
-                onClick={() => {
-                  if (!hasPhotoAvatar) return;
-                  setExpandedOption(expandedOption === 'video' ? null : 'video');
-                }}
-                className={`relative overflow-hidden rounded-2xl group ${
-                  hasPhotoAvatar ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
-                } ${expandedOption === 'video' ? 'ring-2 ring-gold' : ''}`}
-                whileHover={hasPhotoAvatar ? { y: -8, scale: 1.02 } : {}}
-                transition={{ duration: 0.3 }}
-              >
-                {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-gold/20 via-gold/10 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
-
-                {/* Animated border */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-gold/30 group-hover:border-gold/60 transition-colors" />
-
-                {/* Content */}
-                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
-                  {/* Icon */}
+                {/* Option 3: Live Avatar */}
+                <FadeIn delay={0.25}>
                   <motion.div
-                    className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
+                    onClick={() => {
+                      if (!canUseLive) return;
+                      setExpandedOption(expandedOption === 'live' ? null : 'live');
+                    }}
+                    className={`relative overflow-hidden rounded-2xl group ${
+                      canUseLive ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                    } ${expandedOption === 'live' ? 'ring-2 ring-purple-400' : ''}`}
+                    whileHover={canUseLive ? { y: -8, scale: 1.02 } : {}}
+                    transition={{ duration: 0.3 }}
                   >
-                    <Film className="w-10 h-10 text-gold" />
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-pink-500/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+
+                    {/* Animated border */}
+                    <div className="absolute inset-0 rounded-2xl border-2 border-purple-500/30 group-hover:border-purple-400/60 transition-colors" />
+
+                    {/* Floating particles */}
+                    <motion.div
+                      className="absolute top-10 right-10 w-2 h-2 rounded-full bg-purple-400/40"
+                      animate={{ y: [0, -20, 0], opacity: [0.4, 0.8, 0.4] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    />
+                    <motion.div
+                      className="absolute bottom-20 left-10 w-3 h-3 rounded-full bg-pink-400/30"
+                      animate={{ y: [0, 20, 0], opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+                    />
+
+                    {/* Content */}
+                    <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
+                      {/* Icon */}
+                      <motion.div
+                        className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <Radio className="w-10 h-10 text-purple-400" />
+                      </motion.div>
+
+                      {/* Title */}
+                      <h3 className="text-2xl font-serif text-cream mb-3">Live Avatar</h3>
+                      <p className="text-cream/60 text-sm mb-6">Real-time interactive conversation</p>
+
+                      {/* Features */}
+                      <div className="space-y-3 mb-auto">
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <span className="text-purple-400 text-xs">✓</span>
+                          </div>
+                          <span>Voice responses</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <span className="text-purple-400 text-xs">✓</span>
+                          </div>
+                          <span>Lip-sync video</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-cream/70 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <span className="text-purple-400 text-xs">✓</span>
+                          </div>
+                          <span>Natural chat flow</span>
+                        </div>
+                      </div>
+
+                      {/* Requirement Badges */}
+                      {canUseLive ? (
+                        <div className="mt-4 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                          Live Streaming
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex flex-col gap-2">
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate('persona');
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs flex items-center gap-1 transition-colors ${
+                              hasPhotoAvatar
+                                ? 'bg-green-500/20 border border-green-500/30 text-green-400'
+                                : 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
+                            }`}
+                            whileHover={!hasPhotoAvatar ? { scale: 1.05 } : {}}
+                          >
+                            {hasPhotoAvatar ? '✓' : '⚠'} Photo Avatar
+                            {!hasPhotoAvatar && <ChevronRight className="w-3 h-3" />}
+                          </motion.button>
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate('persona');
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs flex items-center gap-1 transition-colors ${
+                              hasVoiceClone
+                                ? 'bg-green-500/20 border border-green-500/30 text-green-400'
+                                : 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
+                            }`}
+                            whileHover={!hasVoiceClone ? { scale: 1.05 } : {}}
+                          >
+                            {hasVoiceClone ? '✓' : '⚠'} Voice Clone
+                            {!hasVoiceClone && <ChevronRight className="w-3 h-3" />}
+                          </motion.button>
+                        </div>
+                      )}
+
+                      {/* CTA */}
+                      <motion.div
+                        className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                          canUseLive
+                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                            : 'bg-navy/40 text-cream/40'
+                        }`}
+                        whileHover={canUseLive ? { scale: 1.05, boxShadow: '0 0 30px rgba(168, 85, 247, 0.5)' } : {}}
+                      >
+                        {expandedOption === 'live' ? 'Selected' : 'Select'}
+                      </motion.div>
+                    </div>
+
+                    {/* Decorative corner */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/10 to-transparent rounded-bl-full" />
                   </motion.div>
+                </FadeIn>
 
-                  {/* Title */}
-                  <h3 className="text-2xl font-serif text-cream mb-3">Talking Video</h3>
-                  <p className="text-cream/60 text-sm mb-6">Create videos with perfect lip-sync</p>
-
-                  {/* Features */}
-                  <div className="space-y-3 mb-auto">
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
-                        <span className="text-gold text-xs">✓</span>
-                      </div>
-                      <span>Custom messages</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
-                        <span className="text-gold text-xs">✓</span>
-                      </div>
-                      <span>Event templates</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center">
-                        <span className="text-gold text-xs">✓</span>
-                      </div>
-                      <span>Download & share</span>
-                    </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  {!hasPhotoAvatar && (
-                    <div className="mt-4 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs">
-                      ⚠ Photo Avatar Required
-                    </div>
-                  )}
-
-                  {/* CTA */}
-                  <motion.div
-                    className={`mt-6 px-6 py-3 rounded-xl font-medium ${
-                      hasPhotoAvatar
-                        ? 'bg-gradient-to-r from-gold to-gold-light text-navy'
-                        : 'bg-navy/40 text-cream/40'
-                    }`}
-                    whileHover={hasPhotoAvatar ? { scale: 1.05 } : {}}
-                  >
-                    {expandedOption === 'video' ? 'Selected' : 'Select'}
-                  </motion.div>
-                </div>
-
-                {/* Decorative corner */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gold/10 to-transparent rounded-bl-full" />
-              </motion.div>
-            </FadeIn>
-
-            {/* Option 3: Live Avatar */}
-            <FadeIn delay={0.25}>
-              <motion.div
-                onClick={() => setExpandedOption(expandedOption === 'live' ? null : 'live')}
-                className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
-                  expandedOption === 'live' ? 'ring-2 ring-purple-400' : ''
-                }`}
-                whileHover={{ y: -8, scale: 1.02 }}
-                transition={{ duration: 0.3 }}
-              >
-                {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-pink-500/10 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
-
-                {/* Animated border */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-purple-500/30 group-hover:border-purple-400/60 transition-colors" />
-
-                {/* Floating particles */}
-                <motion.div
-                  className="absolute top-10 right-10 w-2 h-2 rounded-full bg-purple-400/40"
-                  animate={{ y: [0, -20, 0], opacity: [0.4, 0.8, 0.4] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                />
-                <motion.div
-                  className="absolute bottom-20 left-10 w-3 h-3 rounded-full bg-pink-400/30"
-                  animate={{ y: [0, 20, 0], opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 4, repeat: Infinity, delay: 1 }}
-                />
-
-                {/* Content */}
-                <div className="relative p-8 flex flex-col items-center text-center min-h-[400px]">
-                  {/* Icon */}
-                  <motion.div
-                    className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    <Radio className="w-10 h-10 text-purple-400" />
-                  </motion.div>
-
-                  {/* Title */}
-                  <h3 className="text-2xl font-serif text-cream mb-3">Live Avatar</h3>
-                  <p className="text-cream/60 text-sm mb-6">Real-time interactive conversation</p>
-
-                  {/* Features */}
-                  <div className="space-y-3 mb-auto">
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                        <span className="text-purple-400 text-xs">✓</span>
-                      </div>
-                      <span>Voice responses</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                        <span className="text-purple-400 text-xs">✓</span>
-                      </div>
-                      <span>Lip-sync video</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-cream/70 text-sm">
-                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                        <span className="text-purple-400 text-xs">✓</span>
-                      </div>
-                      <span>Natural chat flow</span>
-                    </div>
-                  </div>
-
-                  {/* Live Badge */}
-                  <div className="mt-4 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                    Live Streaming
-                  </div>
-
-                  {/* CTA */}
-                  <motion.div
-                    className="mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium"
-                    whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(168, 85, 247, 0.5)' }}
-                  >
-                    {expandedOption === 'live' ? 'Selected' : 'Select'}
-                  </motion.div>
-                </div>
-
-                {/* Decorative corner */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/10 to-transparent rounded-bl-full" />
-              </motion.div>
-            </FadeIn>
-
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Expandable Sections */}
