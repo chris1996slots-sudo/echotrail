@@ -948,8 +948,8 @@ export function EchoSimPage({ onNavigate }) {
 
                       {/* Requirement Badge */}
                       {canUseTextChat ? (
-                        <div className="mt-4 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs">
-                          Quick & Easy
+                        <div className="mt-4 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
+                          ✓ Ready to Chat
                         </div>
                       ) : (
                         <motion.button
@@ -957,11 +957,15 @@ export function EchoSimPage({ onNavigate }) {
                             e.stopPropagation();
                             onNavigate('persona');
                           }}
-                          className="mt-4 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/30 transition-colors flex items-center gap-1"
-                          whileHover={{ scale: 1.05 }}
+                          className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
+                          whileHover={{ scale: 1.02 }}
                         >
-                          ⚠ {storyCount}/3 Profile Stories
-                          <ChevronRight className="w-3 h-3" />
+                          <span className="flex items-center gap-1">
+                            ⚠ {storyCount}/3 Profile Stories needed
+                          </span>
+                          <span className="text-cream/50 text-[10px] flex items-center gap-1">
+                            Click to add stories <ChevronRight className="w-3 h-3" />
+                          </span>
                         </motion.button>
                       )}
 
@@ -1051,11 +1055,15 @@ export function EchoSimPage({ onNavigate }) {
                             e.stopPropagation();
                             onNavigate('persona');
                           }}
-                          className="mt-4 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/30 transition-colors flex items-center gap-1"
-                          whileHover={{ scale: 1.05 }}
+                          className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
+                          whileHover={{ scale: 1.02 }}
                         >
-                          ⚠ Photo Avatar Required
-                          <ChevronRight className="w-3 h-3" />
+                          <span className="flex items-center gap-1">
+                            ⚠ Photo Avatar Required
+                          </span>
+                          <span className="text-cream/50 text-[10px] flex items-center gap-1">
+                            Click to create avatar <ChevronRight className="w-3 h-3" />
+                          </span>
                         </motion.button>
                       )}
 
@@ -1150,41 +1158,29 @@ export function EchoSimPage({ onNavigate }) {
                       {canUseLive ? (
                         <div className="mt-4 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                          Live Streaming
+                          Live Streaming Ready
                         </div>
                       ) : (
-                        <div className="mt-4 flex flex-col gap-2">
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigate('persona');
-                            }}
-                            className={`px-3 py-1.5 rounded-full text-xs flex items-center gap-1 transition-colors ${
-                              hasPhotoAvatar
-                                ? 'bg-green-500/20 border border-green-500/30 text-green-400'
-                                : 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
-                            }`}
-                            whileHover={!hasPhotoAvatar ? { scale: 1.05 } : {}}
-                          >
-                            {hasPhotoAvatar ? '✓' : '⚠'} Photo Avatar
-                            {!hasPhotoAvatar && <ChevronRight className="w-3 h-3" />}
-                          </motion.button>
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigate('persona');
-                            }}
-                            className={`px-3 py-1.5 rounded-full text-xs flex items-center gap-1 transition-colors ${
-                              hasVoiceClone
-                                ? 'bg-green-500/20 border border-green-500/30 text-green-400'
-                                : 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
-                            }`}
-                            whileHover={!hasVoiceClone ? { scale: 1.05 } : {}}
-                          >
-                            {hasVoiceClone ? '✓' : '⚠'} Voice Clone
-                            {!hasVoiceClone && <ChevronRight className="w-3 h-3" />}
-                          </motion.button>
-                        </div>
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigate('persona');
+                          }}
+                          className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1.5"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          <div className="flex gap-3 text-xs">
+                            <span className={hasPhotoAvatar ? 'text-green-400' : 'text-red-400'}>
+                              {hasPhotoAvatar ? '✓' : '⚠'} Photo
+                            </span>
+                            <span className={hasVoiceClone ? 'text-green-400' : 'text-red-400'}>
+                              {hasVoiceClone ? '✓' : '⚠'} Voice
+                            </span>
+                          </div>
+                          <span className="text-cream/50 text-[10px] flex items-center gap-1">
+                            Click to set up <ChevronRight className="w-3 h-3" />
+                          </span>
+                        </motion.button>
                       )}
 
                       {/* CTA */}
