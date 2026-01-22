@@ -726,54 +726,12 @@ export function FamilyTreePage({ onNavigate }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-4"
+          className="text-center mb-2"
         >
-          <h1 className="text-2xl font-serif text-cream flex items-center justify-center gap-2 mb-3">
-            <Users className="w-6 h-6 text-gold" />
+          <h1 className="text-xl font-serif text-cream flex items-center justify-center gap-2">
+            <Users className="w-5 h-5 text-gold" />
             Family Tree
           </h1>
-
-          {/* Expand Options */}
-          <div className="flex justify-center gap-3 flex-wrap">
-            {/* Expand Descendants */}
-            <button
-              onClick={() => setShowGrandchildren(!showGrandchildren)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                showGrandchildren
-                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : 'bg-cream/5 text-cream/50 border border-cream/10 hover:border-cream/30'
-              }`}
-            >
-              <span>👼</span>
-              {showGrandchildren ? 'Hide Grandchildren' : 'Show Grandchildren'}
-            </button>
-
-            {/* Toggle Children */}
-            <button
-              onClick={() => setShowChildren(!showChildren)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                showChildren
-                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                  : 'bg-cream/5 text-cream/50 border border-cream/10 hover:border-cream/30'
-              }`}
-            >
-              <span>👶</span>
-              {showChildren ? 'Hide Children' : 'Show Children'}
-            </button>
-
-            {/* Expand Ancestors */}
-            <button
-              onClick={() => setShowGreatGreatGrandparents(!showGreatGreatGrandparents)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                showGreatGreatGrandparents
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'bg-cream/5 text-cream/50 border border-cream/10 hover:border-cream/30'
-              }`}
-            >
-              <span>📜</span>
-              {showGreatGreatGrandparents ? 'Hide Deep Ancestors' : 'Show Deep Ancestors'}
-            </button>
-          </div>
         </motion.div>
 
         {/* Family Tree Structure - Centered Layout with Connection Lines */}
@@ -991,6 +949,48 @@ export function FamilyTreePage({ onNavigate }) {
               {renderCategory('greatGreatGrandparents')}
             </div>
           )}
+
+          {/* Expand/Collapse Options - at bottom */}
+          <div className="flex justify-center gap-2 flex-wrap pt-6 mt-4 border-t border-cream/10">
+            {/* Expand Descendants */}
+            <button
+              onClick={() => setShowGrandchildren(!showGrandchildren)}
+              className={`px-2 py-1 rounded text-[10px] font-medium transition-all flex items-center gap-1 ${
+                showGrandchildren
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                  : 'bg-cream/5 text-cream/40 border border-cream/10 hover:border-cream/30'
+              }`}
+            >
+              <span>👼</span>
+              {showGrandchildren ? 'Hide' : 'Show'} Grandchildren
+            </button>
+
+            {/* Toggle Children */}
+            <button
+              onClick={() => setShowChildren(!showChildren)}
+              className={`px-2 py-1 rounded text-[10px] font-medium transition-all flex items-center gap-1 ${
+                showChildren
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                  : 'bg-cream/5 text-cream/40 border border-cream/10 hover:border-cream/30'
+              }`}
+            >
+              <span>👶</span>
+              {showChildren ? 'Hide' : 'Show'} Children
+            </button>
+
+            {/* Expand Ancestors */}
+            <button
+              onClick={() => setShowGreatGreatGrandparents(!showGreatGreatGrandparents)}
+              className={`px-2 py-1 rounded text-[10px] font-medium transition-all flex items-center gap-1 ${
+                showGreatGreatGrandparents
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-cream/5 text-cream/40 border border-cream/10 hover:border-cream/30'
+              }`}
+            >
+              <span>📜</span>
+              {showGreatGreatGrandparents ? 'Hide' : 'Show'} Deep Ancestors
+            </button>
+          </div>
         </div>
       </div>
 
