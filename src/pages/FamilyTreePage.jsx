@@ -386,90 +386,80 @@ export function FamilyTreePage({ onNavigate }) {
     }
   };
 
-  // Render category section with all members + add button
-  const renderCategory = (categoryKey) => {
+  // Render compact category section
+  const renderCategory = (categoryKey, compact = false) => {
     const categoryDef = RELATIONSHIP_TYPES[categoryKey];
     const members = getMembersByCategory(categoryKey);
 
     return (
-      <div key={categoryKey} className="flex flex-col items-center mb-8">
-        {/* Category Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-2xl">{categoryDef.icon}</span>
-          <h3 className="text-cream/70 text-lg font-medium">{categoryDef.label}</h3>
+      <div key={categoryKey} className="flex flex-col items-center">
+        {/* Category Header - smaller */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-lg">{categoryDef.icon}</span>
+          <h3 className="text-cream/60 text-sm font-medium">{categoryDef.label}</h3>
+          <span className="text-cream/30 text-xs">({members.length})</span>
         </div>
 
-        {/* Members Grid */}
-        <div className="flex flex-wrap justify-center gap-4 w-full max-w-4xl">
-          {/* Existing Members */}
+        {/* Members Grid - compact */}
+        <div className="flex flex-wrap justify-center gap-2">
+          {/* Existing Members - smaller cards */}
           {members.map((member) => (
             <motion.div
               key={member.id}
               onClick={() => handleMemberClick(member)}
-              className={`relative glass-card p-4 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
-              whileHover={{ scale: 1.05, y: -4 }}
+              className={`relative glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all bg-gradient-to-br ${categoryDef.color}`}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.2 }}
             >
-              <div className="flex flex-col items-center gap-3 w-32">
-                {/* Avatar */}
+              <div className="flex flex-col items-center gap-1.5 w-16">
+                {/* Avatar - smaller */}
                 <div className="relative">
                   {member.imageData ? (
                     <img
                       src={member.imageData}
                       alt={member.name}
-                      className="w-20 h-20 rounded-full object-cover border-3 border-gold/40"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-gold/40"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-3 border-gold/40">
-                      <UserIcon className="w-10 h-10 text-gold/60" />
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center border-2 border-gold/40">
+                      <UserIcon className="w-6 h-6 text-gold/60" />
                     </div>
                   )}
 
-                  {/* Status indicators */}
-                  {(member.voiceData || member.imageData) && (
-                    <div className="absolute -bottom-1 -right-1 flex gap-1">
-                      {member.voiceData && (
-                        <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center border-2 border-navy">
-                          <Mic className="w-3 h-3 text-white" />
-                        </div>
-                      )}
+                  {/* Status indicator - smaller */}
+                  {member.voiceData && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center border border-navy">
+                      <Mic className="w-2 h-2 text-white" />
                     </div>
                   )}
                 </div>
 
-                {/* Name and relationship */}
-                <div className="text-center">
-                  <h4 className="text-cream font-medium text-sm truncate w-full">{member.name}</h4>
-                  <p className="text-cream/50 text-xs">{member.relationship}</p>
+                {/* Name only - truncated */}
+                <div className="text-center w-full">
+                  <h4 className="text-cream font-medium text-xs truncate">{member.name}</h4>
                   {member.isDeceased && (
-                    <p className="text-cream/40 text-xs italic">({member.deathYear})</p>
+                    <p className="text-cream/30 text-[10px]">†{member.deathYear}</p>
                   )}
                 </div>
               </div>
             </motion.div>
           ))}
 
-          {/* Add Member Button */}
+          {/* Add Member Button - smaller */}
           <motion.div
             onClick={() => handleAddMember(categoryKey)}
-            className="relative glass-card p-4 cursor-pointer hover:bg-gold/5 transition-all border-2 border-dashed border-gold/30 hover:border-gold"
-            whileHover={{ scale: 1.05, y: -4 }}
+            className="glass-card p-2 cursor-pointer hover:bg-gold/5 transition-all border border-dashed border-gold/30 hover:border-gold"
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
           >
-            <div className="flex flex-col items-center gap-3 w-32 h-full justify-center">
-              {/* Plus icon */}
-              <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center border-3 border-dashed border-gold/30">
-                <Plus className="w-10 h-10 text-gold/60" />
+            <div className="flex flex-col items-center gap-1 w-16 justify-center">
+              <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center border border-dashed border-gold/30">
+                <Plus className="w-6 h-6 text-gold/60" />
               </div>
-
-              {/* Label */}
-              <div className="text-center">
-                <p className="text-gold/70 text-sm font-medium">Add {categoryDef.label.slice(0, -1)}</p>
-                <p className="text-cream/40 text-xs">Click to create</p>
-              </div>
+              <p className="text-gold/60 text-[10px] font-medium">Add</p>
             </div>
           </motion.div>
         </div>
@@ -690,120 +680,106 @@ export function FamilyTreePage({ onNavigate }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-4"
         >
-          <h1 className="text-3xl font-serif text-cream flex items-center justify-center gap-2">
-            <Users className="w-7 h-7 text-gold" />
-            Your Family Tree
-          </h1>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <h1 className="text-2xl font-serif text-cream flex items-center gap-2">
+              <Users className="w-6 h-6 text-gold" />
+              Family Tree
+            </h1>
 
-          {/* Toggle Options */}
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
-            <button
-              onClick={() => setShowGrandchildren(!showGrandchildren)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                showGrandchildren
-                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : 'bg-cream/5 text-cream/40 border border-cream/10'
-              }`}
-            >
-              👼 Grandchildren
-            </button>
-            <button
-              onClick={() => setShowChildren(!showChildren)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                showChildren
-                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                  : 'bg-cream/5 text-cream/40 border border-cream/10'
-              }`}
-            >
-              👶 Children
-            </button>
+            {/* Toggle Options - inline */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowGrandchildren(!showGrandchildren)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                  showGrandchildren
+                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                    : 'bg-cream/5 text-cream/40 border border-cream/10'
+                }`}
+              >
+                👼 Grandchildren
+              </button>
+              <button
+                onClick={() => setShowChildren(!showChildren)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                  showChildren
+                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                    : 'bg-cream/5 text-cream/40 border border-cream/10'
+                }`}
+              >
+                👶 Children
+              </button>
+            </div>
           </div>
         </motion.div>
 
-        {/* Family Tree Structure - Flexible Layout */}
-        <div className="space-y-8">
-          {/* LEVEL 0: Grandchildren (Children's Children) */}
-          {showGrandchildren && renderCategory('grandchildren')}
-
-          {/* Connecting line */}
-          {showGrandchildren && getMembersByCategory('grandchildren').length > 0 && (
-            <div className="flex justify-center">
-              <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+        {/* Family Tree Structure - Compact Layout */}
+        <div className="space-y-4">
+          {/* ROW 1: Descendants (Grandchildren & Children) */}
+          {(showGrandchildren || showChildren) && (
+            <div className="flex flex-wrap justify-center gap-6 pb-3 border-b border-cream/10">
+              {showGrandchildren && renderCategory('grandchildren')}
+              {showChildren && renderCategory('children')}
             </div>
           )}
 
-          {/* LEVEL 1: Children */}
-          {showChildren && renderCategory('children')}
-
-          {/* Connecting line between Children and User (only if children shown) */}
-          {showChildren && getMembersByCategory('children').length > 0 && (
-            <div className="flex justify-center">
-              <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+          {/* ROW 2: User (You) + Siblings - side by side */}
+          <div className="flex flex-wrap justify-center items-start gap-6 py-3">
+            {/* Siblings left */}
+            <div className="hidden md:block">
+              {renderCategory('siblings')}
             </div>
-          )}
 
-          {/* LEVEL 2: User Card (You) */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col items-center"
-          >
-            <div className="relative glass-card p-6 w-full max-w-sm bg-gradient-to-br from-gold/10 to-gold/5 border-2 border-gold/30">
-              <div className="flex flex-col items-center gap-4">
-                {/* User avatar */}
-                {(() => {
-                  // Get active avatar or first avatar from persona
-                  const activeAvatar = persona?.avatarImages?.find(img => img.isActive) || persona?.avatarImages?.[0];
-
-                  return activeAvatar?.imageData ? (
-                    <img
-                      src={activeAvatar.imageData}
-                      alt={user?.firstName}
-                      className="w-20 h-20 rounded-full object-cover border-3 border-gold"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-3 border-gold">
-                      <UserIcon className="w-10 h-10 text-navy" />
-                    </div>
-                  );
-                })()}
-
-                {/* User name */}
-                <div className="text-center">
-                  <h2 className="text-2xl font-medium text-gold">{user?.firstName} {user?.lastName}</h2>
-                  <p className="text-cream/60 text-sm">You</p>
+            {/* User Card (You) - Center, prominent */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col items-center"
+            >
+              <div className="relative glass-card p-4 bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/40">
+                <div className="flex flex-col items-center gap-2">
+                  {/* User avatar */}
+                  {(() => {
+                    const activeAvatar = persona?.avatarImages?.find(img => img.isActive) || persona?.avatarImages?.[0];
+                    return activeAvatar?.imageData ? (
+                      <img
+                        src={activeAvatar.imageData}
+                        alt={user?.firstName}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-gold"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-2 border-gold">
+                        <UserIcon className="w-8 h-8 text-navy" />
+                      </div>
+                    );
+                  })()}
+                  <div className="text-center">
+                    <h2 className="text-lg font-medium text-gold">{user?.firstName} {user?.lastName}</h2>
+                    <p className="text-cream/50 text-xs">You</p>
+                  </div>
                 </div>
               </div>
+            </motion.div>
+
+            {/* Siblings right (on mobile: below) */}
+            <div className="md:hidden">
+              {renderCategory('siblings')}
             </div>
-          </motion.div>
-
-          {/* LEVEL 2.5: Siblings (same level as user) */}
-          {renderCategory('siblings')}
-
-          {/* Connecting line */}
-          <div className="flex justify-center">
-            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
           </div>
 
-          {/* LEVEL 3: Parents & Aunts/Uncles (Same Generation) */}
-          <div className="space-y-8">
+          {/* ROW 3: Parents & Aunts/Uncles - side by side */}
+          <div className="flex flex-wrap justify-center gap-6 py-3 border-t border-cream/10">
             {renderCategory('parents')}
             {renderCategory('auntsUncles')}
           </div>
 
-          {/* Connecting line */}
-          <div className="flex justify-center">
-            <div className="w-0.5 h-8 bg-gradient-to-b from-cream/20 to-transparent" />
+          {/* ROW 4: Grandparents & Great-Grandparents - side by side */}
+          <div className="flex flex-wrap justify-center gap-6 py-3 border-t border-cream/10">
+            {renderCategory('grandparents')}
+            {renderCategory('greatGrandparents')}
           </div>
-
-          {/* LEVEL 4: Grandparents */}
-          {renderCategory('grandparents')}
-
-          {/* LEVEL 5: Great-Grandparents */}
-          {renderCategory('greatGrandparents')}
         </div>
       </div>
 
