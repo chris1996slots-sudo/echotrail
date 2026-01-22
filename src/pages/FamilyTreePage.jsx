@@ -786,31 +786,31 @@ export function FamilyTreePage({ onNavigate }) {
               {renderCategory('siblings')}
             </div>
 
-            {/* User Card (You) - Center */}
+            {/* User Card (You) - Center - same size as other cards */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
               className="flex flex-col items-center"
             >
-              <div className="relative glass-card p-3 bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/40">
-                <div className="flex flex-col items-center gap-2">
+              <div className="relative glass-card p-2 bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/40">
+                <div className="flex flex-col items-center gap-1.5 w-16">
                   {(() => {
                     const activeAvatar = persona?.avatarImages?.find(img => img.isActive) || persona?.avatarImages?.[0];
                     return activeAvatar?.imageData ? (
                       <img
                         src={activeAvatar.imageData}
                         alt={user?.firstName}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-gold"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-gold"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-2 border-gold">
-                        <UserIcon className="w-7 h-7 text-navy" />
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold to-gold-light flex items-center justify-center border-2 border-gold">
+                        <UserIcon className="w-6 h-6 text-navy" />
                       </div>
                     );
                   })()}
-                  <div className="text-center">
-                    <h2 className="text-base font-medium text-gold">{user?.firstName} {user?.lastName}</h2>
+                  <div className="text-center w-full">
+                    <h4 className="text-cream font-medium text-xs truncate">{user?.firstName}</h4>
                     <p className="text-cream/50 text-[10px]">You</p>
                   </div>
                 </div>
