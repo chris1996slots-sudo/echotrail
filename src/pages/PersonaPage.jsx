@@ -3551,7 +3551,7 @@ export function PersonaPage({ onNavigate }) {
                     <MessageCircle className="w-5 h-5" />
                     Chat with Your Echo
                   </motion.button>
-                ) : (
+                ) : activeTab !== 'avatar' && (
                   <motion.button
                     onClick={() => setActiveTab('avatar')}
                     className="w-full py-3 bg-navy-light border border-gold/30 text-cream/70 font-medium rounded-xl flex items-center justify-center gap-2 hover:border-gold/50 hover:text-cream transition-all"
