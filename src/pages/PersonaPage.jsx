@@ -359,6 +359,18 @@ export function PersonaPage({ onNavigate }) {
   const [editingStoryContent, setEditingStoryContent] = useState('');
   const [expandedCategories, setExpandedCategories] = useState({});
 
+  // Quick Add Family Member state
+  const [showQuickAddFamily, setShowQuickAddFamily] = useState(false);
+  const [familyMemberForm, setFamilyMemberForm] = useState({
+    name: '',
+    relationship: 'Grandfather',
+    birthYear: '',
+    bio: '',
+    imageData: null,
+  });
+  const [isSubmittingFamilyMember, setIsSubmittingFamilyMember] = useState(false);
+  const familyImageInputRef = useRef(null);
+
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -1693,23 +1705,211 @@ export function PersonaPage({ onNavigate }) {
                     </div>
                   )}
 
-                  {/* Family Members Info */}
+                  {/* Family Members Quick Add */}
                   <div className="mt-6 p-4 bg-navy-dark/50 rounded-xl border border-gold/10">
                     <div className="flex items-start gap-3">
                       <Users className="w-5 h-5 text-gold/70 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h4 className="text-cream/90 font-medium text-sm mb-1">
-                          Creating for a family member?
-                        </h4>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-cream/90 font-medium text-sm">
+                            Creating for a family member?
+                          </h4>
+                          <motion.button
+                            onClick={() => setShowQuickAddFamily(!showQuickAddFamily)}
+                            className="text-gold text-xs flex items-center gap-1 hover:text-gold-light transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            {showQuickAddFamily ? (
+                              <>
+                                <ChevronUp className="w-3 h-3" />
+                                Close
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-3 h-3" />
+                                Quick Add
+                              </>
+                            )}
+                          </motion.button>
+                        </div>
                         <p className="text-cream/50 text-xs mb-3">
-                          You can create digital echoes for parents, grandparents, or other loved ones in the Family Tree section.
+                          Add family members here or manage your full Family Tree.
                         </p>
+
+                        {/* Quick Add Form */}
+                        <AnimatePresence>
+                          {showQuickAddFamily && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-3 pt-3 border-t border-gold/10"
+                            >
+                              {/* Name */}
+                              <div>
+                                <label className="block text-cream/60 text-xs mb-1">Name *</label>
+                                <input
+                                  type="text"
+                                  value={familyMemberForm.name}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, name: e.target.value })}
+                                  placeholder="Enter name"
+                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+
+                              {/* Relationship */}
+                              <div>
+                                <label className="block text-cream/60 text-xs mb-1">Relationship</label>
+                                <select
+                                  value={familyMemberForm.relationship}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, relationship: e.target.value })}
+                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                >
+                                  <optgroup label="Grandparents">
+                                    <option value="Grandfather">Grandfather</option>
+                                    <option value="Grandmother">Grandmother</option>
+                                  </optgroup>
+                                  <optgroup label="Great-Grandparents">
+                                    <option value="Great-Grandfather">Great-Grandfather</option>
+                                    <option value="Great-Grandmother">Great-Grandmother</option>
+                                  </optgroup>
+                                  <optgroup label="Parents">
+                                    <option value="Father">Father</option>
+                                    <option value="Mother">Mother</option>
+                                  </optgroup>
+                                  <optgroup label="Aunts & Uncles">
+                                    <option value="Uncle">Uncle</option>
+                                    <option value="Aunt">Aunt</option>
+                                  </optgroup>
+                                  <optgroup label="Siblings">
+                                    <option value="Brother">Brother</option>
+                                    <option value="Sister">Sister</option>
+                                  </optgroup>
+                                  <optgroup label="Children">
+                                    <option value="Son">Son</option>
+                                    <option value="Daughter">Daughter</option>
+                                  </optgroup>
+                                  <optgroup label="Grandchildren">
+                                    <option value="Grandson">Grandson</option>
+                                    <option value="Granddaughter">Granddaughter</option>
+                                  </optgroup>
+                                </select>
+                              </div>
+
+                              {/* Photo Upload */}
+                              <div>
+                                <label className="block text-cream/60 text-xs mb-1">Photo (optional)</label>
+                                <div className="flex items-center gap-2">
+                                  {familyMemberForm.imageData && (
+                                    <img
+                                      src={familyMemberForm.imageData}
+                                      alt="Preview"
+                                      className="w-10 h-10 rounded-lg object-cover"
+                                    />
+                                  )}
+                                  <label className="flex-1 px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream/50 cursor-pointer hover:border-gold/30 transition-colors flex items-center justify-center gap-2 text-xs">
+                                    <Upload className="w-3 h-3" />
+                                    <span>{familyMemberForm.imageData ? 'Change' : 'Upload Photo'}</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      ref={familyImageInputRef}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file && file.type.startsWith('image/')) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            setFamilyMemberForm({ ...familyMemberForm, imageData: reader.result });
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Birth Year */}
+                              <div>
+                                <label className="block text-cream/60 text-xs mb-1">Birth Year (optional)</label>
+                                <input
+                                  type="text"
+                                  value={familyMemberForm.birthYear}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, birthYear: e.target.value })}
+                                  placeholder="e.g., 1945"
+                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+
+                              {/* Bio */}
+                              <div>
+                                <label className="block text-cream/60 text-xs mb-1">Short Bio (optional)</label>
+                                <textarea
+                                  value={familyMemberForm.bio}
+                                  onChange={(e) => setFamilyMemberForm({ ...familyMemberForm, bio: e.target.value })}
+                                  placeholder="Share a brief description or memory..."
+                                  rows={2}
+                                  className="w-full px-3 py-2 bg-navy-light/50 border border-cream/10 rounded-lg text-cream text-sm focus:outline-none focus:border-gold/50 resize-none"
+                                />
+                              </div>
+
+                              {/* Buttons */}
+                              <div className="flex gap-2 pt-2">
+                                <motion.button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!familyMemberForm.name.trim()) {
+                                      showToast('Please enter a name', 'error');
+                                      return;
+                                    }
+                                    setIsSubmittingFamilyMember(true);
+                                    try {
+                                      await api.createFamilyMember(familyMemberForm);
+                                      showToast('Family member added successfully!', 'success');
+                                      setFamilyMemberForm({
+                                        name: '',
+                                        relationship: 'Grandfather',
+                                        birthYear: '',
+                                        bio: '',
+                                        imageData: null,
+                                      });
+                                      setShowQuickAddFamily(false);
+                                    } catch (err) {
+                                      showToast(err.message || 'Failed to add family member', 'error');
+                                    } finally {
+                                      setIsSubmittingFamilyMember(false);
+                                    }
+                                  }}
+                                  disabled={isSubmittingFamilyMember || !familyMemberForm.name.trim()}
+                                  className="flex-1 px-3 py-2 bg-gradient-to-r from-gold to-gold-light text-navy rounded-lg text-xs font-medium hover:from-gold-light hover:to-gold transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  {isSubmittingFamilyMember ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                      Adding...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      Add to Family Tree
+                                    </>
+                                  )}
+                                </motion.button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Link to full Family Tree */}
                         <motion.button
                           onClick={() => onNavigate('family-tree')}
-                          className="text-gold text-xs flex items-center gap-1 hover:text-gold-light transition-colors"
+                          className="text-gold text-xs flex items-center gap-1 hover:text-gold-light transition-colors mt-2"
                           whileHover={{ x: 3 }}
                         >
-                          Go to Family Tree
+                          View Full Family Tree
                           <ArrowRight className="w-3 h-3" />
                         </motion.button>
                       </div>
