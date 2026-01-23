@@ -218,7 +218,7 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage,
       // Use Avatar IV API (photo + voice clone)
       // If family member is selected, pass their photo and name
       const options = {
-        useVoiceClone: selectedFamilyMember ? false : useVoiceClone, // Family members don't use user's voice clone
+        useVoiceClone: useVoiceClone, // User can choose to use their voice clone for any avatar
         photoData: selectedFamilyMember?.imageData || null,
         familyMemberName: selectedFamilyMember?.name || null,
       };
@@ -1405,7 +1405,7 @@ export function EchoSimPage({ onNavigate }) {
                   </div>
 
                   {/* Voice Clone Option */}
-                  {hasVoiceClone && videoSource === 'self' && (
+                  {hasVoiceClone && (
                     <div className="mb-6 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -1414,7 +1414,11 @@ export function EchoSimPage({ onNavigate }) {
                           </div>
                           <div>
                             <p className="text-cream font-medium text-sm">Use Your Cloned Voice</p>
-                            <p className="text-cream/50 text-xs">The avatar will speak with your voice</p>
+                            <p className="text-cream/50 text-xs">
+                              {selectedFamilyMember
+                                ? `${selectedFamilyMember.name} will speak with your voice`
+                                : 'The avatar will speak with your voice'}
+                            </p>
                           </div>
                         </div>
                         <motion.button
