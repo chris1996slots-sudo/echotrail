@@ -26,6 +26,8 @@
     "@heygen/streaming-avatar": "^2.1.0",
     "@prisma/client": "^5.22.0",
     "@tailwindcss/vite": "^4.1.18",
+    "autoprefixer": "^10.4.21",
+    "lightningcss": "^1.29.3",
     "@vitejs/plugin-react": "^5.1.1",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
