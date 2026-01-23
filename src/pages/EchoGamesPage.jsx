@@ -2,26 +2,14 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gamepad2,
-  Trophy,
   Target,
-  Zap,
-  Star,
-  TrendingUp,
   Calendar,
-  Award,
-  Lock,
   Play,
   Clock,
   CheckCircle,
-  X,
-  Sparkles,
   Brain,
   Map,
-  Film,
   BookOpen,
-  ChevronRight,
-  Medal,
-  Flame
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
 import { GameContainer } from '../components/games/GameContainer';
@@ -66,17 +54,9 @@ const gameTypes = [
   },
 ];
 
-const achievementRarities = {
-  common: { color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' },
-  rare: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-  epic: { color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  legendary: { color: 'text-gold', bg: 'bg-gold/10', border: 'border-gold/20' },
-};
-
 export function EchoGamesPage() {
   const [progress, setProgress] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
 
@@ -87,13 +67,11 @@ export function EchoGamesPage() {
   const loadGameData = async () => {
     try {
       setLoading(true);
-      const [progressData, achievementsData, sessionsData] = await Promise.all([
+      const [progressData, sessionsData] = await Promise.all([
         api.getGameProgress(),
-        api.getAchievements(),
         api.getGameSessions(),
       ]);
       setProgress(progressData);
-      setAchievements(achievementsData);
       setSessions(sessionsData.slice(0, 5)); // Recent 5
     } catch (error) {
       console.error('Failed to load game data:', error);
@@ -145,17 +123,6 @@ export function EchoGamesPage() {
     loadGameData();
   };
 
-  const getLevelProgress = () => {
-    if (!progress) return { current: 1, next: 2, percentage: 0 };
-    const current = progress.level;
-    const pointsForNext = current * 1000; // Example: level * 1000 points
-    const currentPoints = progress.totalPoints % pointsForNext;
-    const percentage = (currentPoints / pointsForNext) * 100;
-    return { current, next: current + 1, percentage };
-  };
-
-  const levelInfo = getLevelProgress();
-
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-navy via-navy-dark to-navy-light py-20 px-4">
@@ -173,7 +140,7 @@ export function EchoGamesPage() {
               </motion.div>
               <h1 className="text-3xl md:text-5xl font-serif text-cream mb-4">Echo Games</h1>
               <p className="text-cream/60 text-base md:text-lg max-w-2xl mx-auto">
-                Play interactive games and discover family stories while earning points and unlocking achievements.
+                Play interactive games and discover family stories through fun challenges.
               </p>
             </div>
           </FadeIn>
@@ -181,84 +148,10 @@ export function EchoGamesPage() {
           {loading ? (
             <div className="text-center py-20">
               <Gamepad2 className="w-12 h-12 text-green-500/50 mx-auto mb-4 animate-bounce" />
-              <p className="text-cream/50">Loading your progress...</p>
+              <p className="text-cream/50">Loading games...</p>
             </div>
           ) : (
             <>
-              {/* Progress Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                {/* Level & Points */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="glass-card p-6 border-gold/20"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-gold to-amber-500 rounded-lg flex items-center justify-center">
-                      <Star className="w-6 h-6 text-navy" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-serif text-cream">Level {progress?.level || 1}</h3>
-                      <p className="text-cream/50 text-sm">{progress?.totalPoints || 0} points</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-cream/50">
-                      <span>Progress to Level {levelInfo.next}</span>
-                      <span>{Math.round(levelInfo.percentage)}%</span>
-                    </div>
-                    <div className="w-full bg-navy-light/50 rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-gold to-amber-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${levelInfo.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Current Streak */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="glass-card p-6 border-orange-500/20"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                      <Flame className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-serif text-cream">{progress?.currentStreak || 0} Day Streak</h3>
-                      <p className="text-cream/50 text-sm">Best: {progress?.longestStreak || 0} days</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-cream/40">
-                    Play daily to maintain your streak and earn bonus points!
-                  </p>
-                </motion.div>
-
-                {/* Achievements */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="glass-card p-6 border-purple-500/20"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                      <Trophy className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-serif text-cream">{progress?.badgesEarned || 0} Badges</h3>
-                      <p className="text-cream/50 text-sm">{achievements.filter(a => a.unlocked).length}/{achievements.length} unlocked</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-cream/40">
-                    Complete challenges to unlock rare achievements!
-                  </p>
-                </motion.div>
-              </div>
-
               {/* Game Selection */}
               <div className="mb-12">
                 <h2 className="text-2xl font-serif text-cream mb-6 flex items-center gap-2">
@@ -366,48 +259,6 @@ export function EchoGamesPage() {
                 </div>
               )}
 
-              {/* Achievements */}
-              <div>
-                <h2 className="text-2xl font-serif text-cream mb-6 flex items-center gap-2">
-                  <Trophy className="w-6 h-6 text-gold" />
-                  Achievements
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {achievements.map((achievement, index) => {
-                    const rarity = achievementRarities[achievement.rarity] || achievementRarities.common;
-                    return (
-                      <motion.div
-                        key={achievement.key}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                        className={`glass-card p-4 border-2 ${rarity.border} ${!achievement.unlocked && 'opacity-50'}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`w-12 h-12 ${rarity.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                            {achievement.unlocked ? (
-                              <Medal className={`w-6 h-6 ${rarity.color}`} />
-                            ) : (
-                              <Lock className="w-6 h-6 text-cream/30" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-cream font-medium mb-1">{achievement.name}</h4>
-                            <p className="text-cream/50 text-xs mb-2">{achievement.description}</p>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${rarity.bg} ${rarity.color}`}>
-                                {achievement.rarity}
-                              </span>
-                              <span className="text-xs text-gold">+{achievement.pointsReward}pts</span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Game Play Modal */}
               <AnimatePresence>
                 {selectedGame && (
@@ -435,17 +286,6 @@ export function EchoGamesPage() {
             </>
           )}
 
-          {/* Info Box */}
-          {!loading && (
-            <div className="mt-12 bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center">
-              <Gamepad2 className="w-8 h-8 text-green-400/60 mx-auto mb-3" />
-              <p className="text-cream/70 text-sm">
-                Play games to earn points, unlock achievements, and discover new stories about your family legacy.
-                <br />
-                The more you play, the more you learn!
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </PageTransition>
