@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #0a1628;
-  --color-navy-light: #132742;
-  --color-navy-dark: #060f1a;
-  --color-charcoal: #2d3436;
-  --color-charcoal-light: #4a4f51;
-  --color-gold: #d4af37;
-  --color-gold-light: #e8c55a;
-  --color-gold-dark: #b8942e;
-  --color-cream: #f8f6f0;
-  --color-cream-dark: #e8e4d9;
+  /* Using rgb() format for better browser compatibility with opacity modifiers */
+  --color-navy: rgb(10, 22, 40);
+  --color-navy-light: rgb(19, 39, 66);
+  --color-navy-dark: rgb(6, 15, 26);
+  --color-charcoal: rgb(45, 52, 54);
+  --color-charcoal-light: rgb(74, 79, 81);
+  --color-gold: rgb(212, 175, 55);
+  --color-gold-light: rgb(232, 197, 90);
+  --color-gold-dark: rgb(184, 148, 46);
+  --color-cream: rgb(248, 246, 240);
+  --color-cream-dark: rgb(232, 228, 217);
 
   --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
