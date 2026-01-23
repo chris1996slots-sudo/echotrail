@@ -694,13 +694,17 @@ export function EchoSimPage({ onNavigate }) {
           api.getPhotoAvatarStatus()
         ]);
         setHasVoiceClone(voiceStatus.hasClonedVoice);
-        setHasPhotoAvatar(photoStatus.hasPhotoAvatar);
+        // Photo avatar is available if HeyGen avatar exists OR if any avatar image is uploaded
+        // (Avatar IV API uploads photos directly without needing a permanent HeyGen avatar)
+        setHasPhotoAvatar(photoStatus.hasPhotoAvatar || (persona?.avatarImages?.length > 0));
       } catch (err) {
         console.error('Failed to check status:', err);
+        // Fallback: check if persona has avatar images
+        setHasPhotoAvatar(persona?.avatarImages?.length > 0);
       }
     };
     checkStatus();
-  }, []);
+  }, [persona]);
 
   // Handle template selection
   const handleTemplateSelect = (template) => {
@@ -798,16 +802,16 @@ export function EchoSimPage({ onNavigate }) {
               <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                 {hasPhotoAvatar ? (
                   <span className="px-2.5 py-1 rounded-lg text-xs bg-green-500/20 text-green-400">
-                    ✓ Photo Avatar
+                    ✓ Photo Ready
                   </span>
                 ) : (
                   <motion.button
-                    onClick={() => onNavigate('persona')}
+                    onClick={() => onNavigate('persona', 'avatar')}
                     className="px-2.5 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-1"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    ✗ Photo Avatar · Click to setup
+                    ✗ Photo · Click to upload
                     <ChevronRight className="w-3 h-3" />
                   </motion.button>
                 )}
@@ -817,7 +821,7 @@ export function EchoSimPage({ onNavigate }) {
                   </span>
                 ) : (
                   <motion.button
-                    onClick={() => onNavigate('persona')}
+                    onClick={() => onNavigate('persona', 'avatar')}
                     className="px-2.5 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-1"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -921,7 +925,7 @@ export function EchoSimPage({ onNavigate }) {
                         <motion.button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onNavigate('persona');
+                            onNavigate('persona', 'stories');
                           }}
                           className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
                           whileHover={{ scale: 1.02 }}
@@ -1013,22 +1017,22 @@ export function EchoSimPage({ onNavigate }) {
                       {/* Requirement Badge */}
                       {canUseVideo ? (
                         <div className="mt-4 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
-                          ✓ Photo Avatar Ready
+                          ✓ Photo Ready
                         </div>
                       ) : (
                         <motion.button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onNavigate('persona');
+                            onNavigate('persona', 'avatar');
                           }}
                           className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
                           whileHover={{ scale: 1.02 }}
                         >
                           <span className="flex items-center gap-1">
-                            ⚠ Photo Avatar Required
+                            ⚠ Photo Required
                           </span>
                           <span className="text-cream/50 text-[10px] flex items-center gap-1">
-                            Click to create avatar <ChevronRight className="w-3 h-3" />
+                            Click to upload photo <ChevronRight className="w-3 h-3" />
                           </span>
                         </motion.button>
                       )}
@@ -1130,7 +1134,12 @@ export function EchoSimPage({ onNavigate }) {
                         <motion.button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onNavigate('persona');
+                            // Navigate to the appropriate tab based on what's missing
+                            if (!hasPhotoAvatar) {
+                              onNavigate('persona', 'avatar');
+                            } else {
+                              onNavigate('persona', 'avatar'); // Voice is in avatar tab
+                            }
                           }}
                           className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1.5"
                           whileHover={{ scale: 1.02 }}
