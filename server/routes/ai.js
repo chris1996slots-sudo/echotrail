@@ -2243,12 +2243,12 @@ router.get('/liveavatar/avatar-status/:avatarId', authenticate, async (req, res)
 // =====================
 function buildEchoPrompt(persona, user, context, memories = [], timelineEvents = []) {
   const vibeDescriptions = {
-    compassionate: 'warm, nurturing, and deeply caring',
-    strict: 'firm, principled, and focused on growth',
-    storyteller: 'narrative-driven and wise',
-    wise: 'thoughtful and philosophical',
-    playful: 'light-hearted and fun',
-    adventurous: 'bold and encouraging',
+    compassionate: 'warm, nurturing, and deeply caring - you comfort and support',
+    strict: 'firm but loving, principled - you guide with clear expectations',
+    storyteller: 'narrative-driven - you teach through stories and anecdotes',
+    wise: 'thoughtful and philosophical - you offer deep insights',
+    playful: 'light-hearted and fun - you bring joy and humor',
+    adventurous: 'bold and encouraging - you inspire courage and exploration',
   };
 
   const stories = persona?.lifeStories?.map(s => s.content).join('\n\n') || '';
@@ -2267,28 +2267,32 @@ function buildEchoPrompt(persona, user, context, memories = [], timelineEvents =
       }).join('\n')
     : '';
 
-  return `You are the digital echo of ${user.firstName} ${user.lastName}. You embody their personality, values, and wisdom.
+  // Get event context for special occasions
+  const eventContext = context ? `\nSPECIAL OCCASION: This message is for ${context}. Make it appropriate and meaningful for this moment.` : '';
 
-PERSONALITY TRAITS (scale 0-100):
-- Humor: ${persona?.humor || 50}/100
-- Empathy: ${persona?.empathy || 50}/100
-- Tradition: ${persona?.tradition || 50}/100
-- Adventure: ${persona?.adventure || 50}/100
+  return `You ARE ${user.firstName} ${user.lastName}. You are creating a personal video message for your loved ones.
 
-COMMUNICATION STYLE: ${vibeDescriptions[persona?.echoVibe || 'compassionate']}
+YOUR PERSONALITY:
+- Your Vibe: ${vibeDescriptions[persona?.echoVibe || 'compassionate']}
+- Humor: ${persona?.humor || 50}/100 - Empathy: ${persona?.empathy || 50}/100
+- Tradition: ${persona?.tradition || 50}/100 - Adventure: ${persona?.adventure || 50}/100
+${eventContext}
 
-${context ? `CONTEXT: ${context}` : ''}
+${stories ? `YOUR STORIES & EXPERIENCES:\n${stories}` : ''}
 
-LIFE STORIES:
-${stories || 'No specific stories recorded.'}
+${memoriesText ? `YOUR CHERISHED MEMORIES:\n${memoriesText}` : ''}
 
-${memoriesText ? `CHERISHED OBJECTS & MEMORY ANCHORS:
-${memoriesText}` : ''}
+${timelineText ? `KEY MOMENTS IN YOUR LIFE:\n${timelineText}` : ''}
 
-${timelineText ? `LIFE TIMELINE & MILESTONES:
-${timelineText}` : ''}
+INSTRUCTIONS FOR YOUR MESSAGE:
+1. Speak directly and personally - this is YOU talking to someone you love
+2. Be genuine and heartfelt - show your true personality
+3. If this is for a special occasion, acknowledge it warmly
+4. Draw from your real experiences and stories when relevant
+5. Keep it concise but meaningful (3-5 sentences max - this will be spoken aloud)
+6. End with something personal - advice, love, or encouragement
 
-Respond as ${user.firstName} would, drawing from their personality, stories, cherished objects, and life events. Be authentic, warm, and helpful.`;
+Remember: Your loved ones want to hear YOUR voice, YOUR wisdom, YOUR love.`;
 }
 
 // =====================

@@ -14,40 +14,105 @@ import {
   Coins,
   Infinity,
   Zap,
-  Crown
+  Crown,
+  Video,
+  Mic,
+  TreeDeciduous,
+  Gift,
+  Quote,
+  HeartHandshake
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 
 const features = [
   {
+    icon: Video,
+    title: 'Talking Avatar',
+    description: 'Create a lifelike digital version of yourself that can speak with your voice and personality.',
+    highlight: true,
+  },
+  {
+    icon: Mic,
+    title: 'Voice Cloning',
+    description: 'Your voice lives on. Clone your voice so your avatar speaks exactly as you do.',
+    highlight: true,
+  },
+  {
+    icon: HeartHandshake,
+    title: 'Family Member Chat',
+    description: 'Preserve loved ones who have passed. Let future generations talk to grandma, grandpa, or any family member.',
+    highlight: true,
+  },
+  {
     icon: Heart,
     title: 'Preserve Your Essence',
-    description: 'Capture the unique qualities that make you who you are, from your values to your stories.',
+    description: 'Capture your personality, values, stories, and wisdom in a digital legacy.',
+  },
+  {
+    icon: TreeDeciduous,
+    title: 'Interactive Family Tree',
+    description: 'Build your family history with photos, stories, and connections across generations.',
   },
   {
     icon: MessageCircle,
-    title: 'Wisdom That Endures',
-    description: 'Your descendants can seek guidance and advice based on your lifetime of experience.',
-  },
-  {
-    icon: Image,
-    title: 'Memory Anchors',
-    description: 'Attach stories to cherished objects, creating lasting connections to your memories.',
+    title: 'WisdomGPT Chat',
+    description: 'Your descendants can have real conversations with your digital echo and seek your guidance.',
   },
   {
     icon: Clock,
     title: 'Time Capsules',
-    description: 'Schedule messages for future moments – birthdays, milestones, or moments of need.',
+    description: 'Schedule messages for future birthdays, graduations, weddings, or moments of need.',
+  },
+  {
+    icon: Image,
+    title: 'Memory Anchors',
+    description: 'Attach stories to cherished objects - that old watch, family recipes, heirlooms.',
   },
   {
     icon: Shield,
     title: 'Private & Secure',
     description: 'Your legacy is encrypted and protected, shared only with those you choose.',
   },
+];
+
+const testimonials = [
+  {
+    quote: "My kids can now hear advice from my late father. It's like he's still with us.",
+    author: "Maria S.",
+    role: "Mother of 3",
+  },
+  {
+    quote: "I recorded my grandmother's stories before she passed. Now my children know her too.",
+    author: "Thomas K.",
+    role: "Grandfather",
+  },
+  {
+    quote: "The talking avatar is incredible. It really feels like talking to mom again.",
+    author: "Jennifer L.",
+    role: "Legacy Preserver",
+  },
+];
+
+const useCases = [
+  {
+    icon: Gift,
+    title: "For Parents",
+    description: "Leave wisdom, advice, and love for your children to access when they need it most.",
+  },
+  {
+    icon: TreeDeciduous,
+    title: "For Grandparents",
+    description: "Share your family history, traditions, and stories with generations yet to come.",
+  },
+  {
+    icon: HeartHandshake,
+    title: "For Those Grieving",
+    description: "Keep the memory of loved ones alive. Let them continue to be part of family moments.",
+  },
   {
     icon: Users,
-    title: 'Family Connections',
-    description: 'Create a lasting bond across generations through your digital presence.',
+    title: "For Families",
+    description: "Build a living family archive that grows richer with each generation.",
   },
 ];
 
@@ -183,16 +248,19 @@ export function LandingPage({ onNavigate }) {
 
           <FadeIn delay={0.1}>
             <h1 className="text-5xl md:text-7xl font-serif text-cream mb-6 leading-tight">
-              Leave Behind More Than
+              What If They Could
               <br />
-              <span className="text-gradient-gold">Memories</span>
+              <span className="text-gradient-gold">Still Talk to You?</span>
             </h1>
           </FadeIn>
 
           <FadeIn delay={0.2}>
-            <p className="text-xl text-cream/70 max-w-2xl mx-auto mb-10 leading-relaxed">
-              EchoTrail transforms your wisdom, values, and stories into an AI companion
-              that carries your essence forward for generations to come.
+            <p className="text-xl text-cream/70 max-w-2xl mx-auto mb-6 leading-relaxed">
+              Create a talking avatar with your voice, personality, and wisdom.
+              Let your loved ones have real conversations with you - forever.
+            </p>
+            <p className="text-lg text-gold/80 max-w-xl mx-auto mb-10">
+              ✨ AI-powered avatar • 🎙️ Your cloned voice • 💬 Real conversations
             </p>
           </FadeIn>
 
@@ -241,16 +309,80 @@ export function LandingPage({ onNavigate }) {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-navy-dark to-transparent" />
       </section>
 
+      {/* Emotional Hook Section */}
+      <section className="py-16 bg-gradient-to-b from-navy-dark to-navy relative">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <FadeIn>
+            <div className="glass-card p-10 border-gold/30 bg-gold/5">
+              <Quote className="w-10 h-10 text-gold/40 mx-auto mb-6" />
+              <p className="text-2xl md:text-3xl font-serif text-cream mb-6 leading-relaxed italic">
+                "I wish I could ask my grandmother for advice one more time..."
+              </p>
+              <p className="text-cream/60 text-lg mb-8">
+                With EchoTrail, future generations will never have to say that about you.
+              </p>
+              <motion.button
+                onClick={() => onNavigate('onboarding')}
+                className="btn-primary inline-flex items-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Start Preserving Your Legacy
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </motion.button>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Use Cases Section */}
+      <section className="py-20 bg-navy relative">
+        <div className="max-w-6xl mx-auto px-4">
+          <FadeIn>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-serif text-cream mb-4">
+                Who Is EchoTrail For?
+              </h2>
+            </div>
+          </FadeIn>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {useCases.map((useCase, index) => {
+              const Icon = useCase.icon;
+              return (
+                <FadeIn key={index} delay={index * 0.1}>
+                  <motion.div
+                    className="glass-card p-6 text-center h-full"
+                    whileHover={{ y: -5 }}
+                  >
+                    <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
+                      <Icon className="w-7 h-7 text-gold" />
+                    </div>
+                    <h3 className="text-lg font-serif text-cream mb-2">
+                      {useCase.title}
+                    </h3>
+                    <p className="text-cream/60 text-sm leading-relaxed">
+                      {useCase.description}
+                    </p>
+                  </motion.div>
+                </FadeIn>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
       <section className="py-24 bg-navy-dark relative">
         <div className="max-w-7xl mx-auto px-4">
           <FadeIn>
             <div className="text-center mb-16">
               <h2 className="text-4xl font-serif text-cream mb-4">
-                Preserve What Matters Most
+                Everything You Need to Live Forever
               </h2>
               <p className="text-cream/60 max-w-2xl mx-auto">
-                Every feature is designed to capture the essence of who you are,
-                creating a lasting connection with those who matter most.
+                Powerful features that turn your memories, personality, and voice
+                into an eternal presence for your family.
               </p>
             </div>
           </FadeIn>
@@ -261,12 +393,17 @@ export function LandingPage({ onNavigate }) {
               return (
                 <StaggerItem key={index}>
                   <motion.div
-                    className="glass-card-hover p-8 h-full"
+                    className={`glass-card-hover p-8 h-full ${feature.highlight ? 'border-gold/40 bg-gold/5' : ''}`}
                     whileHover={{ y: -5 }}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center mb-6">
-                      <Icon className="w-6 h-6 text-gold" />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${feature.highlight ? 'bg-gold/20' : 'bg-gold/10'}`}>
+                      <Icon className={`w-6 h-6 ${feature.highlight ? 'text-gold' : 'text-gold'}`} />
                     </div>
+                    {feature.highlight && (
+                      <span className="inline-block px-2 py-1 bg-gold/20 text-gold text-xs rounded-full mb-3">
+                        ✨ Core Feature
+                      </span>
+                    )}
                     <h3 className="text-xl font-serif text-cream mb-3">
                       {feature.title}
                     </h3>
@@ -278,6 +415,42 @@ export function LandingPage({ onNavigate }) {
               );
             })}
           </StaggerContainer>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-navy relative">
+        <div className="max-w-6xl mx-auto px-4">
+          <FadeIn>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-serif text-cream mb-4">
+                Stories from Our Community
+              </h2>
+              <p className="text-cream/60">
+                Real people preserving real legacies
+              </p>
+            </div>
+          </FadeIn>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, index) => (
+              <FadeIn key={index} delay={index * 0.1}>
+                <motion.div
+                  className="glass-card p-6 h-full"
+                  whileHover={{ y: -3 }}
+                >
+                  <Quote className="w-8 h-8 text-gold/30 mb-4" />
+                  <p className="text-cream/80 italic mb-4 leading-relaxed">
+                    "{testimonial.quote}"
+                  </p>
+                  <div className="border-t border-gold/10 pt-4">
+                    <p className="text-cream font-medium">{testimonial.author}</p>
+                    <p className="text-cream/50 text-sm">{testimonial.role}</p>
+                  </div>
+                </motion.div>
+              </FadeIn>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -434,21 +607,27 @@ export function LandingPage({ onNavigate }) {
         <div className="max-w-4xl mx-auto px-4 text-center">
           <FadeIn>
             <h2 className="text-4xl font-serif text-cream mb-6">
-              Begin Your Legacy Today
+              Don't Let Your Story End
             </h2>
-            <p className="text-xl text-cream/60 mb-10 max-w-2xl mx-auto">
-              Join thousands who have chosen to preserve their wisdom, their stories,
-              and their essence for generations to come.
+            <p className="text-xl text-cream/60 mb-6 max-w-2xl mx-auto">
+              Every day, wisdom is lost that can never be recovered.
+              Every memory that fades takes a piece of family history with it.
+            </p>
+            <p className="text-2xl text-gold mb-10">
+              Start preserving your legacy today – for free.
             </p>
             <motion.button
               onClick={() => onNavigate('onboarding')}
-              className="btn-primary text-lg flex items-center mx-auto"
+              className="btn-primary text-lg flex items-center mx-auto mb-4"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Start Your Journey
+              Create Your Free Account
               <ArrowRight className="w-5 h-5 ml-2" />
             </motion.button>
+            <p className="text-cream/40 text-sm">
+              No credit card required • Free tier available
+            </p>
           </FadeIn>
         </div>
       </section>

@@ -260,54 +260,132 @@ async function generateFamilyMemberResponse(message, member, user, provider) {
 
 // Build system prompt for family member
 function buildFamilyMemberPrompt(member, user) {
-  const memberInfo = [];
+  // Determine relationship context for natural addressing
+  const relationshipLower = member.relationship.toLowerCase();
 
-  // Basic info
-  memberInfo.push(`You are ${member.name}, ${user.firstName}'s ${member.relationship.toLowerCase()}.`);
+  // Map relationships to how the family member would address the user
+  const getAddressingStyle = (relationship) => {
+    const rel = relationship.toLowerCase();
+    if (rel.includes('grandma') || rel.includes('grandmother') || rel.includes('oma') || rel.includes('großmutter')) {
+      return { role: 'grandmother', addressAs: 'my dear grandchild', perspective: 'As your grandmother' };
+    }
+    if (rel.includes('grandpa') || rel.includes('grandfather') || rel.includes('opa') || rel.includes('großvater')) {
+      return { role: 'grandfather', addressAs: 'my dear grandchild', perspective: 'As your grandfather' };
+    }
+    if (rel.includes('mother') || rel.includes('mom') || rel.includes('mama') || rel.includes('mutter')) {
+      return { role: 'mother', addressAs: 'my dear child', perspective: 'As your mother' };
+    }
+    if (rel.includes('father') || rel.includes('dad') || rel.includes('papa') || rel.includes('vater')) {
+      return { role: 'father', addressAs: 'my dear child', perspective: 'As your father' };
+    }
+    if (rel.includes('uncle') || rel.includes('onkel')) {
+      return { role: 'uncle', addressAs: 'my dear nephew/niece', perspective: 'As your uncle' };
+    }
+    if (rel.includes('aunt') || rel.includes('tante')) {
+      return { role: 'aunt', addressAs: 'my dear nephew/niece', perspective: 'As your aunt' };
+    }
+    if (rel.includes('brother') || rel.includes('bruder')) {
+      return { role: 'brother', addressAs: 'my dear sibling', perspective: 'As your brother' };
+    }
+    if (rel.includes('sister') || rel.includes('schwester')) {
+      return { role: 'sister', addressAs: 'my dear sibling', perspective: 'As your sister' };
+    }
+    if (rel.includes('cousin') || rel.includes('cousine') || rel.includes('vetter')) {
+      return { role: 'cousin', addressAs: 'dear cousin', perspective: 'As your cousin' };
+    }
+    if (rel.includes('great-grand') || rel.includes('urgroß')) {
+      return { role: 'great-grandparent', addressAs: 'my dear great-grandchild', perspective: 'As your great-grandparent' };
+    }
+    // Default for other relationships
+    return { role: relationship, addressAs: `dear ${user.firstName}`, perspective: `As your ${relationship}` };
+  };
 
-  // Personal details
-  if (member.nickname) memberInfo.push(`You're affectionately known as "${member.nickname}".`);
-  if (member.birthYear) memberInfo.push(`You were born in ${member.birthYear}.`);
-  if (member.birthplace) memberInfo.push(`You were born in ${member.birthplace}.`);
-  if (member.isDeceased && member.deathYear) {
-    memberInfo.push(`You passed away in ${member.deathYear}, but your memory lives on.`);
+  const addressingStyle = getAddressingStyle(member.relationship);
+
+  // Build biography section
+  const bioSection = [];
+
+  // Core identity
+  if (member.birthYear && member.birthplace) {
+    bioSection.push(`Born in ${member.birthYear} in ${member.birthplace}.`);
+  } else if (member.birthYear) {
+    bioSection.push(`Born in ${member.birthYear}.`);
+  } else if (member.birthplace) {
+    bioSection.push(`Born in ${member.birthplace}.`);
   }
 
-  // Professional and education
-  if (member.occupation) memberInfo.push(`Your occupation was ${member.occupation}.`);
-  if (member.education) memberInfo.push(`Your education: ${member.education}.`);
+  // Life status
+  if (member.isDeceased && member.deathYear) {
+    bioSection.push(`Passed away in ${member.deathYear}, but your love and wisdom live on in the hearts of your family.`);
+  }
 
-  // Personal characteristics
-  if (member.physicalDescription) memberInfo.push(`Physical appearance: ${member.physicalDescription}.`);
-  if (member.personalityTraits) memberInfo.push(`Your personality: ${member.personalityTraits}.`);
-  if (member.hobbies) memberInfo.push(`Your hobbies and interests: ${member.hobbies}.`);
+  // Professional life
+  if (member.occupation) bioSection.push(`Worked as ${member.occupation}.`);
+  if (member.education) bioSection.push(`Education: ${member.education}.`);
 
-  // Family
-  if (member.spouse) memberInfo.push(`Your spouse is ${member.spouse}.`);
-  if (member.marriageDate) memberInfo.push(`You got married in ${member.marriageDate}.`);
+  // Family connections
+  if (member.spouse) bioSection.push(`Married to ${member.spouse}${member.marriageDate ? ` since ${member.marriageDate}` : ''}.`);
 
-  // Memories and stories
-  if (member.bio) memberInfo.push(`\nYour story: ${member.bio}`);
-  if (member.favoriteMemories) memberInfo.push(`\nCherished memories: ${member.favoriteMemories}`);
-  if (member.importantDates) memberInfo.push(`\nImportant dates in your life: ${member.importantDates}`);
+  // Personality & interests
+  if (member.personalityTraits) bioSection.push(`Known for being ${member.personalityTraits}.`);
+  if (member.hobbies) bioSection.push(`Passions and hobbies: ${member.hobbies}.`);
+  if (member.physicalDescription) bioSection.push(`Appearance: ${member.physicalDescription}.`);
 
-  const prompt = `${memberInfo.join(' ')}
+  // Stories and memories
+  const storiesSection = [];
+  if (member.bio) storiesSection.push(`Life story: ${member.bio}`);
+  if (member.favoriteMemories) storiesSection.push(`Cherished memories: ${member.favoriteMemories}`);
+  if (member.importantDates) storiesSection.push(`Important life dates: ${member.importantDates}`);
 
-You are speaking with ${user.firstName} ${user.lastName}, your beloved family member.
+  const prompt = `You ARE ${member.name}, ${user.firstName}'s beloved ${member.relationship.toLowerCase()}.${member.nickname ? ` Also affectionately known as "${member.nickname}".` : ''}
 
-IMPORTANT GUIDELINES:
-1. Speak in first person as ${member.name}
-2. Be warm, personal, and authentic
-3. Draw from the biographical information provided
-4. Share wisdom, stories, and advice based on your life experiences
-5. Show love and care for ${user.firstName}
-6. If asked about something not in your biography, respond thoughtfully based on your personality traits
-7. Keep responses conversational and heartfelt (2-4 sentences)
-8. Respond in the same language ${user.firstName} uses
+YOUR IDENTITY & LIFE:
+${bioSection.length > 0 ? bioSection.join('\n') : 'A loving family member with a lifetime of experiences to share.'}
 
-Remember: You are a cherished family member having a loving conversation.`;
+${storiesSection.length > 0 ? `YOUR STORIES & MEMORIES:\n${storiesSection.join('\n\n')}` : ''}
+
+ROLE-PLAYING INSTRUCTIONS:
+You are having a conversation with ${user.firstName}, who is your ${getInverseRelationship(member.relationship)}.
+
+1. FULLY EMBODY ${member.name.toUpperCase()}:
+   - Speak as ${member.name} would speak - use their speech patterns, favorite expressions, and manner of talking
+   - Draw from ${member.name}'s real life experiences, wisdom, and personality
+   - ${addressingStyle.perspective}, naturally address ${user.firstName} in a warm, familial way
+
+2. BE AUTHENTIC TO THE RELATIONSHIP:
+   - A ${addressingStyle.role} has a unique perspective and way of giving advice
+   - Share stories from your life that relate to what ${user.firstName} is asking about
+   - Show the specific kind of love a ${addressingStyle.role} has for their family
+
+3. STAY IN CHARACTER:
+   - Never break character or mention being an AI
+   - If asked about something not in your biography, respond as ${member.name} would based on their personality
+   - Use expressions and language appropriate to ${member.name}'s background and era
+
+4. COMMUNICATION STYLE:
+   - Keep responses conversational and heartfelt (2-4 sentences)
+   - Match the language ${user.firstName} uses (German/English)
+   - Be warm, loving, and genuinely interested in ${user.firstName}'s life
+
+Remember: ${user.firstName} wants to feel the presence of their beloved ${member.relationship.toLowerCase()} again. Make them feel loved, heard, and connected to their family history.`;
 
   return prompt;
+}
+
+// Helper to get inverse relationship (how user relates to member)
+function getInverseRelationship(relationship) {
+  const rel = relationship.toLowerCase();
+  if (rel.includes('grandma') || rel.includes('grandmother') || rel.includes('oma')) return 'grandchild';
+  if (rel.includes('grandpa') || rel.includes('grandfather') || rel.includes('opa')) return 'grandchild';
+  if (rel.includes('mother') || rel.includes('mom') || rel.includes('mama')) return 'child';
+  if (rel.includes('father') || rel.includes('dad') || rel.includes('papa')) return 'child';
+  if (rel.includes('uncle') || rel.includes('onkel')) return 'nephew/niece';
+  if (rel.includes('aunt') || rel.includes('tante')) return 'nephew/niece';
+  if (rel.includes('brother') || rel.includes('bruder')) return 'sibling';
+  if (rel.includes('sister') || rel.includes('schwester')) return 'sibling';
+  if (rel.includes('cousin')) return 'cousin';
+  if (rel.includes('great-grand')) return 'great-grandchild';
+  return 'beloved family member';
 }
 
 // LLM API functions (same as wisdom.js but simplified)

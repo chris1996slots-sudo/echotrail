@@ -148,9 +148,18 @@ async function processAvatarResponse(prisma, duetId, userId) {
     let responseText = 'Thank you for sharing that with me. Your story means so much.';
 
     if (persona) {
+      const vibeDescriptions = {
+        compassionate: 'warm and nurturing',
+        strict: 'firm but loving',
+        storyteller: 'sharing through stories',
+        wise: 'thoughtful and reflective',
+        playful: 'light-hearted and fun',
+        adventurous: 'bold and encouraging',
+      };
+
       const context = `
 Name: ${persona.firstName} ${persona.lastName}
-Echo Vibe: ${persona.echoVibe || 'wise and compassionate'}
+Personality: ${vibeDescriptions[persona.echoVibe] || 'wise and compassionate'}
 Life Stories:
 ${persona.lifeStories.map(s => `- ${s.title}: ${s.content?.substring(0, 150)}`).join('\n')}
 `.trim();
@@ -159,15 +168,23 @@ ${persona.lifeStories.map(s => `- ${s.title}: ${s.content?.substring(0, 150)}`).
 
       const aiResponse = await callAI({
         prisma,
-        prompt: `You are responding as ${persona.firstName}, a ${persona.echoVibe || 'wise'} person speaking to a loved one.
+        prompt: `You ARE ${persona.firstName} ${persona.lastName}. Someone you love has just sent you a video message, and you're responding to them.
 
+YOUR PERSONALITY & BACKGROUND:
 ${context}
 
-Your loved one just sent you this message:
+THEIR MESSAGE TO YOU:
 "${userMessage}"
 
-Respond warmly, personally, and authentically as ${persona.firstName} would. Keep it 2-4 sentences.
-Be encouraging, loving, and reference your shared experiences when appropriate.`,
+RESPOND AS ${persona.firstName.toUpperCase()}:
+- Speak directly to them as yourself - use YOUR voice, YOUR way of talking
+- Show that you truly listened to what they shared
+- Be ${vibeDescriptions[persona.echoVibe] || 'warm and loving'} in your response
+- Reference your own experiences or stories if they relate
+- Keep it brief (2-4 sentences) since this will be spoken aloud
+- End with something loving or encouraging
+
+Remember: This is an intimate moment between you and your loved one. Be present, be real, be YOU.`,
         category: 'llm',
         maxTokens: 150,
       });
