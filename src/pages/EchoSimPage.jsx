@@ -839,7 +839,7 @@ export function EchoSimPage({ onNavigate }) {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    ✗ Photo Avatar
+                    ✗ Photo Avatar · Click to setup
                     <ChevronRight className="w-3 h-3" />
                   </motion.button>
                 )}
@@ -850,11 +850,11 @@ export function EchoSimPage({ onNavigate }) {
                 ) : (
                   <motion.button
                     onClick={() => onNavigate('persona')}
-                    className="px-2.5 py-1 rounded-lg text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-1"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    ○ Voice Clone
+                    ✗ Voice Clone · Click to setup
                     <ChevronRight className="w-3 h-3" />
                   </motion.button>
                 )}
@@ -865,8 +865,6 @@ export function EchoSimPage({ onNavigate }) {
 
         {/* Three Main Options - Side by Side */}
         <div className="mb-12">
-          <h2 className="text-xl font-serif text-cream mb-6 text-center">Choose Your Experience</h2>
-
           {(() => {
             // Calculate requirements
             const storyCount = persona?.lifeStories?.length || 0;
@@ -885,7 +883,7 @@ export function EchoSimPage({ onNavigate }) {
                       setExpandedOption(expandedOption === 'chat' ? null : 'chat');
                     }}
                     className={`relative overflow-hidden rounded-2xl group ${
-                      canUseTextChat ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                      canUseTextChat ? 'cursor-pointer' : 'cursor-not-allowed'
                     } ${expandedOption === 'chat' ? 'ring-2 ring-blue-400' : ''}`}
                     whileHover={canUseTextChat ? { y: -8, scale: 1.02 } : {}}
                     transition={{ duration: 0.3 }}
@@ -995,7 +993,7 @@ export function EchoSimPage({ onNavigate }) {
                       setExpandedOption(expandedOption === 'video' ? null : 'video');
                     }}
                     className={`relative overflow-hidden rounded-2xl group ${
-                      canUseVideo ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                      canUseVideo ? 'cursor-pointer' : 'cursor-not-allowed'
                     } ${expandedOption === 'video' ? 'ring-2 ring-gold' : ''}`}
                     whileHover={canUseVideo ? { y: -8, scale: 1.02 } : {}}
                     transition={{ duration: 0.3 }}
@@ -1093,7 +1091,7 @@ export function EchoSimPage({ onNavigate }) {
                       setExpandedOption(expandedOption === 'live' ? null : 'live');
                     }}
                     className={`relative overflow-hidden rounded-2xl group ${
-                      canUseLive ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                      canUseLive ? 'cursor-pointer' : 'cursor-not-allowed'
                     } ${expandedOption === 'live' ? 'ring-2 ring-purple-400' : ''}`}
                     whileHover={canUseLive ? { y: -8, scale: 1.02 } : {}}
                     transition={{ duration: 0.3 }}
