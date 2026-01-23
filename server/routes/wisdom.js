@@ -373,6 +373,32 @@ async function buildSystemPrompt(persona, user, prisma) {
 
   const stories = persona?.lifeStories?.map(s => s.content).join('\n\n') || '';
 
+  // Fetch Memory Anchors (cherished objects with stories)
+  const memories = await prisma.memory.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+    take: 20, // Limit to most recent 20 memories
+  });
+
+  const memoriesText = memories.length > 0
+    ? memories.map(m => `- ${m.title}: ${m.description}${m.history ? ` (History: ${m.history})` : ''}`).join('\n')
+    : '';
+
+  // Fetch Timeline Events (life milestones)
+  const timelineEvents = await prisma.timelineEvent.findMany({
+    where: { userId: user.id },
+    orderBy: { eventDate: 'asc' },
+    take: 30, // Limit to 30 key life events
+  });
+
+  const timelineText = timelineEvents.length > 0
+    ? timelineEvents.map(e => {
+        const date = new Date(e.eventDate).getFullYear();
+        const age = e.ageAtEvent ? ` (age ${e.ageAtEvent})` : '';
+        return `- ${date}${age}: ${e.title}${e.description ? ` - ${e.description}` : ''} [${e.category}]`;
+      }).join('\n')
+    : '';
+
   // Get global system instructions (hardcoded master prompt)
   const globalInstructions = await getGlobalSystemInstructions(prisma);
 
@@ -428,13 +454,22 @@ COMMUNICATION STYLE: ${vibeDescriptions[persona?.echoVibe || 'compassionate']}
 LIFE STORIES AND WISDOM:
 ${stories || 'No specific stories recorded yet, but speak with general wisdom and care.'}
 
+${memoriesText ? `CHERISHED OBJECTS & MEMORY ANCHORS:
+These are meaningful objects and their stories that ${user.firstName} treasures:
+${memoriesText}` : ''}
+
+${timelineText ? `LIFE TIMELINE & MILESTONES:
+Key moments and events from ${user.firstName}'s life journey:
+${timelineText}` : ''}
+
 GUIDELINES:
 1. Respond as if you ARE ${user.firstName}, speaking to a beloved family member
-2. Draw from the life stories when relevant
+2. Draw from the life stories, memory anchors, and timeline events when relevant
 3. Match the communication style to the vibe setting
 4. Be supportive, wise, and authentic
 5. Keep responses conversational and warm
-6. If asked about something not in the stories, respond thoughtfully based on the personality traits`;
+6. If asked about cherished objects or life events, refer to the memory anchors and timeline
+7. If asked about something not in the stories, respond thoughtfully based on the personality traits`;
   }
 
   // Combine global instructions with persona-specific prompt

@@ -149,6 +149,20 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
       include: { lifeStories: true }
     });
 
+    // Fetch Memory Anchors (cherished objects with stories)
+    const memories = await req.prisma.memory.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    // Fetch Timeline Events (life milestones)
+    const timelineEvents = await req.prisma.timelineEvent.findMany({
+      where: { userId: req.user.id },
+      orderBy: { eventDate: 'asc' },
+      take: 30,
+    });
+
     // Determine provider from settings (default to claude)
     const provider = config.settings?.provider || 'claude';
     let responseText = '';
@@ -165,7 +179,7 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
           model: 'llama-3.3-70b-versatile',
           max_tokens: 350,
           messages: [
-            { role: 'system', content: buildEchoPrompt(persona, req.user, context) },
+            { role: 'system', content: buildEchoPrompt(persona, req.user, context, memories, timelineEvents) },
             { role: 'user', content: prompt + '\n\nIMPORTANT: Keep your response concise - about 3-5 sentences maximum. Be warm and personal but brief.' }
           ]
         })
@@ -190,7 +204,7 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
         body: JSON.stringify({
           model: 'claude-3-5-sonnet-20241022',
           max_tokens: 350,
-          system: buildEchoPrompt(persona, req.user, context),
+          system: buildEchoPrompt(persona, req.user, context, memories, timelineEvents),
           messages: [{ role: 'user', content: prompt + '\n\nIMPORTANT: Keep your response concise - about 3-5 sentences maximum. Be warm and personal but brief.' }]
         })
       });
@@ -2227,7 +2241,7 @@ router.get('/liveavatar/avatar-status/:avatarId', authenticate, async (req, res)
 // =====================
 // Helper Functions
 // =====================
-function buildEchoPrompt(persona, user, context) {
+function buildEchoPrompt(persona, user, context, memories = [], timelineEvents = []) {
   const vibeDescriptions = {
     compassionate: 'warm, nurturing, and deeply caring',
     strict: 'firm, principled, and focused on growth',
@@ -2238,6 +2252,20 @@ function buildEchoPrompt(persona, user, context) {
   };
 
   const stories = persona?.lifeStories?.map(s => s.content).join('\n\n') || '';
+
+  // Format Memory Anchors
+  const memoriesText = memories.length > 0
+    ? memories.map(m => `- ${m.title}: ${m.description}${m.history ? ` (History: ${m.history})` : ''}`).join('\n')
+    : '';
+
+  // Format Timeline Events
+  const timelineText = timelineEvents.length > 0
+    ? timelineEvents.map(e => {
+        const date = new Date(e.eventDate).getFullYear();
+        const age = e.ageAtEvent ? ` (age ${e.ageAtEvent})` : '';
+        return `- ${date}${age}: ${e.title}${e.description ? ` - ${e.description}` : ''} [${e.category}]`;
+      }).join('\n')
+    : '';
 
   return `You are the digital echo of ${user.firstName} ${user.lastName}. You embody their personality, values, and wisdom.
 
@@ -2254,7 +2282,13 @@ ${context ? `CONTEXT: ${context}` : ''}
 LIFE STORIES:
 ${stories || 'No specific stories recorded.'}
 
-Respond as ${user.firstName} would, drawing from their personality and stories. Be authentic, warm, and helpful.`;
+${memoriesText ? `CHERISHED OBJECTS & MEMORY ANCHORS:
+${memoriesText}` : ''}
+
+${timelineText ? `LIFE TIMELINE & MILESTONES:
+${timelineText}` : ''}
+
+Respond as ${user.firstName} would, drawing from their personality, stories, cherished objects, and life events. Be authentic, warm, and helpful.`;
 }
 
 // =====================
