@@ -11,9 +11,12 @@ import {
   X,
   Plus,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 import { PageTransition, FadeIn } from '../components/PageTransition';
+import { useApp } from '../context/AppContext';
 import api from '../services/api';
 
 const cardStyles = [
@@ -30,13 +33,32 @@ const accentColors = [
   { id: 'green', color: 'text-green-400 border-green-400 bg-green-500/10' },
 ];
 
-export function WisdomCardsPage() {
+export function WisdomCardsPage({ onNavigate }) {
+  const { persona } = useApp();
   const [todayCard, setTodayCard] = useState(null);
   const [allCards, setAllCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAllCards, setShowAllCards] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
+
+  // Check if Value Store is completed
+  const isValueStoreComplete = () => {
+    if (!persona) return false;
+
+    // Check if at least some personality traits have been modified from default (50)
+    const traits = ['humor', 'empathy', 'tradition', 'adventure', 'wisdom', 'creativity', 'patience', 'optimism'];
+    const modifiedTraits = traits.filter(t => persona[t] !== undefined && persona[t] !== 50);
+    const hasModifiedTraits = modifiedTraits.length >= 3; // At least 3 traits modified
+
+    // Check if core values or life philosophy is filled
+    const hasCoreValues = persona.coreValues && persona.coreValues.length > 0;
+    const hasLifePhilosophy = persona.lifePhilosophy && persona.lifePhilosophy.trim().length > 20;
+
+    return hasModifiedTraits || hasCoreValues || hasLifePhilosophy;
+  };
+
+  const valueStoreComplete = isValueStoreComplete();
 
   useEffect(() => {
     loadCards();
@@ -124,6 +146,35 @@ export function WisdomCardsPage() {
             </div>
           </FadeIn>
 
+          {/* Value Store Not Complete Warning */}
+          {!valueStoreComplete && (
+            <FadeIn delay={0.1}>
+              <div className="glass-card p-8 mb-8 border-2 border-amber-500/30 bg-amber-500/5">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-8 h-8 text-amber-400" />
+                  </div>
+                  <div className="text-center md:text-left flex-1">
+                    <h3 className="text-xl font-serif text-cream mb-2">Complete Your Value Store First</h3>
+                    <p className="text-cream/60 mb-4">
+                      To generate personalized Wisdom Cards, we need to know more about you.
+                      Please complete your personality traits, core values, or life philosophy in the Value Store.
+                    </p>
+                    <motion.button
+                      onClick={() => onNavigate && onNavigate('persona')}
+                      className="btn-primary inline-flex items-center"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Settings className="w-5 h-5 mr-2" />
+                      Go to My Persona
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          )}
+
           {/* Toggle View */}
           <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mb-8 px-4">
             <button
@@ -150,8 +201,9 @@ export function WisdomCardsPage() {
             </button>
             <button
               onClick={handleGenerateCard}
-              disabled={generating}
+              disabled={generating || !valueStoreComplete}
               className="px-6 py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!valueStoreComplete ? 'Complete your Value Store first' : ''}
             >
               {generating ? (
                 <>
