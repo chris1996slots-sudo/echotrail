@@ -768,9 +768,6 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
               </div>
             </motion.div>
-
-            {/* Line from YOU down */}
-            <div className="w-0.5 h-6 bg-gradient-to-b from-gold/60 to-cream/40" />
           </div>
 
           {/* ===== SIBLINGS (optional, beside You) ===== */}
@@ -780,6 +777,14 @@ export function FamilyTreePage({ onNavigate }) {
             </div>
           )}
 
+          {/* ===== CONNECTION: YOU to PARENTS ===== */}
+          <div className="flex flex-col items-center">
+            {/* Vertical line from YOU */}
+            <div className="w-0.5 h-8 bg-gradient-to-b from-gold/60 to-cream/40" />
+            {/* T-junction: horizontal line spanning both parents */}
+            <div className="w-[140px] h-0.5 bg-cream/40" />
+          </div>
+
           {/* ===== PARENTS SECTION ===== */}
           <div className="flex flex-col items-center">
             {/* Parents Header */}
@@ -788,7 +793,7 @@ export function FamilyTreePage({ onNavigate }) {
               <h3 className="text-cream/70 text-sm font-medium">Parents</h3>
             </div>
 
-            {/* Parents Row with integrated lines */}
+            {/* Parents Row with connection lines */}
             <div className="flex items-start">
               {/* Uncle/Aunt buttons (left side) */}
               <div className="flex items-center gap-2 mr-4">
@@ -832,21 +837,19 @@ export function FamilyTreePage({ onNavigate }) {
                   ))}
               </div>
 
-              {/* Mom with line above and below */}
+              {/* Mom with vertical line from T-junction */}
               <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-teal-500/50" />
+                <div className="w-0.5 h-4 bg-cream/40" />
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[0], RELATIONSHIP_TYPES.parents, 0)}
-                <div className="w-0.5 h-6 bg-gradient-to-b from-teal-500/60 to-teal-500/30" />
               </div>
 
-              {/* Horizontal connector between Mom and Dad */}
-              <div className="w-6 h-0.5 bg-cream/30 mt-6" />
+              {/* Gap between Mom and Dad (the horizontal line is above) */}
+              <div className="w-[60px]" />
 
-              {/* Dad with line above and below */}
+              {/* Dad with vertical line from T-junction */}
               <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-blue-500/50" />
+                <div className="w-0.5 h-4 bg-cream/40" />
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[1], RELATIONSHIP_TYPES.parents, 1)}
-                <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/60 to-blue-500/30" />
               </div>
 
               {/* Uncle/Aunt buttons (right side) */}
@@ -893,8 +896,24 @@ export function FamilyTreePage({ onNavigate }) {
             </div>
           </div>
 
+          {/* ===== CONNECTION: PARENTS to GRANDPARENTS ===== */}
+          <div className="flex justify-center mt-2">
+            <div className="flex items-start" style={{ gap: '60px' }}>
+              {/* Mom's side connector */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-6 bg-teal-500/50" />
+                <div className="w-[90px] h-0.5 bg-teal-500/40" />
+              </div>
+              {/* Dad's side connector */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-6 bg-blue-500/50" />
+                <div className="w-[90px] h-0.5 bg-blue-500/40" />
+              </div>
+            </div>
+          </div>
+
           {/* ===== GRANDPARENTS ROW ===== */}
-          <div className="flex flex-col items-center mt-2">
+          <div className="flex flex-col items-center">
             <div className="flex items-start gap-8">
               {/* Mom's Parents (Maternal) */}
               <div className="flex flex-col items-center">
@@ -903,23 +922,21 @@ export function FamilyTreePage({ onNavigate }) {
                   <h3 className="text-teal-400/80 text-sm font-medium">Mom's Parents</h3>
                 </div>
                 <div className="flex items-start gap-2">
-                  {/* Grandma (Mom) with line */}
+                  {/* Grandma (Mom) */}
                   <div className="flex flex-col items-center">
                     <div className="w-0.5 h-3 bg-teal-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[0], RELATIONSHIP_TYPES.grandparents, 0)}
-                    <div className="w-0.5 h-4 bg-gradient-to-b from-teal-500/40 to-teal-500/20" />
                   </div>
-                  {/* Grandpa (Mom) with line */}
+                  {/* Grandpa (Mom) */}
                   <div className="flex flex-col items-center">
                     <div className="w-0.5 h-3 bg-teal-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[1], RELATIONSHIP_TYPES.grandparents, 1)}
-                    <div className="w-0.5 h-4 bg-gradient-to-b from-teal-500/40 to-teal-500/20" />
                   </div>
                 </div>
               </div>
 
               {/* Separator */}
-              <div className="w-px h-32 bg-cream/15 self-center" />
+              <div className="w-px h-28 bg-cream/15 self-center" />
 
               {/* Dad's Parents (Paternal) */}
               <div className="flex flex-col items-center">
@@ -928,25 +945,49 @@ export function FamilyTreePage({ onNavigate }) {
                   <h3 className="text-blue-400/80 text-sm font-medium">Dad's Parents</h3>
                 </div>
                 <div className="flex items-start gap-2">
-                  {/* Grandma (Dad) with line */}
+                  {/* Grandma (Dad) */}
                   <div className="flex flex-col items-center">
                     <div className="w-0.5 h-3 bg-blue-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[2], RELATIONSHIP_TYPES.grandparents, 2)}
-                    <div className="w-0.5 h-4 bg-gradient-to-b from-blue-500/40 to-blue-500/20" />
                   </div>
-                  {/* Grandpa (Dad) with line */}
+                  {/* Grandpa (Dad) */}
                   <div className="flex flex-col items-center">
                     <div className="w-0.5 h-3 bg-blue-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[3], RELATIONSHIP_TYPES.grandparents, 3)}
-                    <div className="w-0.5 h-4 bg-gradient-to-b from-blue-500/40 to-blue-500/20" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* ===== CONNECTION: GRANDPARENTS to GREAT-GRANDPARENTS ===== */}
+          <div className="flex justify-center mt-2">
+            <div className="flex items-start" style={{ gap: '48px' }}>
+              {/* Mom's Grandma connector */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-4 bg-teal-500/30" />
+                <div className="w-[48px] h-0.5 bg-teal-500/30" />
+              </div>
+              {/* Mom's Grandpa connector */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-4 bg-teal-500/30" />
+                <div className="w-[48px] h-0.5 bg-teal-500/30" />
+              </div>
+              {/* Dad's Grandma connector */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-4 bg-blue-500/30" />
+                <div className="w-[48px] h-0.5 bg-blue-500/30" />
+              </div>
+              {/* Dad's Grandpa connector */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-4 bg-blue-500/30" />
+                <div className="w-[48px] h-0.5 bg-blue-500/30" />
+              </div>
+            </div>
+          </div>
+
           {/* ===== GREAT-GRANDPARENTS ROW ===== */}
-          <div className="flex flex-col items-center py-4">
+          <div className="flex flex-col items-center py-2">
             <div className="flex items-start gap-8">
               {/* Mom's Side - 4 Great-Grandparents */}
               <div className="flex flex-col items-center">
@@ -954,44 +995,42 @@ export function FamilyTreePage({ onNavigate }) {
                   <span className="text-base">🎩</span>
                   <h3 className="text-teal-400/60 text-xs font-medium">Mom's Grandparents</h3>
                 </div>
-                <div className="flex gap-6">
+                <div className="flex gap-4">
                   {/* Grandma's parents */}
                   <div className="flex flex-col items-center">
-                    {/* T-junction from Grandma to her parents */}
-                    <div className="relative flex flex-col items-center mb-2">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-teal-500/30" />
-                      <div className="absolute top-0 left-1/2 -translate-x-[24px] w-0.5 h-3 bg-teal-500/30" />
-                      <div className="absolute top-0 left-1/2 translate-x-[24px] -translate-x-0.5 w-0.5 h-3 bg-teal-500/30" />
-                      <div className="h-3" />
-                    </div>
                     <p className="text-teal-400/40 text-[9px] mb-1">Grandma's parents</p>
                     <div className="flex gap-1">
-                      {PLACEHOLDER_SLOTS.greatGrandparents.filter(s => s.side === 'maternal' && s.branch === 'gm').map((slot, index) =>
-                        renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.greatGrandparents, index)
-                      )}
+                      {/* Left line */}
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-teal-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[0], RELATIONSHIP_TYPES.greatGrandparents, 0)}
+                      </div>
+                      {/* Right line */}
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-teal-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[1], RELATIONSHIP_TYPES.greatGrandparents, 1)}
+                      </div>
                     </div>
                   </div>
                   {/* Grandpa's parents */}
                   <div className="flex flex-col items-center">
-                    {/* T-junction from Grandpa to his parents */}
-                    <div className="relative flex flex-col items-center mb-2">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-teal-500/30" />
-                      <div className="absolute top-0 left-1/2 -translate-x-[24px] w-0.5 h-3 bg-teal-500/30" />
-                      <div className="absolute top-0 left-1/2 translate-x-[24px] -translate-x-0.5 w-0.5 h-3 bg-teal-500/30" />
-                      <div className="h-3" />
-                    </div>
                     <p className="text-teal-400/40 text-[9px] mb-1">Grandpa's parents</p>
                     <div className="flex gap-1">
-                      {PLACEHOLDER_SLOTS.greatGrandparents.filter(s => s.side === 'maternal' && s.branch === 'gp').map((slot, index) =>
-                        renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.greatGrandparents, index + 2)
-                      )}
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-teal-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[2], RELATIONSHIP_TYPES.greatGrandparents, 2)}
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-teal-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[3], RELATIONSHIP_TYPES.greatGrandparents, 3)}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Separator */}
-              <div className="w-px h-36 bg-cream/15 self-center" />
+              <div className="w-px h-32 bg-cream/15 self-center" />
 
               {/* Dad's Side - 4 Great-Grandparents */}
               <div className="flex flex-col items-center">
@@ -999,37 +1038,33 @@ export function FamilyTreePage({ onNavigate }) {
                   <span className="text-base">🎩</span>
                   <h3 className="text-blue-400/60 text-xs font-medium">Dad's Grandparents</h3>
                 </div>
-                <div className="flex gap-6">
+                <div className="flex gap-4">
                   {/* Grandma's parents */}
                   <div className="flex flex-col items-center">
-                    {/* T-junction from Grandma to her parents */}
-                    <div className="relative flex flex-col items-center mb-2">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-500/30" />
-                      <div className="absolute top-0 left-1/2 -translate-x-[24px] w-0.5 h-3 bg-blue-500/30" />
-                      <div className="absolute top-0 left-1/2 translate-x-[24px] -translate-x-0.5 w-0.5 h-3 bg-blue-500/30" />
-                      <div className="h-3" />
-                    </div>
                     <p className="text-blue-400/40 text-[9px] mb-1">Grandma's parents</p>
                     <div className="flex gap-1">
-                      {PLACEHOLDER_SLOTS.greatGrandparents.filter(s => s.side === 'paternal' && s.branch === 'gm').map((slot, index) =>
-                        renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.greatGrandparents, index + 4)
-                      )}
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-blue-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[4], RELATIONSHIP_TYPES.greatGrandparents, 4)}
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-blue-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[5], RELATIONSHIP_TYPES.greatGrandparents, 5)}
+                      </div>
                     </div>
                   </div>
                   {/* Grandpa's parents */}
                   <div className="flex flex-col items-center">
-                    {/* T-junction from Grandpa to his parents */}
-                    <div className="relative flex flex-col items-center mb-2">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-500/30" />
-                      <div className="absolute top-0 left-1/2 -translate-x-[24px] w-0.5 h-3 bg-blue-500/30" />
-                      <div className="absolute top-0 left-1/2 translate-x-[24px] -translate-x-0.5 w-0.5 h-3 bg-blue-500/30" />
-                      <div className="h-3" />
-                    </div>
                     <p className="text-blue-400/40 text-[9px] mb-1">Grandpa's parents</p>
                     <div className="flex gap-1">
-                      {PLACEHOLDER_SLOTS.greatGrandparents.filter(s => s.side === 'paternal' && s.branch === 'gp').map((slot, index) =>
-                        renderPlaceholderSlot(slot, RELATIONSHIP_TYPES.greatGrandparents, index + 6)
-                      )}
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-blue-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[6], RELATIONSHIP_TYPES.greatGrandparents, 6)}
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-blue-500/30" />
+                        {renderPlaceholderSlot(PLACEHOLDER_SLOTS.greatGrandparents[7], RELATIONSHIP_TYPES.greatGrandparents, 7)}
+                      </div>
                     </div>
                   </div>
                 </div>
