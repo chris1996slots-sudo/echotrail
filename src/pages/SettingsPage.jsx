@@ -330,67 +330,103 @@ export function SettingsPage({ onNavigate }) {
     onNavigate('landing');
   };
 
-  const settingsSections = [
+  // Grouped settings sections
+  const settingsGroups = [
     {
-      id: 'subscription',
-      icon: Crown,
-      title: 'Subscription',
-      description: `Current plan: ${user?.subscription || 'FREE'}`,
-      highlight: true,
+      id: 'billing',
+      title: 'Billing & Rewards',
+      icon: CreditCard,
+      color: 'gold',
+      sections: [
+        {
+          id: 'subscription',
+          icon: Crown,
+          title: 'Subscription',
+          description: `Current plan: ${user?.subscription || 'FREE'}`,
+          highlight: true,
+        },
+        {
+          id: 'tokens',
+          icon: Coins,
+          title: 'AI Tokens',
+          description: 'Purchase tokens for AI features',
+          highlight: true,
+        },
+        {
+          id: 'referral',
+          icon: Gift,
+          title: 'Referral Program',
+          description: 'Invite friends and earn rewards',
+          highlight: true,
+        },
+      ],
     },
     {
-      id: 'tokens',
-      icon: Coins,
-      title: 'AI Tokens',
-      description: 'Purchase tokens for AI features',
-      highlight: true,
-    },
-    {
-      id: 'referral',
-      icon: Gift,
-      title: 'Referral Program',
-      description: 'Invite friends and earn rewards',
-      highlight: true,
-    },
-    {
-      id: 'profile',
+      id: 'account',
+      title: 'Account',
       icon: User,
-      title: 'Profile Information',
-      description: 'Update your name and personal details',
+      color: 'blue',
+      sections: [
+        {
+          id: 'profile',
+          icon: User,
+          title: 'Profile Information',
+          description: 'Update your name and personal details',
+        },
+        {
+          id: 'password',
+          icon: Lock,
+          title: 'Change Password',
+          description: 'Update your account password',
+        },
+      ],
     },
     {
-      id: 'password',
-      icon: Lock,
-      title: 'Change Password',
-      description: 'Update your account password',
-    },
-    {
-      id: 'notifications',
+      id: 'preferences',
+      title: 'Preferences',
       icon: Bell,
-      title: 'Notifications',
-      description: 'Manage email and notification preferences',
+      color: 'purple',
+      sections: [
+        {
+          id: 'notifications',
+          icon: Bell,
+          title: 'Notifications',
+          description: 'Manage email and notification preferences',
+        },
+        {
+          id: 'language',
+          icon: Globe,
+          title: 'Language',
+          description: 'Change the app language',
+          disabled: true,
+        },
+      ],
     },
     {
-      id: 'language',
-      icon: Globe,
-      title: 'Language',
-      description: 'Change the app language',
-      disabled: true,
-    },
-    {
-      id: 'privacy',
+      id: 'security',
+      title: 'Security & Privacy',
       icon: Shield,
-      title: 'Privacy & Security',
-      description: 'Control your data and privacy settings',
-    },
-    {
-      id: 'delete',
-      icon: Trash2,
-      title: 'Delete Account',
-      description: 'Permanently delete your account and data',
-      danger: true,
+      color: 'green',
+      sections: [
+        {
+          id: 'privacy',
+          icon: Shield,
+          title: 'Privacy & Security',
+          description: 'Control your data and privacy settings',
+        },
+        {
+          id: 'delete',
+          icon: Trash2,
+          title: 'Delete Account',
+          description: 'Permanently delete your account and data',
+          danger: true,
+        },
+      ],
     },
   ];
+
+  // Flat list for backwards compatibility
+  const settingsSections = settingsGroups.flatMap(g => g.sections);
 
   return (
     <PageTransition className="min-h-screen bg-gradient-to-b from-navy via-navy to-navy-dark">
@@ -436,69 +472,92 @@ export function SettingsPage({ onNavigate }) {
           </div>
         </FadeIn>
 
-        {/* Settings Sections */}
+        {/* Settings Sections - Grouped */}
         <FadeIn delay={0.2}>
-          <div className="space-y-3">
-            {settingsSections.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
+          <div className="space-y-6">
+            {settingsGroups.map((group, groupIndex) => {
+              const GroupIcon = group.icon;
+              const colorClasses = {
+                gold: 'text-gold border-gold/30 bg-gold/5',
+                blue: 'text-blue-400 border-blue-500/30 bg-blue-500/5',
+                purple: 'text-purple-400 border-purple-500/30 bg-purple-500/5',
+                green: 'text-green-400 border-green-500/30 bg-green-500/5',
+              };
 
               return (
-                <motion.div
-                  key={section.id}
-                  className={`glass-card overflow-hidden ${
-                    section.danger ? 'border-red-500/30' : section.highlight ? 'border-gold/30' : ''
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      if (section.disabled) return;
-                      const newSection = isActive ? null : section.id;
-                      setActiveSection(newSection);
-                      if (newSection === 'referral') loadReferralData();
-                    }}
-                    className={`w-full p-4 flex items-center justify-between transition-colors ${
-                      section.disabled
-                        ? 'cursor-not-allowed opacity-60'
-                        : section.danger
-                        ? 'hover:bg-red-500/10'
-                        : section.highlight
-                        ? 'hover:bg-gold/10'
-                        : 'hover:bg-navy-light/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        section.danger
-                          ? 'bg-red-500/20 text-red-400'
-                          : section.highlight
-                          ? 'bg-gold/20 text-gold'
-                          : 'bg-gold/10 text-gold'
-                      }`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <div className="flex items-center gap-2">
-                          <h3 className={`font-medium ${
-                            section.danger ? 'text-red-400' : section.highlight ? 'text-gold' : 'text-cream'
-                          }`}>
-                            {section.title}
-                          </h3>
-                          {section.disabled && (
-                            <span className="px-2 py-0.5 rounded-full bg-cream/10 text-cream/50 text-xs">
-                              Coming Soon
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-cream/50">{section.description}</p>
-                      </div>
+                <div key={group.id}>
+                  {/* Group Header */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorClasses[group.color]}`}>
+                      <GroupIcon className="w-4 h-4" />
                     </div>
-                    {!section.disabled && (
-                      <ChevronRight className={`w-5 h-5 text-cream/40 transition-transform ${
-                        isActive ? 'rotate-90' : ''
-                      }`} />
-                    )}
-                  </button>
+                    <h2 className={`text-sm font-medium uppercase tracking-wider ${colorClasses[group.color].split(' ')[0]}`}>
+                      {group.title}
+                    </h2>
+                  </div>
+
+                  {/* Group Items */}
+                  <div className="space-y-2">
+                    {group.sections.map((section) => {
+                      const Icon = section.icon;
+                      const isActive = activeSection === section.id;
+
+                      return (
+                        <motion.div
+                          key={section.id}
+                          className={`glass-card overflow-hidden ${
+                            section.danger ? 'border-red-500/30' : section.highlight ? 'border-gold/30' : ''
+                          }`}
+                        >
+                          <button
+                            onClick={() => {
+                              if (section.disabled) return;
+                              const newSection = isActive ? null : section.id;
+                              setActiveSection(newSection);
+                              if (newSection === 'referral') loadReferralData();
+                            }}
+                            className={`w-full p-4 flex items-center justify-between transition-colors ${
+                              section.disabled
+                                ? 'cursor-not-allowed opacity-60'
+                                : section.danger
+                                ? 'hover:bg-red-500/10'
+                                : section.highlight
+                                ? 'hover:bg-gold/10'
+                                : 'hover:bg-navy-light/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                section.danger
+                                  ? 'bg-red-500/20 text-red-400'
+                                  : section.highlight
+                                  ? 'bg-gold/20 text-gold'
+                                  : 'bg-cream/10 text-cream/70'
+                              }`}>
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div className="text-left">
+                                <div className="flex items-center gap-2">
+                                  <h3 className={`font-medium ${
+                                    section.danger ? 'text-red-400' : section.highlight ? 'text-gold' : 'text-cream'
+                                  }`}>
+                                    {section.title}
+                                  </h3>
+                                  {section.disabled && (
+                                    <span className="px-2 py-0.5 rounded-full bg-cream/10 text-cream/50 text-xs">
+                                      Coming Soon
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-cream/50">{section.description}</p>
+                              </div>
+                            </div>
+                            {!section.disabled && (
+                              <ChevronRight className={`w-5 h-5 text-cream/40 transition-transform ${
+                                isActive ? 'rotate-90' : ''
+                              }`} />
+                            )}
+                          </button>
 
                   {/* Expanded Content */}
                   {isActive && (
@@ -1114,9 +1173,13 @@ export function SettingsPage({ onNavigate }) {
                           )}
                         </div>
                       )}
-                    </motion.div>
-                  )}
-                </motion.div>
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                  </div>
+                </div>
               );
             })}
           </div>
