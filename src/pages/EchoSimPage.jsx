@@ -753,7 +753,9 @@ export function EchoSimPage({ onNavigate }) {
   useEffect(() => {
     const loadFamilyMembers = async () => {
       try {
-        const members = await api.getFamilyMembers();
+        const response = await api.getFamilyMembers();
+        // API returns { members: [...] }
+        const members = response?.members || [];
         // Only include family members that have a photo
         const membersWithPhoto = members.filter(m => m.imageData);
         setFamilyMembers(membersWithPhoto);
