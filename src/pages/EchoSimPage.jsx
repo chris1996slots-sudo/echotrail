@@ -21,7 +21,8 @@ import {
   VolumeX,
   ChevronRight,
   MessageCircle,
-  Send
+  Send,
+  ArrowLeft
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn } from '../components/PageTransition';
