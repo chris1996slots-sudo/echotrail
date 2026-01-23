@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -22,10 +22,182 @@ import {
   Play,
   FileImage,
   FileVideo,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  MessageCircle,
+  Send,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/PageTransition';
 import { useApp } from '../context/AppContext';
+
+// Custom Wheel Picker Component
+function WheelPicker({ values, selectedValue, onChange, label }) {
+  const containerRef = useRef(null);
+  const itemHeight = 40;
+  const visibleItems = 5;
+  const selectedIndex = values.indexOf(selectedValue);
+
+  const handleScroll = (e) => {
+    const scrollTop = e.target.scrollTop;
+    const newIndex = Math.round(scrollTop / itemHeight);
+    if (newIndex >= 0 && newIndex < values.length && values[newIndex] !== selectedValue) {
+      onChange(values[newIndex]);
+    }
+  };
+
+  useEffect(() => {
+    if (containerRef.current && selectedIndex >= 0) {
+      containerRef.current.scrollTop = selectedIndex * itemHeight;
+    }
+  }, [selectedIndex]);
+
+  const scrollUp = () => {
+    if (selectedIndex > 0) {
+      onChange(values[selectedIndex - 1]);
+    }
+  };
+
+  const scrollDown = () => {
+    if (selectedIndex < values.length - 1) {
+      onChange(values[selectedIndex + 1]);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <span className="text-cream/50 text-xs mb-1">{label}</span>
+      <div className="relative">
+        <button
+          onClick={scrollUp}
+          className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 text-gold/50 hover:text-gold"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+        <div
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="h-[200px] w-20 overflow-y-auto scrollbar-hide relative"
+          style={{
+            scrollSnapType: 'y mandatory',
+            scrollBehavior: 'smooth',
+          }}
+        >
+          {/* Spacer for top padding */}
+          <div style={{ height: itemHeight * 2 }} />
+          {values.map((value, index) => (
+            <div
+              key={value}
+              className={`h-10 flex items-center justify-center transition-all cursor-pointer ${
+                value === selectedValue
+                  ? 'text-gold text-xl font-bold scale-110'
+                  : 'text-cream/40 text-base'
+              }`}
+              style={{ scrollSnapAlign: 'center' }}
+              onClick={() => onChange(value)}
+            >
+              {value}
+            </div>
+          ))}
+          {/* Spacer for bottom padding */}
+          <div style={{ height: itemHeight * 2 }} />
+        </div>
+        {/* Selection highlight */}
+        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-10 border-y-2 border-gold/30 pointer-events-none bg-gold/5 rounded" />
+        <button
+          onClick={scrollDown}
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10 text-gold/50 hover:text-gold"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Date Wheel Picker Component
+function DateWheelPicker({ value, onChange, minDate }) {
+  const currentDate = value ? new Date(value) : new Date();
+  const minDateObj = minDate ? new Date(minDate) : new Date();
+
+  const [selectedDay, setSelectedDay] = useState(currentDate.getDate());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+
+  // Generate years (current year to +20 years)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 21 }, (_, i) => currentYear + i);
+
+  // Generate months
+  const months = [
+    { value: 1, label: 'Jan' },
+    { value: 2, label: 'Feb' },
+    { value: 3, label: 'Mar' },
+    { value: 4, label: 'Apr' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'Jun' },
+    { value: 7, label: 'Jul' },
+    { value: 8, label: 'Aug' },
+    { value: 9, label: 'Sep' },
+    { value: 10, label: 'Oct' },
+    { value: 11, label: 'Nov' },
+    { value: 12, label: 'Dec' },
+  ];
+
+  // Generate days based on selected month/year
+  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  // Update parent when selection changes
+  useEffect(() => {
+    const newDate = new Date(selectedYear, selectedMonth - 1, Math.min(selectedDay, daysInMonth));
+    // Check if date is valid and not in the past
+    if (newDate >= minDateObj) {
+      onChange(newDate.toISOString().split('T')[0]);
+    }
+  }, [selectedDay, selectedMonth, selectedYear, daysInMonth]);
+
+  // Adjust day if it exceeds days in month
+  useEffect(() => {
+    if (selectedDay > daysInMonth) {
+      setSelectedDay(daysInMonth);
+    }
+  }, [selectedMonth, selectedYear, daysInMonth]);
+
+  return (
+    <div className="bg-navy-dark/50 rounded-xl p-4 border border-gold/20">
+      <div className="flex justify-center gap-4">
+        <WheelPicker
+          values={days}
+          selectedValue={selectedDay}
+          onChange={setSelectedDay}
+          label="Day"
+        />
+        <WheelPicker
+          values={months.map(m => m.value)}
+          selectedValue={selectedMonth}
+          onChange={setSelectedMonth}
+          label="Month"
+        />
+        <WheelPicker
+          values={years}
+          selectedValue={selectedYear}
+          onChange={setSelectedYear}
+          label="Year"
+        />
+      </div>
+      <div className="text-center mt-4 text-gold text-sm">
+        {new Date(selectedYear, selectedMonth - 1, selectedDay).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })}
+      </div>
+    </div>
+  );
+}
 
 const occasions = [
   { id: 'birthday', label: 'Birthday', icon: Cake },
@@ -49,6 +221,10 @@ export function TimeCapsulePage() {
     message: '',
     deliveryDate: '',
     attachments: [], // Array of { type: 'image' | 'video', data: base64, name: string }
+    notifyTelegram: false,
+    notifyWhatsApp: false,
+    telegramUsername: '',
+    whatsAppNumber: '',
   });
 
   const showToast = (message, type = 'error') => {
@@ -122,6 +298,10 @@ export function TimeCapsulePage() {
       message: currentCapsule.message,
       deliveryDate: new Date(currentCapsule.deliveryDate).toISOString(),
       attachments: currentCapsule.attachments,
+      notifyTelegram: currentCapsule.notifyTelegram,
+      notifyWhatsApp: currentCapsule.notifyWhatsApp,
+      telegramUsername: currentCapsule.telegramUsername,
+      whatsAppNumber: currentCapsule.whatsAppNumber,
     };
 
     await addTimeCapsule(capsuleData);
@@ -144,6 +324,10 @@ export function TimeCapsulePage() {
       message: capsule.message,
       deliveryDate: capsule.deliveryDate ? new Date(capsule.deliveryDate).toISOString().split('T')[0] : '',
       attachments: capsule.attachments || [],
+      notifyTelegram: capsule.notifyTelegram || false,
+      notifyWhatsApp: capsule.notifyWhatsApp || false,
+      telegramUsername: capsule.telegramUsername || '',
+      whatsAppNumber: capsule.whatsAppNumber || '',
     });
     setEditingId(capsule.id);
     setShowModal(true);
@@ -157,6 +341,10 @@ export function TimeCapsulePage() {
       message: '',
       deliveryDate: '',
       attachments: [],
+      notifyTelegram: false,
+      notifyWhatsApp: false,
+      telegramUsername: '',
+      whatsAppNumber: '',
     });
     setEditingId(null);
     setShowModal(false);
@@ -299,19 +487,31 @@ export function TimeCapsulePage() {
                               To: {capsule.recipient} • {occasion?.label || 'Custom'}
                             </p>
                             <p className="text-cream/70 text-sm line-clamp-2">{capsule.message}</p>
-                            {/* Attachments indicator */}
-                            {capsule.attachments && capsule.attachments.length > 0 && (
-                              <div className="flex items-center gap-2 mt-2">
-                                {capsule.attachments.filter(a => a.type === 'image').length > 0 && (
+                            {/* Attachments & Notifications indicator */}
+                            {(capsule.attachments?.length > 0 || capsule.notifyTelegram || capsule.notifyWhatsApp) && (
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                {capsule.attachments?.filter(a => a.type === 'image').length > 0 && (
                                   <span className="flex items-center gap-1 text-xs text-cream/40 bg-navy-dark/50 px-2 py-1 rounded-full">
                                     <FileImage className="w-3 h-3" />
                                     {capsule.attachments.filter(a => a.type === 'image').length} photo{capsule.attachments.filter(a => a.type === 'image').length > 1 ? 's' : ''}
                                   </span>
                                 )}
-                                {capsule.attachments.filter(a => a.type === 'video').length > 0 && (
+                                {capsule.attachments?.filter(a => a.type === 'video').length > 0 && (
                                   <span className="flex items-center gap-1 text-xs text-cream/40 bg-navy-dark/50 px-2 py-1 rounded-full">
                                     <FileVideo className="w-3 h-3" />
                                     {capsule.attachments.filter(a => a.type === 'video').length} video{capsule.attachments.filter(a => a.type === 'video').length > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {capsule.notifyTelegram && (
+                                  <span className="flex items-center gap-1 text-xs text-[#0088cc] bg-[#0088cc]/10 px-2 py-1 rounded-full">
+                                    <Send className="w-3 h-3" />
+                                    Telegram
+                                  </span>
+                                )}
+                                {capsule.notifyWhatsApp && (
+                                  <span className="flex items-center gap-1 text-xs text-[#25D366] bg-[#25D366]/10 px-2 py-1 rounded-full">
+                                    <MessageCircle className="w-3 h-3" />
+                                    WhatsApp
                                   </span>
                                 )}
                               </div>
@@ -441,13 +641,11 @@ export function TimeCapsulePage() {
                 </div>
 
                 <div>
-                  <label className="block text-cream/70 text-sm mb-2">Delivery Date</label>
-                  <input
-                    type="date"
+                  <label className="block text-cream/70 text-sm mb-3">Delivery Date</label>
+                  <DateWheelPicker
                     value={currentCapsule.deliveryDate}
-                    onChange={(e) => setCurrentCapsule(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="input-field"
+                    onChange={(date) => setCurrentCapsule(prev => ({ ...prev, deliveryDate: date }))}
+                    minDate={new Date().toISOString().split('T')[0]}
                   />
                 </div>
 
@@ -532,6 +730,93 @@ export function TimeCapsulePage() {
                   <p className="text-cream/40 text-xs mt-2 text-center">
                     Max 10MB for images, 50MB for videos • JPG, PNG, MP4, MOV supported
                   </p>
+                </div>
+
+                {/* Notification Options */}
+                <div>
+                  <label className="flex items-center gap-2 text-cream/70 text-sm mb-3">
+                    <Bell className="w-4 h-4 text-gold" />
+                    Delivery Notifications
+                  </label>
+                  <p className="text-cream/40 text-xs mb-4">
+                    Get notified when your time capsule is delivered (coming soon)
+                  </p>
+
+                  {/* Telegram Option */}
+                  <div className="mb-4">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        onClick={() => setCurrentCapsule(prev => ({ ...prev, notifyTelegram: !prev.notifyTelegram }))}
+                        className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${
+                          currentCapsule.notifyTelegram ? 'bg-[#0088cc]' : 'bg-navy-dark border border-gold/20'
+                        }`}
+                      >
+                        <motion.div
+                          className="w-4 h-4 rounded-full bg-white shadow"
+                          animate={{ x: currentCapsule.notifyTelegram ? 24 : 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      </div>
+                      <Send className="w-4 h-4 text-[#0088cc]" />
+                      <span className="text-cream/70 text-sm group-hover:text-cream">Telegram</span>
+                    </label>
+                    <AnimatePresence>
+                      {currentCapsule.notifyTelegram && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <input
+                            type="text"
+                            value={currentCapsule.telegramUsername}
+                            onChange={(e) => setCurrentCapsule(prev => ({ ...prev, telegramUsername: e.target.value }))}
+                            placeholder="@username"
+                            className="input-field mt-2 text-sm"
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* WhatsApp Option */}
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        onClick={() => setCurrentCapsule(prev => ({ ...prev, notifyWhatsApp: !prev.notifyWhatsApp }))}
+                        className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${
+                          currentCapsule.notifyWhatsApp ? 'bg-[#25D366]' : 'bg-navy-dark border border-gold/20'
+                        }`}
+                      >
+                        <motion.div
+                          className="w-4 h-4 rounded-full bg-white shadow"
+                          animate={{ x: currentCapsule.notifyWhatsApp ? 24 : 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      </div>
+                      <MessageCircle className="w-4 h-4 text-[#25D366]" />
+                      <span className="text-cream/70 text-sm group-hover:text-cream">WhatsApp</span>
+                    </label>
+                    <AnimatePresence>
+                      {currentCapsule.notifyWhatsApp && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <input
+                            type="tel"
+                            value={currentCapsule.whatsAppNumber}
+                            onChange={(e) => setCurrentCapsule(prev => ({ ...prev, whatsAppNumber: e.target.value }))}
+                            placeholder="+1 234 567 8900"
+                            className="input-field mt-2 text-sm"
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
