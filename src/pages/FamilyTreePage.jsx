@@ -788,9 +788,9 @@ export function FamilyTreePage({ onNavigate }) {
               <h3 className="text-cream/70 text-sm font-medium">Parents</h3>
             </div>
 
-            {/* Uncle/Aunt (left) - Mom - Dad - Uncle/Aunt (right) */}
-            <div className="flex items-start gap-4">
-              {/* Add Uncle/Aunt (Mom's side - maternal) */}
+            {/* Uncle/Aunt (left) - Mom - Dad - Uncle/Aunt (right) - all in same row */}
+            <div className="flex items-start gap-2">
+              {/* Mom's side: Add button + existing aunts/uncles */}
               <motion.div
                 onClick={() => handleEmptySlotClick('Aunt', 'Aunt (Mom\'s side)')}
                 className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all border border-dashed border-teal-500/30 hover:border-teal-500 self-center"
@@ -805,8 +805,37 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
               </motion.div>
 
+              {/* Existing Maternal Aunts & Uncles (Mom's side) - inline */}
+              {familyMembers
+                .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
+                .slice(0, Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
+                .map((member) => (
+                  <motion.div
+                    key={member.id}
+                    onClick={() => handleMemberClick(member)}
+                    className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all self-center"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex flex-col items-center gap-1 w-14">
+                      {member.imageData ? (
+                        <img
+                          src={member.imageData}
+                          alt={member.name}
+                          className="w-10 h-10 rounded-full object-cover border-2 border-teal-500/40"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500/20 to-teal-500/10 flex items-center justify-center border-2 border-teal-500/40">
+                          <span className="text-base">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
+                        </div>
+                      )}
+                      <span className="text-[9px] text-cream/70 truncate w-full text-center">{member.name}</span>
+                    </div>
+                  </motion.div>
+                ))}
+
               {/* Mom */}
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center mx-2">
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[0], RELATIONSHIP_TYPES.parents, 0)}
                 {/* Line down to Mom's parents */}
                 <div className="w-0.5 h-4 bg-teal-500/40 mt-1" />
@@ -814,12 +843,41 @@ export function FamilyTreePage({ onNavigate }) {
               </div>
 
               {/* Dad */}
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center mx-2">
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[1], RELATIONSHIP_TYPES.parents, 1)}
                 {/* Line down to Dad's parents */}
                 <div className="w-0.5 h-4 bg-blue-500/40 mt-1" />
                 <div className="text-blue-400/60 text-[9px]">↓</div>
               </div>
+
+              {/* Existing Paternal Aunts & Uncles (Dad's side) - inline */}
+              {familyMembers
+                .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
+                .slice(Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
+                .map((member) => (
+                  <motion.div
+                    key={member.id}
+                    onClick={() => handleMemberClick(member)}
+                    className="glass-card p-2 cursor-pointer hover:bg-blue-500/10 transition-all self-center"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex flex-col items-center gap-1 w-14">
+                      {member.imageData ? (
+                        <img
+                          src={member.imageData}
+                          alt={member.name}
+                          className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/40"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center border-2 border-blue-500/40">
+                          <span className="text-base">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
+                        </div>
+                      )}
+                      <span className="text-[9px] text-cream/70 truncate w-full text-center">{member.name}</span>
+                    </div>
+                  </motion.div>
+                ))}
 
               {/* Add Uncle/Aunt (Dad's side - paternal) */}
               <motion.div
@@ -836,41 +894,6 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
               </motion.div>
             </div>
-
-            {/* Existing Aunts & Uncles */}
-            {familyMembers.some(m => ['Uncle', 'Aunt'].includes(m.relationship)) && (
-              <div className="mt-3 pt-3 border-t border-cream/10">
-                <div className="flex flex-wrap justify-center gap-2">
-                  {familyMembers
-                    .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
-                    .map((member) => (
-                      <motion.div
-                        key={member.id}
-                        onClick={() => handleMemberClick(member)}
-                        className="glass-card p-2 cursor-pointer hover:bg-cream/5 transition-all"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <div className="flex flex-col items-center gap-1">
-                          {member.imageData ? (
-                            <img
-                              src={member.imageData}
-                              alt={member.name}
-                              className="w-10 h-10 rounded-full object-cover border border-gold/30"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center border border-gold/30">
-                              <span className="text-lg">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
-                            </div>
-                          )}
-                          <span className="text-[10px] text-cream/70">{member.name}</span>
-                          <span className="text-[8px] text-cream/40">{member.relationship}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ===== GRANDPARENTS ROW ===== */}
