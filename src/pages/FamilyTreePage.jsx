@@ -768,6 +768,9 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
               </div>
             </motion.div>
+
+            {/* Line from YOU down */}
+            <div className="w-0.5 h-6 bg-gradient-to-b from-gold/60 to-cream/40" />
           </div>
 
           {/* ===== SIBLINGS (optional, beside You) ===== */}
@@ -777,197 +780,165 @@ export function FamilyTreePage({ onNavigate }) {
             </div>
           )}
 
-          {/* ===== CONNECTED TREE: YOU -> PARENTS ===== */}
+          {/* ===== PARENTS SECTION ===== */}
           <div className="flex flex-col items-center">
-            {/* Vertical line from YOU down to the T-junction */}
-            <div className="w-0.5 h-8 bg-gradient-to-b from-gold/60 to-cream/50" />
-
-            {/* T-junction: horizontal line with vertical drops to Mom and Dad */}
-            <div className="relative h-6">
-              {/* Horizontal line */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-0.5 bg-cream/50" />
-              {/* Left vertical line down to Mom */}
-              <div className="absolute top-0 left-1/2 -translate-x-[60px] w-0.5 h-6 bg-gradient-to-b from-cream/50 to-teal-500/60" />
-              {/* Right vertical line down to Dad */}
-              <div className="absolute top-0 left-1/2 translate-x-[59px] w-0.5 h-6 bg-gradient-to-b from-cream/50 to-blue-500/60" />
-            </div>
-
             {/* Parents Header */}
-            <div className="flex items-center gap-1.5 mb-2 mt-1">
+            <div className="flex items-center gap-1.5 mb-2">
               <span className="text-lg">👨‍👩</span>
               <h3 className="text-cream/70 text-sm font-medium">Parents</h3>
             </div>
 
-            {/* Uncle/Aunt (left) - Mom - Dad - Uncle/Aunt (right) - all in same row */}
-            <div className="flex items-start gap-2">
-              {/* Mom's side: Add button + existing aunts/uncles */}
-              <motion.div
-                onClick={() => handleEmptySlotClick('Aunt', 'Aunt (Mom\'s side)')}
-                className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all border border-dashed border-teal-500/30 hover:border-teal-500 self-center"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex flex-col items-center gap-1 w-14">
-                  <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center">
-                    <Plus className="w-4 h-4 text-teal-400/70" />
-                  </div>
-                  <span className="text-[9px] text-teal-400/60 text-center leading-tight">Uncle/<br/>Aunt</span>
-                </div>
-              </motion.div>
-
-              {/* Existing Maternal Aunts & Uncles (Mom's side) - inline */}
-              {familyMembers
-                .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
-                .slice(0, Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
-                .map((member) => (
-                  <motion.div
-                    key={member.id}
-                    onClick={() => handleMemberClick(member)}
-                    className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all self-center"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex flex-col items-center gap-1 w-14">
-                      {member.imageData ? (
-                        <img
-                          src={member.imageData}
-                          alt={member.name}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-teal-500/40"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500/20 to-teal-500/10 flex items-center justify-center border-2 border-teal-500/40">
-                          <span className="text-base">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
-                        </div>
-                      )}
-                      <span className="text-[9px] text-cream/70 truncate w-full text-center">{member.name}</span>
+            {/* Parents Row with integrated lines */}
+            <div className="flex items-start">
+              {/* Uncle/Aunt buttons (left side) */}
+              <div className="flex items-center gap-2 mr-4">
+                <motion.div
+                  onClick={() => handleEmptySlotClick('Aunt', 'Aunt (Mom\'s side)')}
+                  className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all border border-dashed border-teal-500/30 hover:border-teal-500"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex flex-col items-center gap-1 w-14">
+                    <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-teal-400/70" />
                     </div>
-                  </motion.div>
-                ))}
+                    <span className="text-[9px] text-teal-400/60 text-center leading-tight">Uncle/<br/>Aunt</span>
+                  </div>
+                </motion.div>
 
-              {/* Mom */}
-              <div className="flex flex-col items-center" style={{ width: '120px' }}>
+                {/* Existing Maternal Aunts & Uncles */}
+                {familyMembers
+                  .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
+                  .slice(0, Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
+                  .map((member) => (
+                    <motion.div
+                      key={member.id}
+                      onClick={() => handleMemberClick(member)}
+                      className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex flex-col items-center gap-1 w-14">
+                        {member.imageData ? (
+                          <img src={member.imageData} alt={member.name} className="w-10 h-10 rounded-full object-cover border-2 border-teal-500/40" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500/20 to-teal-500/10 flex items-center justify-center border-2 border-teal-500/40">
+                            <span className="text-base">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
+                          </div>
+                        )}
+                        <span className="text-[9px] text-cream/70 truncate w-full text-center">{member.name}</span>
+                      </div>
+                    </motion.div>
+                  ))}
+              </div>
+
+              {/* Mom with line above and below */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-4 bg-teal-500/50" />
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[0], RELATIONSHIP_TYPES.parents, 0)}
+                <div className="w-0.5 h-6 bg-gradient-to-b from-teal-500/60 to-teal-500/30" />
               </div>
 
-              {/* Dad */}
-              <div className="flex flex-col items-center" style={{ width: '120px' }}>
+              {/* Horizontal connector between Mom and Dad */}
+              <div className="w-6 h-0.5 bg-cream/30 mt-6" />
+
+              {/* Dad with line above and below */}
+              <div className="flex flex-col items-center">
+                <div className="w-0.5 h-4 bg-blue-500/50" />
                 {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[1], RELATIONSHIP_TYPES.parents, 1)}
+                <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/60 to-blue-500/30" />
               </div>
 
-              {/* Existing Paternal Aunts & Uncles (Dad's side) - inline */}
-              {familyMembers
-                .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
-                .slice(Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
-                .map((member) => (
-                  <motion.div
-                    key={member.id}
-                    onClick={() => handleMemberClick(member)}
-                    className="glass-card p-2 cursor-pointer hover:bg-blue-500/10 transition-all self-center"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex flex-col items-center gap-1 w-14">
-                      {member.imageData ? (
-                        <img
-                          src={member.imageData}
-                          alt={member.name}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/40"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center border-2 border-blue-500/40">
-                          <span className="text-base">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
-                        </div>
-                      )}
-                      <span className="text-[9px] text-cream/70 truncate w-full text-center">{member.name}</span>
-                    </div>
-                  </motion.div>
-                ))}
+              {/* Uncle/Aunt buttons (right side) */}
+              <div className="flex items-center gap-2 ml-4">
+                {/* Existing Paternal Aunts & Uncles */}
+                {familyMembers
+                  .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
+                  .slice(Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
+                  .map((member) => (
+                    <motion.div
+                      key={member.id}
+                      onClick={() => handleMemberClick(member)}
+                      className="glass-card p-2 cursor-pointer hover:bg-blue-500/10 transition-all"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex flex-col items-center gap-1 w-14">
+                        {member.imageData ? (
+                          <img src={member.imageData} alt={member.name} className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/40" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center border-2 border-blue-500/40">
+                            <span className="text-base">{member.relationship === 'Uncle' ? '👨' : '👩'}</span>
+                          </div>
+                        )}
+                        <span className="text-[9px] text-cream/70 truncate w-full text-center">{member.name}</span>
+                      </div>
+                    </motion.div>
+                  ))}
 
-              {/* Add Uncle/Aunt (Dad's side - paternal) */}
-              <motion.div
-                onClick={() => handleEmptySlotClick('Uncle', 'Uncle (Dad\'s side)')}
-                className="glass-card p-2 cursor-pointer hover:bg-blue-500/10 transition-all border border-dashed border-blue-500/30 hover:border-blue-500 self-center"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex flex-col items-center gap-1 w-14">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <Plus className="w-4 h-4 text-blue-400/70" />
+                <motion.div
+                  onClick={() => handleEmptySlotClick('Uncle', 'Uncle (Dad\'s side)')}
+                  className="glass-card p-2 cursor-pointer hover:bg-blue-500/10 transition-all border border-dashed border-blue-500/30 hover:border-blue-500"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex flex-col items-center gap-1 w-14">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-blue-400/70" />
+                    </div>
+                    <span className="text-[9px] text-blue-400/60 text-center leading-tight">Uncle/<br/>Aunt</span>
                   </div>
-                  <span className="text-[9px] text-blue-400/60 text-center leading-tight">Uncle/<br/>Aunt</span>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </div>
           </div>
 
-          {/* ===== LINES FROM PARENTS TO GRANDPARENTS ===== */}
-          <div className="flex justify-center gap-[120px] mt-2">
-            {/* Line from Mom down */}
-            <div className="w-0.5 h-8 bg-gradient-to-b from-teal-500/60 to-teal-500/40" />
-            {/* Line from Dad down */}
-            <div className="w-0.5 h-8 bg-gradient-to-b from-blue-500/60 to-blue-500/40" />
-          </div>
-
           {/* ===== GRANDPARENTS ROW ===== */}
-          <div className="flex flex-col items-center">
-            <div className="flex items-start gap-16">
+          <div className="flex flex-col items-center mt-2">
+            <div className="flex items-start gap-8">
               {/* Mom's Parents (Maternal) */}
               <div className="flex flex-col items-center">
-                {/* T-junction from Mom's line */}
-                <div className="relative h-6 w-[100px]">
-                  {/* Horizontal line */}
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-teal-500/50" />
-                  {/* Left drop to Grandma */}
-                  <div className="absolute top-0 left-[10px] w-0.5 h-6 bg-teal-500/50" />
-                  {/* Right drop to Grandpa */}
-                  <div className="absolute top-0 right-[10px] w-0.5 h-6 bg-teal-500/50" />
-                </div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-base">👵👴</span>
                   <h3 className="text-teal-400/80 text-sm font-medium">Mom's Parents</h3>
                 </div>
-                <div className="flex items-start gap-3">
-                  {/* Grandma (Mom) */}
+                <div className="flex items-start gap-2">
+                  {/* Grandma (Mom) with line */}
                   <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-3 bg-teal-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[0], RELATIONSHIP_TYPES.grandparents, 0)}
-                    <div className="w-0.5 h-6 bg-gradient-to-b from-teal-500/50 to-teal-500/20 mt-1" />
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-teal-500/40 to-teal-500/20" />
                   </div>
-                  {/* Grandpa (Mom) */}
+                  {/* Grandpa (Mom) with line */}
                   <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-3 bg-teal-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[1], RELATIONSHIP_TYPES.grandparents, 1)}
-                    <div className="w-0.5 h-6 bg-gradient-to-b from-teal-500/50 to-teal-500/20 mt-1" />
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-teal-500/40 to-teal-500/20" />
                   </div>
                 </div>
               </div>
 
               {/* Separator */}
-              <div className="w-px h-36 bg-cream/15 self-center" />
+              <div className="w-px h-32 bg-cream/15 self-center" />
 
               {/* Dad's Parents (Paternal) */}
               <div className="flex flex-col items-center">
-                {/* T-junction from Dad's line */}
-                <div className="relative h-6 w-[100px]">
-                  {/* Horizontal line */}
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500/50" />
-                  {/* Left drop to Grandma */}
-                  <div className="absolute top-0 left-[10px] w-0.5 h-6 bg-blue-500/50" />
-                  {/* Right drop to Grandpa */}
-                  <div className="absolute top-0 right-[10px] w-0.5 h-6 bg-blue-500/50" />
-                </div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-base">👴👵</span>
                   <h3 className="text-blue-400/80 text-sm font-medium">Dad's Parents</h3>
                 </div>
-                <div className="flex items-start gap-3">
-                  {/* Grandma (Dad) */}
+                <div className="flex items-start gap-2">
+                  {/* Grandma (Dad) with line */}
                   <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-3 bg-blue-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[2], RELATIONSHIP_TYPES.grandparents, 2)}
-                    <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-blue-500/20 mt-1" />
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-blue-500/40 to-blue-500/20" />
                   </div>
-                  {/* Grandpa (Dad) */}
+                  {/* Grandpa (Dad) with line */}
                   <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-3 bg-blue-500/40" />
                     {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[3], RELATIONSHIP_TYPES.grandparents, 3)}
-                    <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-blue-500/20 mt-1" />
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-blue-500/40 to-blue-500/20" />
                   </div>
                 </div>
               </div>
