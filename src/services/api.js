@@ -474,10 +474,11 @@ class ApiService {
   // Avatar IV API (Photo → Video with Voice Clone)
   // =====================
 
-  async generateAvatarIV(text, videoTitle) {
+  async generateAvatarIV(text, videoTitle, options = {}) {
+    const { photoData, useVoiceClone = true, familyMemberName } = options;
     return this.request('/api/ai/avatar/iv/generate', {
       method: 'POST',
-      body: JSON.stringify({ text, videoTitle }),
+      body: JSON.stringify({ text, videoTitle, photoData, useVoiceClone, familyMemberName }),
     });
   }
 

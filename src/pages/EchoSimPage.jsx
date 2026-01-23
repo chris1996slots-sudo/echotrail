@@ -9,6 +9,7 @@ import {
   Moon,
   Star,
   User,
+  Users,
   Loader2,
   RefreshCw,
   AlertCircle,
@@ -22,7 +23,9 @@ import {
   ChevronRight,
   MessageCircle,
   Send,
-  ArrowLeft
+  ArrowLeft,
+  Mic,
+  Check
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn } from '../components/PageTransition';
@@ -78,7 +81,7 @@ const eventTemplates = [
 ];
 
 // Video Generation Modal (Option 1)
-function VideoGenerationModal({ template, onClose, user, persona, customMessage }) {
+function VideoGenerationModal({ template, onClose, user, persona, customMessage, useVoiceClone = true, selectedFamilyMember = null }) {
   const [callState, setCallState] = useState('generating');
   const [generatedMessage, setGeneratedMessage] = useState(customMessage || '');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -96,13 +99,16 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
   const audioRef = useRef(null);
   const videoRef = useRef(null);
 
-  // Get active avatar image
+  // Get active avatar image (or use family member's image)
   useEffect(() => {
-    if (persona?.avatarImages?.length > 0) {
+    if (selectedFamilyMember?.imageData) {
+      // Use family member's image
+      setSelectedAvatarImage({ imageData: selectedFamilyMember.imageData, name: selectedFamilyMember.name });
+    } else if (persona?.avatarImages?.length > 0) {
       const active = persona.avatarImages.find(a => a.isActive) || persona.avatarImages[0];
       setSelectedAvatarImage(active);
     }
-  }, [persona]);
+  }, [persona, selectedFamilyMember]);
 
   // Generate AI response when modal opens (only for templates, not custom messages)
   useEffect(() => {
@@ -204,11 +210,19 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
     setVideoProgress('Starting video generation...');
     setError(null);
 
-    const videoTitle = template?.name || 'Custom Message';
+    const videoTitle = selectedFamilyMember
+      ? `${selectedFamilyMember.name}: ${template?.name || 'Message'}`
+      : (template?.name || 'Custom Message');
 
     try {
       // Use Avatar IV API (photo + voice clone)
-      const result = await api.generateAvatarIV(generatedMessage, videoTitle);
+      // If family member is selected, pass their photo and name
+      const options = {
+        useVoiceClone: selectedFamilyMember ? false : useVoiceClone, // Family members don't use user's voice clone
+        photoData: selectedFamilyMember?.imageData || null,
+        familyMemberName: selectedFamilyMember?.name || null,
+      };
+      const result = await api.generateAvatarIV(generatedMessage, videoTitle, options);
       console.log('Avatar IV generate result:', result);
 
       if (result.videoId) {
@@ -705,6 +719,12 @@ export function EchoSimPage({ onNavigate }) {
   const [isLoadingTextChat, setIsLoadingTextChat] = useState(false);
   const [expandedOption, setExpandedOption] = useState(null); // 'chat', 'video', or 'live'
 
+  // Video generation options
+  const [useVoiceClone, setUseVoiceClone] = useState(true); // Use voice clone by default if available
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState(null);
+  const [videoSource, setVideoSource] = useState('self'); // 'self' or 'family'
+
   // Refs for auto-scrolling
   const expandedSectionRef = useRef(null);
 
@@ -728,6 +748,21 @@ export function EchoSimPage({ onNavigate }) {
     };
     checkStatus();
   }, [persona]);
+
+  // Load family members for video generation
+  useEffect(() => {
+    const loadFamilyMembers = async () => {
+      try {
+        const members = await api.getFamilyMembers();
+        // Only include family members that have a photo
+        const membersWithPhoto = members.filter(m => m.imageData);
+        setFamilyMembers(membersWithPhoto);
+      } catch (err) {
+        console.error('Failed to load family members:', err);
+      }
+    };
+    loadFamilyMembers();
+  }, []);
 
   // Auto-scroll to expanded section when option is selected
   useEffect(() => {
@@ -1272,6 +1307,161 @@ export function EchoSimPage({ onNavigate }) {
                     <h3 className="text-xl font-serif text-cream">Video Generation Options</h3>
                   </div>
 
+                  {/* Source Selection: Self or Family Member */}
+                  <div className="mb-6">
+                    <label className="block text-cream/70 text-sm mb-3">Who should speak?</label>
+                    <div className="flex flex-wrap gap-3">
+                      {/* Self option */}
+                      <motion.button
+                        onClick={() => {
+                          setVideoSource('self');
+                          setSelectedFamilyMember(null);
+                        }}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                          videoSource === 'self'
+                            ? 'border-gold bg-gold/10 text-gold'
+                            : 'border-cream/20 bg-navy/40 text-cream/70 hover:border-cream/40'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          videoSource === 'self' ? 'bg-gold/20' : 'bg-cream/10'
+                        }`}>
+                          {persona?.avatarImages?.[0]?.imageData ? (
+                            <img
+                              src={persona.avatarImages[0].imageData}
+                              alt="You"
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <p className="font-medium text-sm">Yourself</p>
+                          <p className="text-xs opacity-60">Your avatar speaks</p>
+                        </div>
+                        {videoSource === 'self' && (
+                          <Check className="w-5 h-5 text-gold ml-2" />
+                        )}
+                      </motion.button>
+
+                      {/* Family Member options */}
+                      {familyMembers.length > 0 && familyMembers.map((member) => (
+                        <motion.button
+                          key={member.id}
+                          onClick={() => {
+                            setVideoSource('family');
+                            setSelectedFamilyMember(member);
+                          }}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                            selectedFamilyMember?.id === member.id
+                              ? 'border-purple-400 bg-purple-500/10 text-purple-300'
+                              : 'border-cream/20 bg-navy/40 text-cream/70 hover:border-cream/40'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-purple-500/20 flex items-center justify-center">
+                            {member.imageData ? (
+                              <img
+                                src={member.imageData}
+                                alt={member.name}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <Users className="w-5 h-5 text-purple-400" />
+                            )}
+                          </div>
+                          <div className="text-left">
+                            <p className="font-medium text-sm">{member.name}</p>
+                            <p className="text-xs opacity-60">{member.relationship}</p>
+                          </div>
+                          {selectedFamilyMember?.id === member.id && (
+                            <Check className="w-5 h-5 text-purple-400 ml-2" />
+                          )}
+                        </motion.button>
+                      ))}
+
+                      {/* Add Family Member hint */}
+                      {familyMembers.length === 0 && (
+                        <motion.button
+                          onClick={() => onNavigate('family-tree')}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-cream/20 text-cream/50 hover:border-cream/40 hover:text-cream/70 transition-all"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          <div className="w-10 h-10 rounded-full bg-cream/5 flex items-center justify-center">
+                            <Users className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-medium text-sm">Add Family Member</p>
+                            <p className="text-xs">With photo to use here</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                        </motion.button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Voice Clone Option */}
+                  {hasVoiceClone && videoSource === 'self' && (
+                    <div className="mb-6 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                            <Mic className="w-5 h-5 text-green-400" />
+                          </div>
+                          <div>
+                            <p className="text-cream font-medium text-sm">Use Your Cloned Voice</p>
+                            <p className="text-cream/50 text-xs">The avatar will speak with your voice</p>
+                          </div>
+                        </div>
+                        <motion.button
+                          onClick={() => setUseVoiceClone(!useVoiceClone)}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            useVoiceClone ? 'bg-green-500' : 'bg-cream/20'
+                          }`}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <motion.div
+                            className="w-5 h-5 rounded-full bg-white shadow-md"
+                            animate={{ x: useVoiceClone ? 26 : 2 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                          />
+                        </motion.button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Family Member Info */}
+                  {selectedFamilyMember && (
+                    <div className="mb-6 p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full overflow-hidden">
+                          <img
+                            src={selectedFamilyMember.imageData}
+                            alt={selectedFamilyMember.name}
+                            className="w-12 h-12 object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-cream font-medium">{selectedFamilyMember.name}</p>
+                          <p className="text-purple-300 text-sm">{selectedFamilyMember.relationship}</p>
+                          {selectedFamilyMember.bio && (
+                            <p className="text-cream/50 text-xs mt-1 line-clamp-2">{selectedFamilyMember.bio}</p>
+                          )}
+                        </div>
+                      </div>
+                      {!selectedFamilyMember.voiceData && (
+                        <p className="text-orange-400/80 text-xs mt-3 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          No voice sample - will use default voice
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Custom Message */}
                   <div className="mb-6">
                     <label className="block text-cream/70 text-sm mb-2">Custom Message</label>
@@ -1281,16 +1471,18 @@ export function EchoSimPage({ onNavigate }) {
                         value={customMessage}
                         onChange={(e) => setCustomMessage(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleCustomMessage()}
-                        placeholder="Type what your avatar should say..."
-                        disabled={!hasPhotoAvatar}
+                        placeholder={selectedFamilyMember
+                          ? `What should ${selectedFamilyMember.name} say...`
+                          : "Type what your avatar should say..."}
+                        disabled={videoSource === 'self' ? !hasPhotoAvatar : !selectedFamilyMember?.imageData}
                         className="flex-1 px-4 py-3 rounded-lg bg-navy/60 border border-cream/10 text-cream placeholder-cream/30 text-sm focus:outline-none focus:border-gold/50 disabled:opacity-50"
                       />
                       <motion.button
                         onClick={handleCustomMessage}
-                        disabled={!customMessage.trim() || !hasPhotoAvatar}
+                        disabled={!customMessage.trim() || (videoSource === 'self' ? !hasPhotoAvatar : !selectedFamilyMember?.imageData)}
                         className="px-5 py-3 rounded-lg bg-gold text-navy font-medium disabled:opacity-50 flex items-center gap-2"
-                        whileHover={customMessage.trim() && hasPhotoAvatar ? { scale: 1.02 } : {}}
-                        whileTap={customMessage.trim() && hasPhotoAvatar ? { scale: 0.98 } : {}}
+                        whileHover={customMessage.trim() ? { scale: 1.02 } : {}}
+                        whileTap={customMessage.trim() ? { scale: 0.98 } : {}}
                       >
                         <Wand2 className="w-4 h-4" />
                         Create
@@ -1304,17 +1496,18 @@ export function EchoSimPage({ onNavigate }) {
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {eventTemplates.map((template) => {
                         const Icon = template.icon;
+                        const isDisabled = videoSource === 'self' ? !hasPhotoAvatar : !selectedFamilyMember?.imageData;
                         return (
                           <motion.button
                             key={template.id}
                             onClick={() => handleTemplateSelect(template)}
-                            disabled={!hasPhotoAvatar}
+                            disabled={isDisabled}
                             className={`p-4 rounded-lg border text-left transition-all ${
-                              hasPhotoAvatar
+                              !isDisabled
                                 ? 'border-cream/20 bg-navy/40 hover:border-gold/40 hover:bg-gold/5'
                                 : 'border-cream/10 bg-navy/20 opacity-50 cursor-not-allowed'
                             }`}
-                            whileHover={hasPhotoAvatar ? { y: -2 } : {}}
+                            whileHover={!isDisabled ? { y: -2 } : {}}
                           >
                             <Icon className="w-5 h-5 text-gold mb-2" />
                             <h4 className="text-cream font-medium text-sm mb-1">{template.name}</h4>
@@ -1414,6 +1607,8 @@ export function EchoSimPage({ onNavigate }) {
             }}
             user={user}
             persona={persona}
+            useVoiceClone={useVoiceClone}
+            selectedFamilyMember={selectedFamilyMember}
           />
         )}
       </AnimatePresence>

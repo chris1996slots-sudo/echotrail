@@ -1401,7 +1401,7 @@ router.get('/avatar/streaming/config', authenticate, async (req, res) => {
 // Generate Avatar IV video from user's photo with their cloned voice
 router.post('/avatar/iv/generate', authenticate, requireSubscription('PREMIUM'), async (req, res) => {
   try {
-    const { text, videoTitle } = req.body;
+    const { text, videoTitle, photoData, useVoiceClone = true, familyMemberName } = req.body;
 
     if (!text || text.length > 1500) {
       return res.status(400).json({ error: 'Text is required and must be under 1500 characters' });
@@ -1446,22 +1446,30 @@ router.post('/avatar/iv/generate', authenticate, requireSubscription('PREMIUM'),
       return res.status(404).json({ error: 'Persona not found. Please create your persona first.' });
     }
 
-    // Get the active avatar image
-    const activeAvatar = persona.avatarImages[0];
-    if (!activeAvatar?.imageData) {
-      return res.status(400).json({
-        error: 'No avatar photo found. Please upload a photo in My Persona → Avatar tab.'
-      });
+    // Get the image to use - either from photoData (family member) or user's avatar
+    let imageDataToUse = photoData;
+
+    if (!imageDataToUse) {
+      // Use user's own avatar
+      const activeAvatar = persona.avatarImages[0];
+      if (!activeAvatar?.imageData) {
+        return res.status(400).json({
+          error: 'No avatar photo found. Please upload a photo in My Persona → Avatar tab.'
+        });
+      }
+      imageDataToUse = activeAvatar.imageData;
     }
 
     console.log('Avatar IV: Generating video for user', req.user.id);
+    console.log('Avatar IV: Using family member photo:', !!photoData, familyMemberName || '');
     console.log('Avatar IV: Has voice clone:', !!persona.elevenlabsVoiceId);
+    console.log('Avatar IV: Use voice clone:', useVoiceClone);
 
     // Step 1: Upload the image to HeyGen for Avatar IV
-    const base64Match = activeAvatar.imageData.match(/^data:image\/(\w+);base64,/);
+    const base64Match = imageDataToUse.match(/^data:image\/(\w+);base64,/);
     const imageFormat = base64Match ? base64Match[1] : 'jpeg';
     const contentType = imageFormat === 'png' ? 'image/png' : 'image/jpeg';
-    const base64Data = activeAvatar.imageData.replace(/^data:image\/\w+;base64,/, '');
+    const base64Data = imageDataToUse.replace(/^data:image\/\w+;base64,/, '');
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
     console.log('Avatar IV: Uploading image to HeyGen...');
@@ -1494,10 +1502,10 @@ router.post('/avatar/iv/generate', authenticate, requireSubscription('PREMIUM'),
       });
     }
 
-    // Step 2: Generate audio with ElevenLabs voice clone (if available)
+    // Step 2: Generate audio with ElevenLabs voice clone (if available and requested)
     let audioAssetId = null;
 
-    if (persona.elevenlabsVoiceId && voiceConfig?.apiKey) {
+    if (useVoiceClone && persona.elevenlabsVoiceId && voiceConfig?.apiKey) {
       console.log('Avatar IV: Generating audio with voice clone...');
 
       // Generate TTS audio
