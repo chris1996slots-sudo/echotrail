@@ -306,6 +306,7 @@ export function PersonaPage({ onNavigate }) {
   const [showVibeEditor, setShowVibeEditor] = useState(false);
   const [editingVibe, setEditingVibe] = useState(null);
   const [isSavingVibe, setIsSavingVibe] = useState(false);
+  const [showVoiceSection, setShowVoiceSection] = useState(false);
 
   // Legacy Journey state
   const [legacyProgress, setLegacyProgress] = useState(null);
@@ -855,7 +856,14 @@ export function PersonaPage({ onNavigate }) {
   // Handle tab navigation from location state
   useEffect(() => {
     if (location.state?.tab) {
-      setActiveTab(location.state.tab);
+      // Special handling for 'voice' - it's not a main tab, it's an avatar step
+      if (location.state.tab === 'voice') {
+        setActiveTab('avatar');
+        setAvatarStep(1); // Voice is step index 1
+        setShowVoiceSection(true); // Also expand voice section in completed view
+      } else {
+        setActiveTab(location.state.tab);
+      }
     }
   }, [location.state]);
 
@@ -2021,12 +2029,193 @@ export function PersonaPage({ onNavigate }) {
                         Voice Clone Active
                       </span>
                     )}
+                    {!persona.elevenlabsVoiceId && (
+                      <span className="px-3 py-1.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded-full flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        No Voice Clone
+                      </span>
+                    )}
                     {persona.heygenAvatarId && (
                       <span className="px-3 py-1.5 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Talking Avatar Active
                       </span>
                     )}
+                  </div>
+
+                  {/* Voice Management Section (collapsible) */}
+                  <div className="mb-4">
+                    <button
+                      onClick={() => setShowVoiceSection(!showVoiceSection)}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
+                        showVoiceSection
+                          ? 'bg-emerald-500/10 border-emerald-500/30'
+                          : persona.elevenlabsVoiceId
+                            ? 'bg-navy-light/30 border-gold/20 hover:border-gold/40'
+                            : 'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          persona.elevenlabsVoiceId ? 'bg-emerald-500/20' : 'bg-orange-500/20'
+                        }`}>
+                          <Mic className={`w-4 h-4 ${persona.elevenlabsVoiceId ? 'text-emerald-400' : 'text-orange-400'}`} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-cream text-sm font-medium">
+                            {persona.elevenlabsVoiceId ? 'Manage Voice Clone' : 'Setup Voice Clone'}
+                          </p>
+                          <p className="text-cream/50 text-xs">
+                            {persona.elevenlabsVoiceId
+                              ? `${persona.voiceSamples?.length || 0} recordings`
+                              : 'Record your voice for video generation'}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-cream/50 transition-transform ${showVoiceSection ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {showVoiceSection && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 p-4 bg-navy-dark/50 rounded-xl border border-gold/20">
+                            {/* Voice Samples List */}
+                            {(persona.voiceSamples?.length || 0) > 0 ? (
+                              <div className="space-y-2 mb-4">
+                                {persona.voiceSamples.map((sample, index) => (
+                                  <div
+                                    key={sample.id}
+                                    className="flex items-center gap-3 p-3 bg-navy-light/30 rounded-lg border border-gold/10"
+                                  >
+                                    <motion.button
+                                      onClick={() => handlePlaySample(sample)}
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                                        playingSampleId === sample.id
+                                          ? 'bg-gold text-navy'
+                                          : 'bg-gold/20 hover:bg-gold/30 text-gold'
+                                      }`}
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      {playingSampleId === sample.id ? (
+                                        <Pause className="w-5 h-5" />
+                                      ) : (
+                                        <Play className="w-5 h-5 ml-0.5" />
+                                      )}
+                                    </motion.button>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-cream text-sm font-medium truncate">{sample.label}</p>
+                                      <p className="text-cream/40 text-xs">{formatTime(sample.duration || 0)}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => handleReplaceSample(sample.id)}
+                                        className="p-1.5 rounded-full hover:bg-purple-500/20 text-cream/50 hover:text-purple-400 transition-colors"
+                                        title="Re-record"
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteVoiceSample(sample.id)}
+                                        className="p-1.5 rounded-full hover:bg-red-500/20 text-cream/50 hover:text-red-400 transition-colors"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center p-6 border-2 border-dashed border-gold/20 rounded-xl mb-4">
+                                <Mic className="w-10 h-10 text-gold/40 mx-auto mb-2" />
+                                <p className="text-cream/50 text-sm">No voice recordings yet</p>
+                                <p className="text-cream/30 text-xs mt-1">Record samples to create your voice clone</p>
+                              </div>
+                            )}
+
+                            {/* Add Recording Buttons */}
+                            {(persona.voiceSamples?.length || 0) < 5 && (
+                              <div className="space-y-2 mb-4">
+                                <motion.button
+                                  onClick={() => setShowVoiceModal(true)}
+                                  className="w-full p-3 border-2 border-dashed border-gold/30 hover:border-gold/50 rounded-lg flex items-center justify-center gap-2 text-cream/70 hover:text-cream transition-all"
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.99 }}
+                                >
+                                  <Mic className="w-4 h-4" />
+                                  <span className="text-sm">Record Voice Sample</span>
+                                </motion.button>
+                                <motion.button
+                                  onClick={() => setShowVoiceMemoModal(true)}
+                                  className="w-full p-3 border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/50 rounded-lg flex items-center justify-center gap-2 text-emerald-400/70 hover:text-emerald-400 transition-all bg-emerald-500/5"
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.99 }}
+                                >
+                                  <Upload className="w-4 h-4" />
+                                  <span className="text-sm">Upload Voice Memo (5+ min)</span>
+                                </motion.button>
+                              </div>
+                            )}
+
+                            {/* Create/Recreate Voice Clone Button */}
+                            {(persona.voiceSamples?.length || 0) > 0 && (
+                              <motion.button
+                                onClick={handleCreateVoiceClone}
+                                disabled={isCreatingVoiceClone}
+                                className={`w-full px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  persona.elevenlabsVoiceId
+                                    ? 'bg-navy-light/50 hover:bg-navy-light text-cream/70 hover:text-cream border border-gold/20'
+                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
+                                }`}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                              >
+                                {isCreatingVoiceClone ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Creating Voice Clone...
+                                  </>
+                                ) : persona.elevenlabsVoiceId ? (
+                                  <>
+                                    <RefreshCw className="w-4 h-4" />
+                                    Recreate Voice Clone
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-4 h-4" />
+                                    Create Voice Clone
+                                  </>
+                                )}
+                              </motion.button>
+                            )}
+
+                            {voiceCloneError && (
+                              <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                                <p className="text-red-400 text-sm flex items-center gap-2">
+                                  <AlertCircle className="w-4 h-4" />
+                                  {voiceCloneError}
+                                </p>
+                              </div>
+                            )}
+
+                            {voiceCloneSuccess && (
+                              <div className="mt-3 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                                <p className="text-green-400 text-sm flex items-center gap-2">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Voice clone created successfully!
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Edit/Delete Actions for Active Avatar */}
