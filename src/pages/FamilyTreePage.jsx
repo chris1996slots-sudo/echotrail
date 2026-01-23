@@ -737,10 +737,10 @@ export function FamilyTreePage({ onNavigate }) {
             </div>
           )}
 
-          {/* ===== FAMILY TREE WITH CSS CONNECTORS ===== */}
+          {/* ===== FAMILY TREE (No connection lines) ===== */}
 
           {/* YOU (CENTER) */}
-          <div className="flex flex-col items-center pt-4">
+          <div className="flex flex-col items-center pt-4 mb-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -769,16 +769,6 @@ export function FamilyTreePage({ onNavigate }) {
                 </div>
               </div>
             </motion.div>
-
-            {/* Connector line down from YOU */}
-            <div className="w-0.5 h-6 bg-gold/50" />
-            {/* Horizontal bar connecting to parents */}
-            <div className="relative w-40 h-0.5 bg-cream/40">
-              {/* Left drop to Mom */}
-              <div className="absolute left-0 top-0 w-0.5 h-4 bg-teal-500/50" />
-              {/* Right drop to Dad */}
-              <div className="absolute right-0 top-0 w-0.5 h-4 bg-blue-500/50" />
-            </div>
           </div>
 
           {/* SIBLINGS (optional) */}
@@ -789,15 +779,15 @@ export function FamilyTreePage({ onNavigate }) {
           )}
 
           {/* PARENTS ROW */}
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1.5 mb-2 mt-2">
+          <div className="flex flex-col items-center mb-6">
+            <div className="flex items-center gap-1.5 mb-3">
               <span className="text-lg">👨‍👩</span>
               <h3 className="text-cream/70 text-sm font-medium">Parents</h3>
             </div>
 
-            <div className="flex items-start justify-center">
+            <div className="flex items-start justify-center gap-4">
               {/* Uncle/Aunt (left) */}
-              <div className="flex items-center gap-2 mr-4">
+              <div className="flex items-center gap-2">
                 <motion.div
                   onClick={() => handleEmptySlotClick('Aunt', 'Aunt (Mom\'s side)')}
                   className="glass-card p-2 cursor-pointer hover:bg-teal-500/10 transition-all border border-dashed border-teal-500/30 hover:border-teal-500"
@@ -836,35 +826,14 @@ export function FamilyTreePage({ onNavigate }) {
                   ))}
               </div>
 
-              {/* Mom with connector */}
-              <div className="flex flex-col items-center">
-                {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[0], RELATIONSHIP_TYPES.parents, 0)}
-                {/* Line down from Mom */}
-                <div className="w-0.5 h-4 bg-teal-500/50" />
-                {/* T-junction for grandparents */}
-                <div className="relative w-20 h-0.5 bg-teal-500/40">
-                  <div className="absolute left-0 top-0 w-0.5 h-3 bg-teal-500/40" />
-                  <div className="absolute right-0 top-0 w-0.5 h-3 bg-teal-500/40" />
-                </div>
-              </div>
+              {/* Mom */}
+              {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[0], RELATIONSHIP_TYPES.parents, 0)}
 
-              {/* Spacer between Mom and Dad */}
-              <div className="w-16" />
-
-              {/* Dad with connector */}
-              <div className="flex flex-col items-center">
-                {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[1], RELATIONSHIP_TYPES.parents, 1)}
-                {/* Line down from Dad */}
-                <div className="w-0.5 h-4 bg-blue-500/50" />
-                {/* T-junction for grandparents */}
-                <div className="relative w-20 h-0.5 bg-blue-500/40">
-                  <div className="absolute left-0 top-0 w-0.5 h-3 bg-blue-500/40" />
-                  <div className="absolute right-0 top-0 w-0.5 h-3 bg-blue-500/40" />
-                </div>
-              </div>
+              {/* Dad */}
+              {renderPlaceholderSlot(PLACEHOLDER_SLOTS.parents[1], RELATIONSHIP_TYPES.parents, 1)}
 
               {/* Uncle/Aunt (right) */}
-              <div className="flex items-center gap-2 ml-4">
+              <div className="flex items-center gap-2">
                 {familyMembers
                   .filter(m => ['Uncle', 'Aunt'].includes(m.relationship))
                   .slice(Math.ceil(familyMembers.filter(m => ['Uncle', 'Aunt'].includes(m.relationship)).length / 2))
@@ -906,7 +875,7 @@ export function FamilyTreePage({ onNavigate }) {
           </div>
 
           {/* GRANDPARENTS ROW */}
-          <div className="flex flex-col items-center mt-1">
+          <div className="flex flex-col items-center mb-6">
             <div className="flex items-start gap-10">
               {/* Mom's Parents */}
               <div className="flex flex-col items-center">
@@ -915,21 +884,13 @@ export function FamilyTreePage({ onNavigate }) {
                   <h3 className="text-teal-400/80 text-sm font-medium">Mom's Parents</h3>
                 </div>
                 <div className="flex items-start gap-2">
-                  {/* Grandma */}
-                  <div className="flex flex-col items-center">
-                    {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[0], RELATIONSHIP_TYPES.grandparents, 0)}
-                    <div className="w-0.5 h-3 bg-teal-500/30" />
-                  </div>
-                  {/* Grandpa */}
-                  <div className="flex flex-col items-center">
-                    {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[1], RELATIONSHIP_TYPES.grandparents, 1)}
-                    <div className="w-0.5 h-3 bg-teal-500/30" />
-                  </div>
+                  {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[0], RELATIONSHIP_TYPES.grandparents, 0)}
+                  {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[1], RELATIONSHIP_TYPES.grandparents, 1)}
                 </div>
               </div>
 
               {/* Separator */}
-              <div className="w-px h-24 bg-cream/15 self-center" />
+              <div className="w-px h-20 bg-cream/15 self-center" />
 
               {/* Dad's Parents */}
               <div className="flex flex-col items-center">
@@ -938,16 +899,8 @@ export function FamilyTreePage({ onNavigate }) {
                   <h3 className="text-blue-400/80 text-sm font-medium">Dad's Parents</h3>
                 </div>
                 <div className="flex items-start gap-2">
-                  {/* Grandma */}
-                  <div className="flex flex-col items-center">
-                    {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[2], RELATIONSHIP_TYPES.grandparents, 2)}
-                    <div className="w-0.5 h-3 bg-blue-500/30" />
-                  </div>
-                  {/* Grandpa */}
-                  <div className="flex flex-col items-center">
-                    {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[3], RELATIONSHIP_TYPES.grandparents, 3)}
-                    <div className="w-0.5 h-3 bg-blue-500/30" />
-                  </div>
+                  {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[2], RELATIONSHIP_TYPES.grandparents, 2)}
+                  {renderPlaceholderSlot(PLACEHOLDER_SLOTS.grandparents[3], RELATIONSHIP_TYPES.grandparents, 3)}
                 </div>
               </div>
             </div>
@@ -981,7 +934,7 @@ export function FamilyTreePage({ onNavigate }) {
               </div>
 
               {/* Separator */}
-              <div className="w-px h-28 bg-cream/15 self-center" />
+              <div className="w-px h-24 bg-cream/15 self-center" />
 
               {/* Dad's Side */}
               <div className="flex flex-col items-center">
