@@ -1404,8 +1404,8 @@ export function EchoSimPage({ onNavigate }) {
                     </div>
                   </div>
 
-                  {/* Voice Clone Option */}
-                  {hasVoiceClone && (
+                  {/* Voice Clone Option - Show toggle if has voice clone */}
+                  {hasVoiceClone ? (
                     <div className="mb-6 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -1436,7 +1436,33 @@ export function EchoSimPage({ onNavigate }) {
                         </motion.button>
                       </div>
                     </div>
-                  )}
+                  ) : selectedFamilyMember ? (
+                    /* No voice clone but family member selected - show setup prompt */
+                    <div className="mb-6 p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                            <Mic className="w-5 h-5 text-orange-400" />
+                          </div>
+                          <div>
+                            <p className="text-cream font-medium text-sm">Want {selectedFamilyMember.name} to speak with your voice?</p>
+                            <p className="text-cream/50 text-xs">
+                              Record your voice samples to make {selectedFamilyMember.name} sound like you
+                            </p>
+                          </div>
+                        </div>
+                        <motion.button
+                          onClick={() => onNavigate('persona', 'voice')}
+                          className="px-4 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-sm font-medium hover:bg-orange-500/30 transition-colors flex items-center gap-2 whitespace-nowrap"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Mic className="w-4 h-4" />
+                          Setup Voice
+                        </motion.button>
+                      </div>
+                    </div>
+                  ) : null}
 
                   {/* Family Member Info */}
                   {selectedFamilyMember && (
