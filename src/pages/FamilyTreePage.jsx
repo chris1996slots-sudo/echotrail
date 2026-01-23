@@ -1561,25 +1561,7 @@ export function FamilyTreePage({ onNavigate }) {
                   <div className="border-t border-cream/10 pt-4">
                     <p className="text-cream/50 text-xs mb-3">Advanced Interactions</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <motion.button
-                        onClick={() => {
-                          setShowProfileModal(false);
-                          setTimeout(() => onNavigate('echo-sim'), 0);
-                        }}
-                        disabled={!selectedMember.imageData || !selectedMember.voiceData}
-                        className={`px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                          selectedMember.imageData && selectedMember.voiceData
-                            ? 'bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-purple-300 border border-purple-500/30 hover:from-purple-600/30 hover:to-pink-600/30'
-                            : 'bg-cream/5 text-cream/30 border border-cream/10 cursor-not-allowed'
-                        }`}
-                        whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
-                        whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
-                      >
-                        <Video className="w-4 h-4" />
-                        <span className="hidden sm:inline">Live Conversation</span>
-                        <span className="sm:hidden">Live</span>
-                      </motion.button>
-
+                      {/* Generate Video - LEFT */}
                       <motion.button
                         onClick={() => {
                           setShowProfileModal(false);
@@ -1598,10 +1580,34 @@ export function FamilyTreePage({ onNavigate }) {
                         <span className="hidden sm:inline">Generate Video</span>
                         <span className="sm:hidden">Video</span>
                       </motion.button>
+
+                      {/* Live Conversation - RIGHT */}
+                      <motion.button
+                        onClick={() => {
+                          setShowProfileModal(false);
+                          setTimeout(() => onNavigate('echo-sim'), 0);
+                        }}
+                        disabled={!selectedMember.imageData || !selectedMember.voiceData}
+                        className={`px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                          selectedMember.imageData && selectedMember.voiceData
+                            ? 'bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-purple-300 border border-purple-500/30 hover:from-purple-600/30 hover:to-pink-600/30'
+                            : 'bg-cream/5 text-cream/30 border border-cream/10 cursor-not-allowed'
+                        }`}
+                        whileHover={selectedMember.imageData && selectedMember.voiceData ? { scale: 1.02 } : {}}
+                        whileTap={selectedMember.imageData && selectedMember.voiceData ? { scale: 0.98 } : {}}
+                      >
+                        <Video className="w-4 h-4" />
+                        <span className="hidden sm:inline">Live Conversation</span>
+                        <span className="sm:hidden">Live</span>
+                      </motion.button>
                     </div>
                     {(!selectedMember.imageData || !selectedMember.voiceData) && (
                       <p className="text-cream/30 text-xs mt-2 text-center">
-                        Add photo & voice to unlock advanced features
+                        {!selectedMember.imageData && !selectedMember.voiceData
+                          ? 'Add photo & voice to unlock'
+                          : !selectedMember.imageData
+                            ? 'Add photo to unlock'
+                            : 'Add voice to unlock'}
                       </p>
                     )}
                   </div>
@@ -1610,42 +1616,44 @@ export function FamilyTreePage({ onNavigate }) {
                 <>
                   {/* Profile Details */}
                   <div className="space-y-4 mb-6">
-                    {selectedMember.birthYear && (
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-gold/50" />
-                        <div>
-                          <p className="text-cream/50 text-xs">Born</p>
-                          <p className="text-cream">{selectedMember.birthYear}</p>
-                        </div>
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-gold/50" />
+                      <div>
+                        <p className="text-cream/50 text-xs">Born</p>
+                        <p className={selectedMember.birthYear ? 'text-cream' : 'text-cream/30 italic'}>
+                          {selectedMember.birthYear || 'Not specified'}
+                        </p>
                       </div>
-                    )}
+                    </div>
 
-                    {selectedMember.birthplace && (
-                      <div className="flex items-center gap-3">
-                        <MapPin className="w-5 h-5 text-gold/50" />
-                        <div>
-                          <p className="text-cream/50 text-xs">Birthplace</p>
-                          <p className="text-cream">{selectedMember.birthplace}</p>
-                        </div>
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-gold/50" />
+                      <div>
+                        <p className="text-cream/50 text-xs">Birthplace</p>
+                        <p className={selectedMember.birthplace ? 'text-cream' : 'text-cream/30 italic'}>
+                          {selectedMember.birthplace || 'Not specified'}
+                        </p>
                       </div>
-                    )}
+                    </div>
 
-                    {selectedMember.isDeceased && selectedMember.deathYear && (
+                    {selectedMember.isDeceased && (
                       <div className="flex items-center gap-3">
                         <Heart className="w-5 h-5 text-red-400/50" />
                         <div>
                           <p className="text-cream/50 text-xs">Passed Away</p>
-                          <p className="text-cream">{selectedMember.deathYear}</p>
+                          <p className={selectedMember.deathYear ? 'text-cream' : 'text-cream/30 italic'}>
+                            {selectedMember.deathYear || 'Not specified'}
+                          </p>
                         </div>
                       </div>
                     )}
 
-                    {selectedMember.bio && (
-                      <div className="pt-4 border-t border-cream/10">
-                        <p className="text-cream/50 text-xs mb-2">Biography</p>
-                        <p className="text-cream/80 leading-relaxed">{selectedMember.bio}</p>
-                      </div>
-                    )}
+                    <div className="pt-4 border-t border-cream/10">
+                      <p className="text-cream/50 text-xs mb-2">Biography</p>
+                      <p className={selectedMember.bio ? 'text-cream/80 leading-relaxed' : 'text-cream/30 italic'}>
+                        {selectedMember.bio || 'No biography added yet'}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Action buttons */}
