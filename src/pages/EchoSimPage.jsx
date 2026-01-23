@@ -1406,7 +1406,7 @@ export function EchoSimPage({ onNavigate }) {
                     </div>
                   </div>
 
-                  {/* Voice Clone Option - Show toggle if has voice clone */}
+                  {/* Voice Clone Option - Show toggle if has voice clone, otherwise show setup prompt */}
                   {hasVoiceClone ? (
                     <div className="mb-6 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
                       <div className="flex items-center justify-between">
@@ -1419,7 +1419,7 @@ export function EchoSimPage({ onNavigate }) {
                             <p className="text-cream/50 text-xs">
                               {selectedFamilyMember
                                 ? `${selectedFamilyMember.name} will speak with your voice`
-                                : 'The avatar will speak with your voice'}
+                                : 'Your avatar will speak with your voice'}
                             </p>
                           </div>
                         </div>
@@ -1438,8 +1438,8 @@ export function EchoSimPage({ onNavigate }) {
                         </motion.button>
                       </div>
                     </div>
-                  ) : selectedFamilyMember ? (
-                    /* No voice clone but family member selected - show setup prompt */
+                  ) : (
+                    /* No voice clone - show setup prompt for both self and family members */
                     <div className="mb-6 p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -1447,9 +1447,15 @@ export function EchoSimPage({ onNavigate }) {
                             <Mic className="w-5 h-5 text-orange-400" />
                           </div>
                           <div>
-                            <p className="text-cream font-medium text-sm">Want {selectedFamilyMember.name} to speak with your voice?</p>
+                            <p className="text-cream font-medium text-sm">
+                              {selectedFamilyMember
+                                ? `Want ${selectedFamilyMember.name} to speak with your voice?`
+                                : 'Want your avatar to speak with your real voice?'}
+                            </p>
                             <p className="text-cream/50 text-xs">
-                              Record your voice samples to make {selectedFamilyMember.name} sound like you
+                              {selectedFamilyMember
+                                ? `Record your voice samples to make ${selectedFamilyMember.name} sound like you`
+                                : 'Record voice samples to clone your voice for video generation'}
                             </p>
                           </div>
                         </div>
@@ -1464,7 +1470,7 @@ export function EchoSimPage({ onNavigate }) {
                         </motion.button>
                       </div>
                     </div>
-                  ) : null}
+                  )}
 
                   {/* Family Member Info */}
                   {selectedFamilyMember && (
