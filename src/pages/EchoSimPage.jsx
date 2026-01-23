@@ -25,7 +25,8 @@ import {
   Send,
   ArrowLeft,
   Mic,
-  Check
+  Check,
+  Plus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageTransition, FadeIn } from '../components/PageTransition';
@@ -756,9 +757,8 @@ export function EchoSimPage({ onNavigate }) {
         const response = await api.getFamilyMembers();
         // API returns { members: [...] }
         const members = response?.members || [];
-        // Only include family members that have a photo
-        const membersWithPhoto = members.filter(m => m.imageData);
-        setFamilyMembers(membersWithPhoto);
+        // Load all family members (show those without photo as needing setup)
+        setFamilyMembers(members);
       } catch (err) {
         console.error('Failed to load family members:', err);
       }
@@ -1350,59 +1350,81 @@ export function EchoSimPage({ onNavigate }) {
                       </motion.button>
 
                       {/* Family Member options */}
-                      {familyMembers.length > 0 && familyMembers.map((member) => (
-                        <motion.button
-                          key={member.id}
-                          onClick={() => {
-                            setVideoSource('family');
-                            setSelectedFamilyMember(member);
-                          }}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
-                            selectedFamilyMember?.id === member.id
-                              ? 'border-purple-400 bg-purple-500/10 text-purple-300'
-                              : 'border-cream/20 bg-navy/40 text-cream/70 hover:border-cream/40'
-                          }`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-purple-500/20 flex items-center justify-center">
-                            {member.imageData ? (
-                              <img
-                                src={member.imageData}
-                                alt={member.name}
-                                className="w-10 h-10 rounded-full object-cover"
-                              />
-                            ) : (
-                              <Users className="w-5 h-5 text-purple-400" />
-                            )}
-                          </div>
-                          <div className="text-left">
-                            <p className="font-medium text-sm">{member.name}</p>
-                            <p className="text-xs opacity-60">{member.relationship}</p>
-                          </div>
-                          {selectedFamilyMember?.id === member.id && (
-                            <Check className="w-5 h-5 text-purple-400 ml-2" />
-                          )}
-                        </motion.button>
-                      ))}
+                      {familyMembers.map((member) => {
+                        const hasPhoto = !!member.imageData;
+                        const hasVoice = !!member.voiceData;
+                        const isSelected = selectedFamilyMember?.id === member.id;
 
-                      {/* Add Family Member hint */}
-                      {familyMembers.length === 0 && (
-                        <motion.button
-                          onClick={() => onNavigate('family-tree')}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-cream/20 text-cream/50 hover:border-cream/40 hover:text-cream/70 transition-all"
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <div className="w-10 h-10 rounded-full bg-cream/5 flex items-center justify-center">
-                            <Users className="w-5 h-5" />
-                          </div>
-                          <div className="text-left">
-                            <p className="font-medium text-sm">Add Family Member</p>
-                            <p className="text-xs">With photo to use here</p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 ml-2" />
-                        </motion.button>
-                      )}
+                        return (
+                          <motion.button
+                            key={member.id}
+                            onClick={() => {
+                              if (hasPhoto) {
+                                setVideoSource('family');
+                                setSelectedFamilyMember(member);
+                              }
+                            }}
+                            disabled={!hasPhoto}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                              !hasPhoto
+                                ? 'border-orange-500/30 bg-orange-500/5 text-cream/50 cursor-not-allowed'
+                                : isSelected
+                                  ? 'border-purple-400 bg-purple-500/10 text-purple-300'
+                                  : 'border-cream/20 bg-navy/40 text-cream/70 hover:border-cream/40'
+                            }`}
+                            whileHover={hasPhoto ? { scale: 1.02 } : {}}
+                            whileTap={hasPhoto ? { scale: 0.98 } : {}}
+                          >
+                            <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${
+                              !hasPhoto ? 'bg-orange-500/20' : 'bg-purple-500/20'
+                            }`}>
+                              {member.imageData ? (
+                                <img
+                                  src={member.imageData}
+                                  alt={member.name}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <Users className={`w-5 h-5 ${!hasPhoto ? 'text-orange-400' : 'text-purple-400'}`} />
+                              )}
+                            </div>
+                            <div className="text-left flex-1">
+                              <p className="font-medium text-sm">{member.name}</p>
+                              <p className="text-xs opacity-60">{member.relationship}</p>
+                              {!hasPhoto && (
+                                <p className="text-xs text-orange-400 mt-0.5">Photo required</p>
+                              )}
+                              {hasPhoto && hasVoice && (
+                                <p className="text-xs text-green-400 mt-0.5 flex items-center gap-1">
+                                  <Mic className="w-3 h-3" /> Voice available
+                                </p>
+                              )}
+                            </div>
+                            {isSelected && hasPhoto && (
+                              <Check className="w-5 h-5 text-purple-400 ml-2" />
+                            )}
+                            {!hasPhoto && (
+                              <ChevronRight className="w-4 h-4 text-orange-400" />
+                            )}
+                          </motion.button>
+                        );
+                      })}
+
+                      {/* Add New Family Member button - always shown */}
+                      <motion.button
+                        onClick={() => onNavigate('persona', 'family-members')}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-cream/20 text-cream/50 hover:border-cream/40 hover:text-cream/70 transition-all"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-cream/5 flex items-center justify-center">
+                          <Plus className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-medium text-sm">Add Family Member</p>
+                          <p className="text-xs">Create new with photo</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </motion.button>
                     </div>
                   </div>
 
@@ -1491,10 +1513,15 @@ export function EchoSimPage({ onNavigate }) {
                           )}
                         </div>
                       </div>
-                      {!selectedFamilyMember.voiceData && (
+                      {selectedFamilyMember.voiceData ? (
+                        <p className="text-green-400/80 text-xs mt-3 flex items-center gap-1">
+                          <Mic className="w-3 h-3" />
+                          Voice sample available - can use their voice
+                        </p>
+                      ) : (
                         <p className="text-orange-400/80 text-xs mt-3 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
-                          No voice sample - will use default voice
+                          No voice sample - will use your voice clone or default voice
                         </p>
                       )}
                     </div>
