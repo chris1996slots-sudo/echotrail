@@ -471,55 +471,10 @@ export function PersonaPage({ onNavigate }) {
   const handleNextStep = async () => {
     const currentStepId = avatarSteps[avatarStep].id;
 
-    // Step 0 (Photos): Check if we should create HeyGen Photo Avatar
-    if (currentStepId === 'photos') {
-      const avatarImages = persona.avatarImages || [];
-      const activeImage = avatarImages.find(img => img.isActive || img.id === persona.activeAvatarId);
-      const hasHeyGenAvatar = persona.heygenAvatarId;
-
-      // If user has an active image but no HeyGen avatar yet, create it
-      if (activeImage && !hasHeyGenAvatar) {
-        try {
-          setIsProcessingAvatar(true);
-          setProcessingStep('Creating talking avatar with lip sync...');
-
-          const avatarResult = await api.createPhotoAvatar(
-            activeImage.imageData,
-            `${user.firstName}'s Avatar`
-          );
-
-          if (avatarResult.success) {
-            setPersona(prev => ({
-              ...prev,
-              heygenAvatarId: avatarResult.avatarId,
-              heygenAvatarName: avatarResult.avatarName,
-            }));
-            setProcessingComplete(true);
-            setTimeout(() => {
-              setProcessingComplete(false);
-              setIsProcessingAvatar(false);
-              setProcessingStep('');
-              // Move to next step after successful creation
-              setAvatarStep(prev => prev + 1);
-            }, 2000);
-          } else {
-            setIsProcessingAvatar(false);
-            setProcessingStep('');
-            showToast('Avatar creation failed. You can continue anyway.');
-            // Move to next step anyway
-            setAvatarStep(prev => prev + 1);
-          }
-        } catch (err) {
-          console.error('HeyGen avatar creation failed:', err);
-          setIsProcessingAvatar(false);
-          setProcessingStep('');
-          showToast('Avatar creation failed. You can continue anyway.');
-          // Move to next step anyway
-          setAvatarStep(prev => prev + 1);
-        }
-        return; // Exit early, step transition handled above
-      }
-    }
+    // Step 0 (Photos): Just move to next step
+    // Note: HeyGen Photo Avatar is no longer created here.
+    // The Avatar IV API uploads the photo directly when generating videos,
+    // which doesn't consume the HeyGen avatar limit (max 3 photo avatars).
 
     // Step 1 (Voice): Check if we should create voice clone
     if (currentStepId === 'voice') {

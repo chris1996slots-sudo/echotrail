@@ -195,27 +195,6 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
     setIsSpeaking(false);
   };
 
-  // Refresh avatar ID
-  const refreshAvatarId = async () => {
-    try {
-      setError(null);
-      setVideoProgress('Refreshing avatar...');
-      const result = await api.refreshPhotoAvatar();
-
-      if (result.updated) {
-        setVideoProgress('Avatar updated! Try generating video again.');
-        setTimeout(() => setVideoProgress(''), 3000);
-      } else if (result.success) {
-        setVideoProgress('Avatar is ready.');
-        setTimeout(() => setVideoProgress(''), 2000);
-      } else {
-        setError('Could not find a valid avatar. Please re-create your Photo Avatar on the Persona page.');
-      }
-    } catch (err) {
-      setError('Failed to refresh avatar: ' + (err.message || 'Unknown error'));
-    }
-  };
-
   // Generate HeyGen video with Avatar IV (Photo + Voice Clone)
   const generateVideoAvatar = async () => {
     if (!generatedMessage) return;
@@ -625,15 +604,15 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
 
                       <motion.button
                         onClick={generateVideoAvatar}
-                        disabled={videoGenerating || !generatedMessage || !persona?.heygenAvatarId}
+                        disabled={videoGenerating || !generatedMessage || !selectedAvatarImage}
                         className={`px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
-                          persona?.heygenAvatarId && generatedMessage
+                          selectedAvatarImage && generatedMessage
                             ? 'bg-gradient-to-r from-gold to-gold-light text-navy hover:opacity-90'
                             : 'bg-navy/40 text-cream/40 cursor-not-allowed'
                         }`}
-                        whileHover={persona?.heygenAvatarId && generatedMessage ? { scale: 1.02 } : {}}
-                        whileTap={persona?.heygenAvatarId && generatedMessage ? { scale: 0.98 } : {}}
-                        title={!persona?.heygenAvatarId ? 'Create a Photo Avatar first on My Persona page' : ''}
+                        whileHover={selectedAvatarImage && generatedMessage ? { scale: 1.02 } : {}}
+                        whileTap={selectedAvatarImage && generatedMessage ? { scale: 0.98 } : {}}
+                        title={!selectedAvatarImage ? 'Upload a photo first on My Persona page' : ''}
                       >
                         {videoGenerating ? (
                           <>
@@ -649,9 +628,9 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
                       </motion.button>
                     </div>
 
-                    {!persona?.heygenAvatarId && (
+                    {!selectedAvatarImage && (
                       <p className="mt-4 text-cream/40 text-xs text-center">
-                        To generate talking videos, create a Photo Avatar on the My Persona page first.
+                        To generate talking videos, upload a photo on the My Persona page first.
                       </p>
                     )}
 
@@ -666,17 +645,6 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
                           <AlertCircle className="w-5 h-5 flex-shrink-0" />
                           <span>{error}</span>
                         </div>
-                        {(error.includes('Refresh') || error.includes('avatar')) && persona?.heygenAvatarId && (
-                          <motion.button
-                            onClick={refreshAvatarId}
-                            className="mt-3 ml-8 px-3 py-1.5 rounded-lg bg-gold/20 text-gold text-xs flex items-center gap-2 hover:bg-gold/30"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            Refresh Avatar ID
-                          </motion.button>
-                        )}
                       </motion.div>
                     )}
 
