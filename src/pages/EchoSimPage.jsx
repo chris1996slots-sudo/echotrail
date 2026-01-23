@@ -705,6 +705,9 @@ export function EchoSimPage({ onNavigate }) {
   const [isLoadingTextChat, setIsLoadingTextChat] = useState(false);
   const [expandedOption, setExpandedOption] = useState(null); // 'chat', 'video', or 'live'
 
+  // Refs for auto-scrolling
+  const expandedSectionRef = useRef(null);
+
   // Check status on mount
   useEffect(() => {
     const checkStatus = async () => {
@@ -725,6 +728,19 @@ export function EchoSimPage({ onNavigate }) {
     };
     checkStatus();
   }, [persona]);
+
+  // Auto-scroll to expanded section when option is selected
+  useEffect(() => {
+    if (expandedOption && expandedSectionRef.current) {
+      // Small delay to allow animation to start
+      setTimeout(() => {
+        expandedSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    }
+  }, [expandedOption]);
 
   // Handle template selection
   const handleTemplateSelect = (template) => {
@@ -936,32 +952,34 @@ export function EchoSimPage({ onNavigate }) {
                         </div>
                       </div>
 
-                      {/* Requirement Badge */}
-                      {canUseTextChat ? (
-                        <div className="mt-4 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
-                          ✓ Ready to Chat
-                        </div>
-                      ) : (
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onNavigate('persona', 'stories');
-                          }}
-                          className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <span className="flex items-center gap-1">
-                            ⚠ {storyCount}/3 Profile Stories needed
-                          </span>
-                          <span className="text-cream/50 text-[10px] flex items-center gap-1">
-                            Click to add stories <ChevronRight className="w-3 h-3" />
-                          </span>
-                        </motion.button>
-                      )}
+                      {/* Requirement Badge - Fixed height container */}
+                      <div className="mt-4 h-14 flex items-center justify-center">
+                        {canUseTextChat ? (
+                          <div className="px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
+                            ✓ Ready to Chat
+                          </div>
+                        ) : (
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate('persona', 'stories');
+                            }}
+                            className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <span className="flex items-center gap-1">
+                              ⚠ {storyCount}/3 Profile Stories needed
+                            </span>
+                            <span className="text-cream/50 text-[10px] flex items-center gap-1">
+                              Click to add stories <ChevronRight className="w-3 h-3" />
+                            </span>
+                          </motion.button>
+                        )}
+                      </div>
 
                       {/* CTA */}
                       <motion.div
-                        className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                        className={`mt-4 px-6 py-3 rounded-xl font-medium ${
                           canUseTextChat
                             ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
                             : 'bg-navy/40 text-cream/40'
@@ -1034,32 +1052,34 @@ export function EchoSimPage({ onNavigate }) {
                         </div>
                       </div>
 
-                      {/* Requirement Badge */}
-                      {canUseVideo ? (
-                        <div className="mt-4 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
-                          ✓ Photo Ready
-                        </div>
-                      ) : (
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onNavigate('persona', 'avatar');
-                          }}
-                          className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <span className="flex items-center gap-1">
-                            ⚠ Photo Required
-                          </span>
-                          <span className="text-cream/50 text-[10px] flex items-center gap-1">
-                            Click to upload photo <ChevronRight className="w-3 h-3" />
-                          </span>
-                        </motion.button>
-                      )}
+                      {/* Requirement Badge - Fixed height container */}
+                      <div className="mt-4 h-14 flex items-center justify-center">
+                        {canUseVideo ? (
+                          <div className="px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs">
+                            ✓ Photo Ready
+                          </div>
+                        ) : (
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate('persona', 'avatar');
+                            }}
+                            className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <span className="flex items-center gap-1">
+                              ⚠ Photo Required
+                            </span>
+                            <span className="text-cream/50 text-[10px] flex items-center gap-1">
+                              Click to upload photo <ChevronRight className="w-3 h-3" />
+                            </span>
+                          </motion.button>
+                        )}
+                      </div>
 
                       {/* CTA */}
                       <motion.div
-                        className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                        className={`mt-4 px-6 py-3 rounded-xl font-medium ${
                           canUseVideo
                             ? 'bg-gradient-to-r from-gold to-gold-light text-navy'
                             : 'bg-navy/40 text-cream/40'
@@ -1144,43 +1164,45 @@ export function EchoSimPage({ onNavigate }) {
                         </div>
                       </div>
 
-                      {/* Requirement Badges */}
-                      {canUseLive ? (
-                        <div className="mt-4 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                          Live Streaming Ready
-                        </div>
-                      ) : (
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Navigate to the appropriate tab based on what's missing
-                            if (!hasPhotoAvatar) {
-                              onNavigate('persona', 'avatar');
-                            } else {
-                              onNavigate('persona', 'avatar'); // Voice is in avatar tab
-                            }
-                          }}
-                          className="mt-4 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1.5"
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <div className="flex gap-3 text-xs">
-                            <span className={hasPhotoAvatar ? 'text-green-400' : 'text-red-400'}>
-                              {hasPhotoAvatar ? '✓' : '⚠'} Photo
-                            </span>
-                            <span className={hasVoiceClone ? 'text-green-400' : 'text-red-400'}>
-                              {hasVoiceClone ? '✓' : '⚠'} Voice
-                            </span>
+                      {/* Requirement Badges - Fixed height container */}
+                      <div className="mt-4 h-14 flex items-center justify-center">
+                        {canUseLive ? (
+                          <div className="px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                            Live Streaming Ready
                           </div>
-                          <span className="text-cream/50 text-[10px] flex items-center gap-1">
-                            Click to set up <ChevronRight className="w-3 h-3" />
-                          </span>
-                        </motion.button>
-                      )}
+                        ) : (
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Navigate to the appropriate tab based on what's missing
+                              if (!hasPhotoAvatar) {
+                                onNavigate('persona', 'avatar');
+                              } else {
+                                onNavigate('persona', 'avatar'); // Voice is in avatar tab
+                              }
+                            }}
+                            className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors flex flex-col items-center gap-1.5"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <div className="flex gap-3 text-xs">
+                              <span className={hasPhotoAvatar ? 'text-green-400' : 'text-red-400'}>
+                                {hasPhotoAvatar ? '✓' : '⚠'} Photo
+                              </span>
+                              <span className={hasVoiceClone ? 'text-green-400' : 'text-red-400'}>
+                                {hasVoiceClone ? '✓' : '⚠'} Voice
+                              </span>
+                            </div>
+                            <span className="text-cream/50 text-[10px] flex items-center gap-1">
+                              Click to set up <ChevronRight className="w-3 h-3" />
+                            </span>
+                          </motion.button>
+                        )}
+                      </div>
 
                       {/* CTA */}
                       <motion.div
-                        className={`mt-6 px-6 py-3 rounded-xl font-medium ${
+                        className={`mt-4 px-6 py-3 rounded-xl font-medium ${
                           canUseLive
                             ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
                             : 'bg-navy/40 text-cream/40'
@@ -1202,6 +1224,7 @@ export function EchoSimPage({ onNavigate }) {
         </div>
 
         {/* Expandable Sections */}
+        <div ref={expandedSectionRef}>
         <AnimatePresence mode="wait">
           {expandedOption === 'chat' && (
             <motion.div
@@ -1352,6 +1375,7 @@ export function EchoSimPage({ onNavigate }) {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
 
         {/* Video Archive - Compact Design */}
         <FadeIn delay={0.35}>
