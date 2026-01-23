@@ -545,27 +545,46 @@ function VideoGenerationModal({ template, onClose, user, persona, customMessage 
                             onChange={(e) => setEditedMessage(e.target.value)}
                             className="w-full h-40 p-3 rounded-xl bg-navy/80 border border-gold/20 text-cream text-sm focus:outline-none focus:border-gold/50 resize-none"
                             placeholder="Enter your message..."
+                            maxLength={300}
                           />
-                          <div className="mt-3 flex justify-end gap-2">
-                            <button
-                              onClick={() => setIsEditing(false)}
-                              className="px-3 py-1.5 rounded-lg text-cream/60 text-sm hover:text-cream"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={saveEditedMessage}
-                              className="px-3 py-1.5 rounded-lg bg-gold text-navy text-sm font-medium"
-                            >
-                              Save
-                            </button>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className={`text-xs ${editedMessage.length > 250 ? 'text-orange-400' : 'text-cream/40'}`}>
+                              {editedMessage.length}/300 chars (~{Math.ceil(editedMessage.split(/\s+/).filter(w => w).length * 0.5)}s video)
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-3 py-1.5 rounded-lg text-cream/60 text-sm hover:text-cream"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={saveEditedMessage}
+                                className="px-3 py-1.5 rounded-lg bg-gold text-navy text-sm font-medium"
+                              >
+                                Save
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-cream text-base leading-relaxed whitespace-pre-wrap">
-                          {generatedMessage || 'No message generated yet.'}
-                        </p>
+                        <div>
+                          <p className="text-cream text-base leading-relaxed whitespace-pre-wrap">
+                            {generatedMessage || 'No message generated yet.'}
+                          </p>
+                          {generatedMessage && (
+                            <p className="text-cream/40 text-xs mt-2">
+                              {generatedMessage.length} chars • ~{Math.ceil(generatedMessage.split(/\s+/).filter(w => w).length * 0.5)}s video
+                            </p>
+                          )}
+                        </div>
                       )}
+                    </div>
+
+                    {/* Video length info */}
+                    <div className="mt-3 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>Videos are limited to 30 seconds. Keep messages short (2-3 sentences, ~50 words).</span>
                     </div>
 
                     {/* Action buttons */}

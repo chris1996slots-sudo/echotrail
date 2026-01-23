@@ -167,6 +167,10 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
     const provider = config.settings?.provider || 'claude';
     let responseText = '';
 
+    // Video length constraint: ~150 words = ~60 seconds of speech, so ~75 words = ~30 seconds
+    // We use max_tokens of 120 (roughly 90 words) to stay safely under 30s
+    const videoLengthNote = '\n\nCRITICAL LENGTH CONSTRAINT: This will be spoken aloud in a video. Keep your response to 2-3 SHORT sentences maximum (under 50 words total). Be warm but extremely concise.';
+
     if (provider === 'groq') {
       // Groq API (OpenAI-compatible)
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -177,10 +181,10 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
         },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          max_tokens: 350,
+          max_tokens: 120,
           messages: [
             { role: 'system', content: buildEchoPrompt(persona, req.user, context, memories, timelineEvents) },
-            { role: 'user', content: prompt + '\n\nIMPORTANT: Keep your response concise - about 3-5 sentences maximum. Be warm and personal but brief.' }
+            { role: 'user', content: prompt + videoLengthNote }
           ]
         })
       });
@@ -203,9 +207,9 @@ router.post('/generate', authenticate, requireSubscription('STANDARD'), async (r
         },
         body: JSON.stringify({
           model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 350,
+          max_tokens: 120,
           system: buildEchoPrompt(persona, req.user, context, memories, timelineEvents),
-          messages: [{ role: 'user', content: prompt + '\n\nIMPORTANT: Keep your response concise - about 3-5 sentences maximum. Be warm and personal but brief.' }]
+          messages: [{ role: 'user', content: prompt + videoLengthNote }]
         })
       });
 
@@ -2289,10 +2293,10 @@ INSTRUCTIONS FOR YOUR MESSAGE:
 2. Be genuine and heartfelt - show your true personality
 3. If this is for a special occasion, acknowledge it warmly
 4. Draw from your real experiences and stories when relevant
-5. Keep it concise but meaningful (3-5 sentences max - this will be spoken aloud)
-6. End with something personal - advice, love, or encouragement
+5. CRITICAL: Keep it to 2-3 SHORT sentences only (under 50 words) - this will be spoken in a video with a 30-second limit
+6. End with something loving
 
-Remember: Your loved ones want to hear YOUR voice, YOUR wisdom, YOUR love.`;
+Remember: Be brief but meaningful. Quality over quantity.`;
 }
 
 // =====================
